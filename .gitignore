@@ -1,3 +1,5 @@
 .DS_Store
 experiments/zero/c
 experiments/zero/s
+testnet/c
+testnet/s
