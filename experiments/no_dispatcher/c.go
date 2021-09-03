@@ -9,12 +9,10 @@ import (
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/sciond"
 	"github.com/scionproto/scion/go/lib/snet"
-	"github.com/scionproto/scion/go/lib/sock/reliable"
-	"github.com/scionproto/scion/go/lib/sock/reliable/reconnect"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 )
 
-func sendHello(sciondAddr, dispatcherSocket string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
+func sendHello(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 
@@ -22,17 +20,14 @@ func sendHello(sciondAddr, dispatcherSocket string, localAddr snet.UDPAddr, remo
 	if err != nil {
 		log.Fatal("Failed to create SCION connector:", err)
 	}
-	pds := &snet.DefaultPacketDispatcherService{
-		Dispatcher: reconnect.NewDispatcherService(
-			reliable.NewDispatcher(dispatcherSocket)),
-		SCMPHandler: snet.DefaultSCMPHandler{
-			RevocationHandler: sciond.RevHandler{Connector: sdc},
-		},
-	}
 
 	ps, err := sdc.Paths(ctx, remoteAddr.IA, localAddr.IA, sciond.PathReqFlags{Refresh: true})
 	if err != nil {
-		log.Fatal("Failed to lookup core paths: %v:", err)
+		log.Fatal("Failed to lookup paths: %v:", err)
+	}
+
+	if len(ps) == 0 {
+		log.Fatal("No paths to %v available", remoteAddr.IA)
 	}
 
 	log.Printf("Available paths to %v:\n", remoteAddr.IA)
@@ -41,15 +36,11 @@ func sendHello(sciondAddr, dispatcherSocket string, localAddr snet.UDPAddr, remo
 	}
 
 	sp := ps[0]
-	log.Printf("Selected path to %v: %v\n", remoteAddr.IA, sp)
 
-	localAddr.Host.Port = 0
-	conn, localPort, err := pds.Register(ctx, localAddr.IA, localAddr.Host, addr.SvcNone)
-	if err != nil {
-		log.Fatal("Failed to register client socket:", err)
-	}
+	log.Printf("Selected path to %v:\n", remoteAddr.IA)
+	log.Printf("\t%v\n", sp)
 
-	log.Printf("Sending in %v on %v:%d - %v\n", localAddr.IA, localAddr.Host.IP, localPort, addr.SvcNone)
+	localAddr.Host.Port = underlay.EndhostPort
 
 	pkt := &snet.Packet{
 		PacketInfo: snet.PacketInfo{
@@ -63,7 +54,7 @@ func sendHello(sciondAddr, dispatcherSocket string, localAddr snet.UDPAddr, remo
 			},
 			Path: sp.Path(),
 			Payload: snet.UDPPayload{
-				SrcPort: localPort,
+				SrcPort: uint16(localAddr.Host.Port),
 				DstPort: uint16(remoteAddr.Host.Port),
 				Payload: []byte("Hello, world!"),
 			},
@@ -79,37 +70,55 @@ func sendHello(sciondAddr, dispatcherSocket string, localAddr snet.UDPAddr, remo
 		}
 	}
 
-	err = conn.WriteTo(pkt, nextHop)
+	err = pkt.Serialize()
+	if err != nil {
+		log.Printf("Failed to serialize SCION packet: %v\n", err)
+		return
+	}
+
+	conn, err := net.DialUDP("udp", localAddr.Host, nextHop)
+	if err != nil {
+		log.Printf("Failed to dial UDP connection: %v\n", err)
+		return
+	}
+	defer conn.Close()
+
+	_, err = conn.Write(pkt.Bytes)
 	if err != nil {
 		log.Printf("Failed to write packet: %v\n", err)
 		return
 	}
 
-	var lastHop net.UDPAddr
-	err = conn.ReadFrom(pkt, &lastHop)
+	pkt.Prepare()
+	n, err := conn.Read(pkt.Bytes)
 	if err != nil {
 		log.Printf("Failed to read packet: %v\n", err)
 		return
 	}
+
+	pkt.Bytes = pkt.Bytes[:n]
+	err = pkt.Decode()
+	if err != nil {
+		log.Printf("Failed to decode packet: %v\n", err)
+		return
+	}
+
 	pld, ok := pkt.Payload.(snet.UDPPayload)
 	if !ok {
 		log.Printf("Failed to read packet payload\n")
 		return
 	}
-	data := string(pld.Payload);
-	log.Printf("Received payload: \"%v\"\n", data)
+	log.Printf("Received payload: \"%v\"\n", string(pld.Payload))
 }
 
 func main() {
 	var sciondAddr string
-	var dispatcherSocket string
 	var localAddr snet.UDPAddr
 	var remoteAddr snet.UDPAddr
 	flag.StringVar(&sciondAddr, "sciond", "", "sciond address")
-	flag.StringVar(&dispatcherSocket, "dispatcher", "", "dispatcher socket")
 	flag.Var(&localAddr, "local", "Local address")
 	flag.Var(&remoteAddr, "remote", "Remote address")
 	flag.Parse()
 
-	sendHello(sciondAddr, dispatcherSocket, localAddr, remoteAddr)
+	sendHello(sciondAddr, localAddr, remoteAddr)
 }

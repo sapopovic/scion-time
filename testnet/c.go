@@ -40,8 +40,6 @@ func sendHello(sciondAddr, dispatcherSocket string, localAddr snet.UDPAddr, remo
 		log.Printf("\t%v\n", p)
 	}
 
-	return;
-
 	sp := ps[0]
 	log.Printf("Selected path to %v: %v\n", remoteAddr.IA, sp)
 
