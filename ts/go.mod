@@ -2,7 +2,10 @@ module example.com/ts
 
 go 1.17
 
-require github.com/scionproto/scion v0.6.0
+require (
+	github.com/facebookincubator/ntp v0.0.0-20210909173946-340a65f31564
+	github.com/scionproto/scion v0.6.0
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -19,12 +22,12 @@ require (
 	go.uber.org/atomic v1.6.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
-	golang.org/x/net v0.0.0-20200927032502-5d4f70055728 // indirect
-	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f // indirect
-	golang.org/x/text v0.3.2 // indirect
-	google.golang.org/genproto v0.0.0-20191002211648-c459b9ce5143 // indirect
+	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
+	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
+	golang.org/x/text v0.3.3 // indirect
+	google.golang.org/genproto v0.0.0-20191108220845-16a3f7862a1a // indirect
 	google.golang.org/grpc v1.29.1 // indirect
 	google.golang.org/protobuf v1.23.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	zombiezen.com/go/capnproto2 v0.0.0-20190813022230-ddfb9bb855fa // indirect
 )

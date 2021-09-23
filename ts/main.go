@@ -5,7 +5,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/scionproto/scion/go/lib/addr"
+	"github.com/facebookincubator/ntp/protocol/ntp"
+
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 )
@@ -15,37 +16,42 @@ func runServer(localAddr snet.UDPAddr) {
 
 	localAddr.Host.Port = underlay.EndhostPort
 
-	log.Printf("Listening in %v on %v:%d - %v\n", localAddr.IA, localAddr.Host.IP, localAddr.Host.Port, addr.SvcNone)
+	log.Printf("Listening in %v on %v:%d", localAddr.IA, localAddr.Host.IP, localAddr.Host.Port)
 
 	conn, err := net.ListenUDP("udp", localAddr.Host)
 	if err != nil {
-		log.Fatal("Failed to listen on UDP connection: %v\n", err)
+		log.Fatalf("Failed to listen for packets: %v", err)
 	}
 	defer conn.Close()
+
+	err = ntp.EnableKernelTimestampsSocket(conn);
+	if err != nil {
+		log.Fatalf("Failed to enable kernel timestamoing for packets: %v", err)
+	}
 
 	for {
 		var pkt snet.Packet
 		pkt.Prepare()
 		n, lastHop, err := conn.ReadFrom(pkt.Bytes)
 		if err != nil {
-			log.Printf("Failed to read packet: %v\n", err)
+			log.Printf("Failed to read packet: %v", err)
 			continue
 		}
 
 		pkt.Bytes = pkt.Bytes[:n]
 		err = pkt.Decode()
 		if err != nil {
-			log.Printf("Failed to decode packet: %v\n", err)
+			log.Printf("Failed to decode packet: %v", err)
 			continue
 		}
 
 		pld, ok := pkt.Payload.(snet.UDPPayload)
 		if !ok {
-			log.Printf("Failed to read packet payload\n")
+			log.Printf("Failed to read packet payload")
 			continue
 		}
 
-		log.Printf("Received payload: \"%v\"\n", string(pld.Payload))
+		log.Printf("Received payload: \"%v\"", string(pld.Payload))
 
 		pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
 		pkt.Payload = snet.UDPPayload{
@@ -60,13 +66,13 @@ func runServer(localAddr snet.UDPAddr) {
 
 		err = pkt.Serialize()
 		if err != nil {
-			log.Printf("Failed to serialize SCION packet: %v\n", err)
+			log.Printf("Failed to serialize packet: %v", err)
 			continue
 		}
 
 		_, err = conn.WriteTo(pkt.Bytes, lastHop);
 		if err != nil {
-			log.Printf("Failed to write packet: %v\n", err)
+			log.Printf("Failed to write packet: %v", err)
 			continue
 		}
 	}
