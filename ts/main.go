@@ -1,9 +1,14 @@
 package main
 
 import (
+	"unsafe"
+
 	"flag"
 	"log"
 	"net"
+	"time"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/facebookincubator/ntp/protocol/ntp"
 
@@ -32,10 +37,22 @@ func runServer(localAddr snet.UDPAddr) {
 	for {
 		var pkt snet.Packet
 		pkt.Prepare()
-		n, lastHop, err := conn.ReadFrom(pkt.Bytes)
+
+		oob := make([]byte, ntp.ControlHeaderSizeBytes)
+
+		n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
 		if err != nil {
 			log.Printf("Failed to read packet: %v", err)
 			continue
+		}
+
+		var now time.Time
+		if oobn != 0 {
+			ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
+			now = time.Unix(ts.Unix())
+			log.Printf("Received kernel timestamp: %v", now)
+		} else {
+			now = time.Now().UTC()
 		}
 
 		pkt.Bytes = pkt.Bytes[:n]
@@ -51,7 +68,16 @@ func runServer(localAddr snet.UDPAddr) {
 			continue
 		}
 
-		log.Printf("Received payload: \"%v\"", string(pld.Payload))
+		log.Printf("Received payload at %v with flags = %v: \"%v\"",
+			now, flags, string(pld.Payload))
+
+		ntppkt, err := ntp.BytesToPacket(pld.Payload)
+		if err != nil {
+			log.Printf("Failed to decode packet payload: %v", err)
+			continue
+		}
+
+		log.Printf("Received NTP packet: %+v", ntppkt)
 
 		pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
 		pkt.Payload = snet.UDPPayload{

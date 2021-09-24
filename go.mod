@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/facebookincubator/ntp v0.0.0-20210909173946-340a65f31564
 	github.com/scionproto/scion v0.6.0
+	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea
 )
 
 require (
@@ -23,7 +24,6 @@ require (
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
-	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/genproto v0.0.0-20191108220845-16a3f7862a1a // indirect
 	google.golang.org/grpc v1.29.1 // indirect
