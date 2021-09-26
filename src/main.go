@@ -54,13 +54,13 @@ func runServer(localAddr snet.UDPAddr) {
 			continue
 		}
 
-		var now time.Time
+		var rxt time.Time
 		if oobn != 0 {
 			ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-			now = time.Unix(ts.Unix())
+			rxt = time.Unix(ts.Unix())
 		} else {
 			log.Printf("Failed to receive kernel timestamp")
-			now = time.Now().UTC()
+			rxt = time.Now().UTC()
 		}
 
 		pkt.Bytes = pkt.Bytes[:n]
@@ -76,22 +76,53 @@ func runServer(localAddr snet.UDPAddr) {
 			continue
 		}
 
-		log.Printf("Received payload at %v with flags = %v: \"%v\":", now, flags)
+		log.Printf("Received payload at %v via %v with flags = %v: \"%v\":", rxt, lastHop, flags)
 		fmt.Printf("%s", hex.Dump(pld.Payload))
 
-		ntppkt, err := ntp.BytesToPacket(pld.Payload)
+		ntpreq, err := ntp.BytesToPacket(pld.Payload)
 		if err != nil {
 			log.Printf("Failed to decode packet payload: %v", err)
 			continue
 		}
 
-		log.Printf("Received NTP packet: %+v", ntppkt)
+		if !ntpreq.ValidSettingsFormat() {
+			log.Printf("Received invalid NTP packet:")
+			fmt.Printf("%s", hex.Dump(pld.Payload))
+			continue
+		}
+
+		log.Printf("Received NTP packet: %+v", ntpreq)
+
+		now := time.Now().UTC()
+
+		ntpresp := &ntp.Packet{
+			Stratum: 1,
+			Precision: -32,
+			RootDelay: 0,
+			RootDispersion: 10,
+			ReferenceID: binary.BigEndian.Uint32([]byte(fmt.Sprintf("%-4s", "STS0"))),
+		}
+
+		ntpresp.Settings = ntpreq.Settings & 0x38
+		ntpresp.Poll = ntpreq.Poll
+
+		refTime := time.Unix(now.Unix()/1000*1000, 0)
+		ntpresp.RefTimeSec, ntpresp.RefTimeFrac = ntp.Time(refTime)
+		ntpresp.OrigTimeSec, ntpresp.OrigTimeFrac = ntpreq.TxTimeSec,ntpreq.TxTimeFrac
+		ntpresp.RxTimeSec, ntpresp.RxTimeFrac = ntp.Time(rxt)
+		ntpresp.TxTimeSec, ntpresp.TxTimeFrac = ntp.Time(now)
+
+		resppld, err := ntpresp.Bytes()
+		if err != nil {
+			log.Printf("Failed to encode %+v: %v", ntpresp, err)
+			continue
+		}
 
 		pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
 		pkt.Payload = snet.UDPPayload{
 			DstPort: pld.SrcPort,
 			SrcPort: pld.DstPort,
-			Payload: []byte("!DLROW ,OLLEh"),
+			Payload: resppld,
 		}
 		if err := pkt.Path.Reverse(); err != nil {
 			log.Printf("Failed to reverse path: %v", err)
@@ -143,7 +174,7 @@ func runClient(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	localAddr.Host.Port = underlay.EndhostPort
 
 	buf := new(bytes.Buffer)
-	sec, frac := ntp.Time(time.Now())
+	sec, frac := ntp.Time(time.Now().UTC())
 	request := &ntp.Packet{
 		Settings:   0x1B,
 		TxTimeSec:  sec,
@@ -207,10 +238,21 @@ func runClient(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 
 	pkt.Prepare()
-	n, err := conn.Read(pkt.Bytes)
+	oob := make([]byte, ntp.ControlHeaderSizeBytes)
+
+	n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
 	if err != nil {
 		log.Printf("Failed to read packet: %v", err)
 		return
+	}
+
+	var rxt time.Time
+	if oobn != 0 {
+		ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
+		rxt = time.Unix(ts.Unix())
+	} else {
+		log.Printf("Failed to receive kernel timestamp")
+		rxt = time.Now().UTC()
 	}
 
 	pkt.Bytes = pkt.Bytes[:n]
@@ -225,7 +267,17 @@ func runClient(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		log.Printf("Failed to read packet payload")
 		return
 	}
-	log.Printf("Received payload: \"%v\"", string(pld.Payload))
+
+	log.Printf("Received payload at %v via %v with flags = %v: \"%v\":", rxt, lastHop, flags)
+	fmt.Printf("%s", hex.Dump(pld.Payload))
+
+	ntpreq, err := ntp.BytesToPacket(pld.Payload)
+	if err != nil {
+		log.Printf("Failed to decode packet payload: %v", err)
+		return
+	}
+
+	log.Printf("Received NTP packet: %+v", ntpreq)
 }
 
 func main() {
