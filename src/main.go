@@ -174,7 +174,8 @@ func runClient(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	localAddr.Host.Port = underlay.EndhostPort
 
 	buf := new(bytes.Buffer)
-	sec, frac := ntp.Time(time.Now().UTC())
+	clientTxTime := time.Now().UTC()
+	sec, frac := ntp.Time(clientTxTime)
 	request := &ntp.Packet{
 		Settings:   0x1B,
 		TxTimeSec:  sec,
@@ -246,13 +247,13 @@ func runClient(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 
-	var rxt time.Time
+	var clientRxTime time.Time
 	if oobn != 0 {
 		ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-		rxt = time.Unix(ts.Unix())
+		clientRxTime = time.Unix(ts.Unix())
 	} else {
 		log.Printf("Failed to receive kernel timestamp")
-		rxt = time.Now().UTC()
+		clientRxTime = time.Now().UTC()
 	}
 
 	pkt.Bytes = pkt.Bytes[:n]
@@ -268,16 +269,30 @@ func runClient(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 
-	log.Printf("Received payload at %v via %v with flags = %v: \"%v\":", rxt, lastHop, flags)
+	log.Printf("Received payload at %v via %v with flags = %v: \"%v\":", clientRxTime, lastHop, flags)
 	fmt.Printf("%s", hex.Dump(pld.Payload))
 
-	ntpreq, err := ntp.BytesToPacket(pld.Payload)
+	ntpresp, err := ntp.BytesToPacket(pld.Payload)
 	if err != nil {
 		log.Printf("Failed to decode packet payload: %v", err)
 		return
 	}
 
-	log.Printf("Received NTP packet: %+v", ntpreq)
+	log.Printf("Received NTP packet: %+v", ntpresp)
+
+	serverRxTime := ntp.Unix(ntpresp.RxTimeSec, ntpresp.RxTimeFrac)
+	serverTxTime := ntp.Unix(ntpresp.TxTimeSec, ntpresp.TxTimeFrac)
+
+	avgNetworkDelay := ntp.AvgNetworkDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
+	currentRealTime := ntp.CurrentRealTime(serverTxTime, avgNetworkDelay)
+	offset := ntp.CalculateOffset(currentRealTime, time.Now().UTC())
+
+	log.Printf("Stratum: %d, Current time: %s\n", ntpresp.Stratum, currentRealTime)
+	log.Printf("Offset: %fs (%fms), Network delay: %fs (%fms)\n",
+		float64(offset)/float64(time.Second.Nanoseconds()),
+		float64(offset)/float64(time.Millisecond.Nanoseconds()),
+		float64(avgNetworkDelay)/float64(time.Second.Nanoseconds()),
+		float64(avgNetworkDelay)/float64(time.Millisecond.Nanoseconds()))
 }
 
 func main() {
