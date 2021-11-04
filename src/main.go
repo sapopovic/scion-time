@@ -19,7 +19,7 @@ import (
 	"github.com/facebookincubator/ntp/protocol/ntp"
 
 	"github.com/scionproto/scion/go/lib/addr"
-	"github.com/scionproto/scion/go/lib/sciond"
+	"github.com/scionproto/scion/go/lib/daemon"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 )
@@ -143,16 +143,16 @@ func runServer(localAddr snet.UDPAddr) {
 	}
 }
 
-func runClient(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
+func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 
-	sdc, err := sciond.NewService(sciondAddr).Connect(ctx)
+	dc, err := daemon.NewService(daemonAddr).Connect(ctx)
 	if err != nil {
-		log.Fatalf("Failed to create SCION connector: %v", err)
+		log.Fatalf("Failed to create SCION daemon connector: %v", err)
 	}
 
-	ps, err := sdc.Paths(ctx, remoteAddr.IA, localAddr.IA, sciond.PathReqFlags{Refresh: true})
+	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 	if err != nil {
 		log.Fatalf("Failed to lookup paths: %v:", err)
 	}
@@ -296,7 +296,7 @@ func runClient(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 }
 
 func main() {
-	var sciondAddr string
+	var daemonAddr string
 	var localAddr snet.UDPAddr
 	var remoteAddr snet.UDPAddr
 
@@ -306,7 +306,7 @@ func main() {
 
 	serverFlags.Var(&localAddr, "local", "Local address")
 
-	clientFlags.StringVar(&sciondAddr, "sciond", "", "sciond address")
+	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	clientFlags.Var(&localAddr, "local", "Local address")
 	clientFlags.Var(&remoteAddr, "remote", "Remote address")
 
@@ -323,10 +323,10 @@ func main() {
 		relayFlags.Parse(os.Args[2:])
 	case "client":
 		clientFlags.Parse(os.Args[2:])
-		log.Print("sciondAddr:", sciondAddr)
+		log.Print("daemonAddr:", daemonAddr)
 		log.Print("localAddr:", localAddr)
 		log.Print("remoteAddr:", remoteAddr)
-		runClient(sciondAddr, localAddr, remoteAddr)
+		runClient(daemonAddr, localAddr, remoteAddr)
 	default:
 		fmt.Println("<usage>")
 		os.Exit(1)

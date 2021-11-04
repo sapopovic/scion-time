@@ -2,7 +2,7 @@ module example.com/scion-time
 
 go 1.17
 
-require github.com/scionproto/scion v0.0.0-00010101000000-000000000000
+require github.com/scionproto/scion v0.6.0
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -17,16 +17,16 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.3 // indirect
-	github.com/prometheus/client_golang v1.6.0 // indirect
+	github.com/prometheus/client_golang v1.7.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.9.1 // indirect
-	github.com/prometheus/procfs v0.0.11 // indirect
-	github.com/uber/jaeger-client-go v2.20.1+incompatible // indirect
+	github.com/prometheus/common v0.10.0 // indirect
+	github.com/prometheus/procfs v0.1.3 // indirect
+	github.com/uber/jaeger-client-go v2.29.1+incompatible // indirect
 	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.17.0 // indirect
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
 	golang.org/x/text v0.3.6 // indirect
@@ -36,4 +36,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/scionproto/scion => github.com/netsec-ethz/scion v0.0.0-20210825190202-fc081bebc932
+replace github.com/scionproto/scion => github.com/netsec-ethz/scion v0.6.1-0.20211014122839-61af520ded9e

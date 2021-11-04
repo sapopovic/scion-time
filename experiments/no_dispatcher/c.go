@@ -7,21 +7,21 @@ import (
 	"net"
 
 	"github.com/scionproto/scion/go/lib/addr"
-	"github.com/scionproto/scion/go/lib/sciond"
+	"github.com/scionproto/scion/go/lib/daemon"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 )
 
-func sendHello(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
+func sendHello(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 
-	sdc, err := sciond.NewService(sciondAddr).Connect(ctx)
+	dc, err := daemon.NewService(daemonAddr).Connect(ctx)
 	if err != nil {
-		log.Fatal("Failed to create SCION connector:", err)
+		log.Fatal("Failed to create SCION daemon connector:", err)
 	}
 
-	ps, err := sdc.Paths(ctx, remoteAddr.IA, localAddr.IA, sciond.PathReqFlags{Refresh: true})
+	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 	if err != nil {
 		log.Fatal("Failed to lookup paths: %v:", err)
 	}
@@ -112,13 +112,13 @@ func sendHello(sciondAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 }
 
 func main() {
-	var sciondAddr string
+	var daemonAddr string
 	var localAddr snet.UDPAddr
 	var remoteAddr snet.UDPAddr
-	flag.StringVar(&sciondAddr, "sciond", "", "sciond address")
+	flag.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	flag.Var(&localAddr, "local", "Local address")
 	flag.Var(&remoteAddr, "remote", "Remote address")
 	flag.Parse()
 
-	sendHello(sciondAddr, localAddr, remoteAddr)
+	sendHello(daemonAddr, localAddr, remoteAddr)
 }
