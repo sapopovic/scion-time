@@ -22,10 +22,19 @@ import (
 	"github.com/scionproto/scion/go/lib/daemon"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
+
+	"example.com/scion-time/go/core"
 )
 
 func runServer(localAddr snet.UDPAddr) {
 	var err error
+
+	core.RegisterLocalClock(&core.SysClock{})
+
+	localClock := core.LocalClockInstance()
+	_ = localClock.Now() 
+	localClock.Adjust(0, 0, 0.0) 
+	localClock.Sleep(0)
 
 	localAddr.Host.Port = underlay.EndhostPort
 

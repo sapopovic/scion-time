@@ -1,4 +1,4 @@
-module example.com/ts
+module example.com/scion-time
 
 go 1.17
 
