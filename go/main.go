@@ -29,12 +29,16 @@ import (
 func runServer(localAddr snet.UDPAddr) {
 	var err error
 
-	core.RegisterLocalClock(&core.SysClock{})
+	core.RegisterLocalClock(core.NewSysClock())
 
 	localClock := core.LocalClockInstance()
 	_ = localClock.Now() 
 	localClock.Adjust(0, 0, 0.0) 
 	localClock.Sleep(0)
+
+	core.RegisterPLL(core.NewStdPLL())
+	pll := core.PLLInstance()
+	pll.Do(0, 0.0)
 
 	localAddr.Host.Port = underlay.EndhostPort
 
