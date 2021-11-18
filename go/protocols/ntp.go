@@ -1,0 +1,4 @@
+package ntp
+
+var _
+
