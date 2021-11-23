@@ -1,6 +1,5 @@
 .DS_Store
 bin/sts
-experiments/no_dispatcher/c
-experiments/no_dispatcher/s
-testnet/c
-testnet/s
+misc/no_dispatcher/c
+misc/no_dispatcher/s
+misc/shmc/shmc
