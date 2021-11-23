@@ -3,6 +3,7 @@ module example.com/scion-time
 go 1.17
 
 require (
+	github.com/beevik/ntp v0.3.0
 	github.com/facebookincubator/ntp v0.0.0-20210909173946-340a65f31564
 	github.com/scionproto/scion v0.6.0
 	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea
