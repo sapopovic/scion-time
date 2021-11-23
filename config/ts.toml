@@ -1,0 +1,2 @@
+mbg_time_sources = ["/dev/mbgclock0"]
+ntp_time_sources = ["time.apple.com", "time.facebook.com", "time.google.com", "time.windows.com"]
