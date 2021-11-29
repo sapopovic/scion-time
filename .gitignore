@@ -1,5 +1,5 @@
 .DS_Store
-bin/sts
+bin/ts
 misc/no_dispatcher/c
 misc/no_dispatcher/s
 misc/shmc/shmc

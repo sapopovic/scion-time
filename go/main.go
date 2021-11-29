@@ -19,6 +19,7 @@ import (
 	"github.com/facebookincubator/ntp/protocol/ntp"
 
 	"github.com/scionproto/scion/go/lib/addr"
+	"github.com/scionproto/scion/go/lib/config"
 	"github.com/scionproto/scion/go/lib/daemon"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
@@ -26,19 +27,61 @@ import (
 	"example.com/scion-time/go/core"
 )
 
-func runServer(localAddr snet.UDPAddr) {
+type tsConfig struct {
+	MBGTimeSources []string `toml:"mbg_time_sources,omitempty"`
+	NTPTimeSources []string `toml:"ntp_time_sources,omitempty"`
+	SCIONPeers []string `toml:"scion_peers,omitempty"`
+}
+
+type timeSource interface {
+	fetchTime() (refTime time.Time, sysTime time.Time, err error)
+}
+
+type mbgTimeSource string
+type ntpTimeSource string
+
+var timeSources []timeSource
+
+func (s mbgTimeSource) fetchTime() (time.Time, time.Time, error) {
+	// TODO: return drivers.FetchMBGTime(string(s))
+	return time.Time{}, time.Time{}, nil
+}
+
+func (s ntpTimeSource) fetchTime() (time.Time, time.Time, error) {
+	// TODO: return drivers.FetchNTPTime(string(s))
+	return time.Time{}, time.Time{}, nil
+}
+
+func runServer(configFile string, localAddr snet.UDPAddr) {
 	var err error
 
 	core.RegisterLocalClock(core.NewSysClock())
 
 	localClock := core.LocalClockInstance()
-	_ = localClock.Now() 
-	localClock.Adjust(0, 0, 0.0) 
+	_ = localClock.Now()
+	localClock.Adjust(0, 0, 0.0)
 	localClock.Sleep(0)
 
 	core.RegisterPLL(core.NewStdPLL())
 	pll := core.PLLInstance()
 	pll.Do(0, 0.0)
+
+	var cfg tsConfig
+	err = config.LoadFile(configFile, &cfg)
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+	for _, s := range cfg.MBGTimeSources {
+		log.Print("mbg_time_source: ", s)
+		timeSources = append(timeSources, mbgTimeSource(s))
+	}
+	for _, s := range cfg.NTPTimeSources {
+		log.Print("ntp_time_source: ", s)
+		timeSources = append(timeSources, ntpTimeSource(s))
+	}
+	for _, s := range cfg.SCIONPeers {
+		log.Print("scion_peer: ", s)
+	}
 
 	localAddr.Host.Port = underlay.EndhostPort
 
@@ -308,7 +351,13 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		float64(avgNetworkDelay)/float64(time.Millisecond.Nanoseconds()))
 }
 
+func exitWithUsage() {
+	fmt.Println("<usage>")
+	os.Exit(1)
+}
+
 func main() {
+	var configFile string
 	var daemonAddr string
 	var localAddr snet.UDPAddr
 	var remoteAddr snet.UDPAddr
@@ -317,6 +366,7 @@ func main() {
 	relayFlags := flag.NewFlagSet("relay", flag.ExitOnError)
 	clientFlags := flag.NewFlagSet("client", flag.ExitOnError)
 
+	serverFlags.StringVar(&configFile, "config", "", "Config file")
 	serverFlags.Var(&localAddr, "local", "Local address")
 
 	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -324,24 +374,31 @@ func main() {
 	clientFlags.Var(&remoteAddr, "remote", "Remote address")
 
 	if len(os.Args) < 2 {
-		fmt.Println("<usage>")
-		os.Exit(1)
+		exitWithUsage()
 	}
 
 	switch os.Args[1] {
 	case "server":
-		serverFlags.Parse(os.Args[2:])
-		runServer(localAddr)
+		err := serverFlags.Parse(os.Args[2:])
+		if err != nil || serverFlags.NArg() != 0 {
+			exitWithUsage()
+		}
+		runServer(configFile, localAddr)
 	case "relay":
-		relayFlags.Parse(os.Args[2:])
+		err := relayFlags.Parse(os.Args[2:])
+		if err != nil || relayFlags.NArg() != 0 {
+			exitWithUsage()
+		}
 	case "client":
-		clientFlags.Parse(os.Args[2:])
+		err := clientFlags.Parse(os.Args[2:])
+		if err != nil || clientFlags.NArg() != 0 {
+			exitWithUsage()
+		}
 		log.Print("daemonAddr:", daemonAddr)
 		log.Print("localAddr:", localAddr)
 		log.Print("remoteAddr:", remoteAddr)
 		runClient(daemonAddr, localAddr, remoteAddr)
 	default:
-		fmt.Println("<usage>")
-		os.Exit(1)
+		exitWithUsage()
 	}
 }
