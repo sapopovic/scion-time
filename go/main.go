@@ -52,8 +52,20 @@ func (s ntpTimeSource) fetchTime() (time.Time, time.Time, error) {
 	return time.Time{}, time.Time{}, nil
 }
 
-func runServer(configFile string, localAddr snet.UDPAddr) {
+func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
+	s := &daemon.Service{
+		Address: daemonAddr,
+	}
+	c, err := s.Connect(ctx)
+	if err != nil {
+		log.Fatal("Failed to create SCION Daemon connector:", err)
+	}
+	return c
+}
+
+func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	var err error
+	ctx := context.Background()
 
 	core.RegisterLocalClock(core.NewSysClock())
 
@@ -79,9 +91,27 @@ func runServer(configFile string, localAddr snet.UDPAddr) {
 		log.Print("ntp_time_source: ", s)
 		timeSources = append(timeSources, ntpTimeSource(s))
 	}
+	var peerIAs []addr.IA
+	var peerHosts []*net.UDPAddr
 	for _, s := range cfg.SCIONPeers {
 		log.Print("scion_peer: ", s)
+		addr, err := snet.ParseUDPAddr(s)
+		if err != nil {
+			log.Fatalf("Failed to parse peer address: %v", err)
+		}
+		peerIAs = append(peerIAs, addr.IA)
+		peerHosts = append(peerHosts, addr.Host)
 	}
+
+	pathInfos, err := core.StartPather(newDaemonConnector(ctx, daemonAddr), peerIAs)
+	if err != nil {
+		log.Fatal("Failed to start pather:", err)
+	}
+	go func() {
+		for {
+			<-pathInfos
+		}
+	}()
 
 	localAddr.Host.Port = underlay.EndhostPort
 
@@ -367,6 +397,7 @@ func main() {
 	clientFlags := flag.NewFlagSet("client", flag.ExitOnError)
 
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
+	serverFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	serverFlags.Var(&localAddr, "local", "Local address")
 
 	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -383,7 +414,10 @@ func main() {
 		if err != nil || serverFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-		runServer(configFile, localAddr)
+		log.Print("configFile:", configFile)
+		log.Print("daemonAddr:", daemonAddr)
+		log.Print("localAddr:", localAddr)
+		runServer(configFile, daemonAddr, localAddr)
 	case "relay":
 		err := relayFlags.Parse(os.Args[2:])
 		if err != nil || relayFlags.NArg() != 0 {

@@ -17,7 +17,7 @@ type SyncInfo struct {
 	ClockOffset time.Duration
 }
 
-var handlerLog = log.New(os.Stderr, "[tsp/handler] ", log.LstdFlags)
+var handlerLog = log.New(os.Stderr, "[ts/handler] ", log.LstdFlags)
 
 func StartHandler(s snet.PacketDispatcherService, ctx context.Context,
 	localIA addr.IA, localHost *net.UDPAddr) (<-chan SyncInfo, error) {

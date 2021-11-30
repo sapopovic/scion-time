@@ -18,7 +18,7 @@ type PathInfo struct {
 	LocalTSHosts []*net.UDPAddr
 }
 
-var patherLog = log.New(ioutil.Discard, "[tsp/pather] ", log.LstdFlags)
+var patherLog = log.New(ioutil.Discard, "[ts/pather] ", log.LstdFlags)
 
 func StartPather(c daemon.Connector, ctx context.Context, peersIAs []addr.IA) (<-chan PathInfo, error) {
 	if peersIAs == nil {

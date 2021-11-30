@@ -30,7 +30,7 @@ type propagator struct {
 }
 
 var (
-	propagatorLog = log.New(ioutil.Discard, "[tsp/propagator] ", log.LstdFlags)
+	propagatorLog = log.New(ioutil.Discard, "[ts/propagator] ", log.LstdFlags)
 
 	localHost         net.UDPAddr
 	propagators       chan *propagator
