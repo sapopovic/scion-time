@@ -5,12 +5,10 @@ import (
 	"time"
 )
 
-type stdPLL struct {}
+type StdPLL struct {}
 
-func (l *stdPLL) Do(offset time.Duration, weight float64) {
-	log.Printf("core.stdPLL.Do")
-}
+var _ PLL = (*StdPLL)(nil)
 
-func NewStdPLL() PLL {
-	return &stdPLL{}
+func (l *StdPLL) Do(offset time.Duration, weight float64) {
+	log.Printf("core.StdPLL.Do")
 }

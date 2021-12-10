@@ -5,21 +5,19 @@ import (
 	"time"
 )
 
-type sysClock struct {}
+type SysClock struct {}
 
-func (c *sysClock) Now() time.Time {
-	log.Printf("core.sysClock.Now")
+var _ LocalClock = (*SysClock)(nil)
+
+func (c *SysClock) Now() time.Time {
+	log.Printf("core.SysClock.Now")
 	return time.Time{}
 }
 
-func (c *sysClock) Adjust(offset, duration time.Duration, frequency float64) {
-	log.Printf("core.sysClock.Adjust")
+func (c *SysClock) Adjust(offset, duration time.Duration, frequency float64) {
+	log.Printf("core.SysClock.Adjust")
 }
 
-func (c *sysClock) Sleep(duration time.Duration) {
-	log.Printf("core.sysClock.Sleep")
-}
-
-func NewSysClock() LocalClock {
-	return &sysClock{}
+func (c SysClock) Sleep(duration time.Duration) {
+	log.Printf("core.SysClock.Sleep")
 }

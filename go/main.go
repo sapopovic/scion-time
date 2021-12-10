@@ -67,14 +67,14 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 
-	core.RegisterLocalClock(core.NewSysClock())
+	core.RegisterLocalClock(&core.SysClock{})
 
 	localClock := core.LocalClockInstance()
 	_ = localClock.Now()
 	localClock.Adjust(0, 0, 0.0)
 	localClock.Sleep(0)
 
-	core.RegisterPLL(core.NewStdPLL())
+	core.RegisterPLL(&core.StdPLL{})
 	pll := core.PLLInstance()
 	pll.Do(0, 0.0)
 
@@ -97,7 +97,7 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 		log.Print("scion_peer: ", s)
 		addr, err := snet.ParseUDPAddr(s)
 		if err != nil {
-			log.Fatalf("Failed to parse peer address: %v", err)
+			log.Fatalf("Failed to parse peer address \"%s\": %v", s, err)
 		}
 		peerIAs = append(peerIAs, addr.IA)
 		peerHosts = append(peerHosts, addr.Host)
