@@ -2,16 +2,16 @@ package core
 
 import (
 	"context"
-	"io"
 	"log"
 	"net"
-	"os"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/daemon"
 	"github.com/scionproto/scion/go/lib/snet"
 )
+
+const patherLogPrefix = "[core/pather]"
 
 type PathInfo struct {
 	LocalIA     addr.IA
@@ -20,9 +20,6 @@ type PathInfo struct {
 }
 
 const pathRefreshPeriod = 15 * time.Second
-
-var logWriter, _ = os.Stderr, io.Discard
-var patherLog = log.New(logWriter, "[ts/pather] ", log.LstdFlags)
 
 func StartPather(c daemon.Connector, peerIAs []addr.IA) (<-chan PathInfo, error) {
 	pathInfos := make(chan PathInfo)
@@ -33,11 +30,11 @@ func StartPather(c daemon.Connector, peerIAs []addr.IA) (<-chan PathInfo, error)
 		for {
 			select {
 			case <-ticker.C:
-				patherLog.Printf("Looking up peer paths")
+				log.Printf("%s Looking up peer paths", patherLogPrefix)
 
 				localIA, err := c.LocalIA(ctx)
 				if err != nil {
-					patherLog.Printf("Failed to look up local IA: %v", err)
+					log.Printf("%s Failed to look up local IA: %v", patherLogPrefix, err)
 				}
 
 				peerIAPaths := map[addr.IA][]snet.Path{}
@@ -53,17 +50,17 @@ func StartPather(c daemon.Connector, peerIAs []addr.IA) (<-chan PathInfo, error)
 				for _, peerIA := range peerIAs {
 					ps, err := c.Paths(ctx, peerIA, localIA, daemon.PathReqFlags{Refresh: true})
 					if err != nil {
-						patherLog.Printf("Failed to look up peer paths: %v", err)
+						log.Printf("%s Failed to look up peer paths: %v", patherLogPrefix, err)
 					}
 					for _, p := range ps {
 						peerIAPaths[p.Destination()] = append(peerIAPaths[p.Destination()], p)
 					}
 				}
-				patherLog.Printf("Reachable peer ASes:")
+				log.Printf("%s Reachable peer ASes:", patherLogPrefix)
 				for peerIA := range peerIAPaths {
-					patherLog.Printf("%v", peerIA)
+					log.Printf("%s %v", patherLogPrefix, peerIA)
 					for _, p := range peerIAPaths[peerIA] {
-						patherLog.Printf("\t%v", p)
+						log.Printf("%s \t%v", patherLogPrefix, p)
 					}
 				}
 
@@ -71,19 +68,19 @@ func StartPather(c daemon.Connector, peerIAs []addr.IA) (<-chan PathInfo, error)
 				// TODO: Implement local peer lookup
 				// localSvcInfo, err := c.SVCInfo(ctx, []addr.HostSVC{addr.SvcTS})
 				// if err != nil {
-				// 	patherLog.Printf("Failed to lookup local TS service info: %v", err)
+				// 	log.Printf("%s Failed to lookup local TS service info: %v", patherLogPrefix, err)
 				// }
 				// localSvcAddr, ok := localSvcInfo[addr.SvcTS]
 				// if ok {
 				// 	localSvcUdpAddr, err := net.ResolveUDPAddr("udp", localSvcAddr)
 				// 	if err != nil {
-				// 		patherLog.Printf("Failed to resolve local TS service addr: %v", err)
+				// 		log.Printf("%s Failed to resolve local TS service addr: %v", patherLogPrefix, err)
 				// 	}
 				// 	localPeers = append(localPeers, localSvcUdpAddr)
 				// }
-				patherLog.Printf("Reachable local peers:")
+				log.Printf("%s Reachable local peers:", patherLogPrefix)
 				for _, localPeer := range localPeers {
-					patherLog.Printf("\t%v", localPeer)
+					log.Printf("%s \t%v", patherLogPrefix, localPeer)
 				}
 
 				pathInfos <- PathInfo{

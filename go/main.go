@@ -24,6 +24,10 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
+	_ "example.com/scion-time/go/drivers"
+
+	_ "example.com/scion-time/go/core/prev"
+
 	"example.com/scion-time/go/core"
 )
 
@@ -373,8 +377,8 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	currentRealTime := ntp.CurrentRealTime(serverTxTime, avgNetworkDelay)
 	offset := ntp.CalculateOffset(currentRealTime, time.Now().UTC())
 
-	log.Printf("Stratum: %d, Current time: %s\n", ntpresp.Stratum, currentRealTime)
-	log.Printf("Offset: %fs (%fms), Network delay: %fs (%fms)\n",
+	log.Printf("Stratum: %d, Current time: %s", ntpresp.Stratum, currentRealTime)
+	log.Printf("Offset: %fs (%fms), Network delay: %fs (%fms)",
 		float64(offset)/float64(time.Second.Nanoseconds()),
 		float64(offset)/float64(time.Millisecond.Nanoseconds()),
 		float64(avgNetworkDelay)/float64(time.Second.Nanoseconds()),

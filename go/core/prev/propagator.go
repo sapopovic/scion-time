@@ -1,14 +1,15 @@
-package core
+package prev
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"net"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/snet"
 )
+
+const propagatorLogPrefix = "[core/prev/propagator]"
 
 const (
 	nPropagators       = 16
@@ -30,8 +31,6 @@ type propagator struct {
 }
 
 var (
-	propagatorLog = log.New(ioutil.Discard, "[ts/propagator] ", log.LstdFlags)
-
 	localHost         net.UDPAddr
 	propagators       chan *propagator
 	propagateRequests chan propagateRequest
@@ -53,18 +52,18 @@ func (p *propagator) start() {
 	go func() {
 		for {
 			propagators <- p
-			propagatorLog.Printf("[%d] Awaiting requests\n", p.id)
+			log.Printf("%s [%d] Awaiting requests", propagatorLogPrefix, p.id)
 			select {
 			case r := <-p.propagateRequests:
-				propagatorLog.Printf("[%d] Received request %v: %v, %v\n", p.id, r, r.pkt, r.nextHop)
+				log.Printf("%s [%d] Received request %v: %v, %v", propagatorLogPrefix, p.id, r, r.pkt, r.nextHop)
 				r.pkt.Source = snet.SCIONAddress{IA: p.localIA, Host: p.localHost}
 				udpPayload := r.pkt.Payload.(snet.UDPPayload)
 				udpPayload.SrcPort = p.localPort
 				err := p.packetConn.WriteTo(r.pkt, r.nextHop)
 				if err != nil {
-					propagatorLog.Printf("[%d] Failed to write packet: %v\n", p.id, err)
+					log.Printf("%s [%d] Failed to write packet: %v", propagatorLogPrefix, p.id, err)
 				}
-				propagatorLog.Printf("[%d] Handled request\n", p.id)
+				log.Printf("%s [%d] Handled request", propagatorLogPrefix, p.id)
 			}
 		}
 	}()
@@ -89,10 +88,10 @@ func StartPropagator(s snet.PacketDispatcherService, ctx context.Context,
 		for {
 			select {
 			case r := <-propagateRequests:
-				propagatorLog.Printf("Received request %v\n", r)
+				log.Printf("%s Received request %v", propagatorLogPrefix, r)
 				p := <-propagators
 				p.propagateRequests <- r
-				propagatorLog.Printf("Handled request %v\n", r)
+				log.Printf("%s Handled request %v", propagatorLogPrefix, r)
 			}
 		}
 	}()

@@ -9,11 +9,12 @@ import (
 
 	"encoding/binary"
 	"log"
-	"os"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
+
+const mbgLogPrefix = "[drivers/mbg]"
 
 const (
 	// See https://man7.org/linux/man-pages/man2/ioctl.2.html#NOTES
@@ -37,8 +38,6 @@ const (
 	ioctlDirShift  = ioctlSizeShift + ioctlSizeBits
 )
 
-var mbgLog = log.New(os.Stderr, "[ets/mbg] ", log.LstdFlags)
-
 func ioctlRequest(d, s, t, n int) uint {
 	// See https://man7.org/linux/man-pages/man2/ioctl.2.html#NOTES
 
@@ -60,13 +59,13 @@ func nanoseconds(frac uint32) int64 {
 func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) {
 	fd, err := unix.Open(dev, unix.O_RDWR, 0)
 	if err != nil {
-		mbgLog.Printf("Failed to open %s: %v", dev, err)
+		log.Printf("%s Failed to open %s: %v", mbgLogPrefix, dev, err)
 		return time.Time{}, time.Time{}, err 
 	}
 	defer func() {
 		err = unix.Close(fd)
 		if err != nil {
-			mbgLog.Printf("Failed to close %s: %v", dev, err)
+			log.Printf("%s Failed to close %s: %v", mbgLogPrefix, dev, err)
 		}
 	}()
 
@@ -81,7 +80,7 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 		uintptr(ioctlRequest(ioctlWrite, len(featureData), 'M', 0xa4)),
 		uintptr(unsafe.Pointer(&featureData[0])))
 	if errno != 0 {
-		mbgLog.Printf("Failed to ioctl %s (features) or HR time not supported: %d", dev, errno)
+		log.Printf("%s Failed to ioctl %s (features) or HR time not supported: %d", mbgLogPrefix, dev, errno)
 		return time.Time{}, time.Time{}, errno
 	}
 
@@ -90,7 +89,7 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 		uintptr(ioctlRequest(ioctlRead, len(cycleFrequencyData), 'M', 0x68)),
 		uintptr(unsafe.Pointer(&cycleFrequencyData[0])))
 	if errno != 0 {
-		mbgLog.Printf("Failed to ioctl %s (cycle frequency): %d", dev, errno)
+		log.Printf("%s Failed to ioctl %s (cycle frequency): %d", mbgLogPrefix, dev, errno)
 		return time.Time{}, time.Time{}, errno
 	}
 
@@ -102,7 +101,7 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 		uintptr(ioctlRequest(ioctlRead, len(timeData), 'M', 0x80)),
 		uintptr(unsafe.Pointer(&timeData[0])))
 	if errno != 0 {
-		mbgLog.Printf("Failed to ioctl %s (time): %d", dev, errno)
+		log.Printf("%s Failed to ioctl %s (time): %d", mbgLogPrefix, dev, errno)
 		return time.Time{}, time.Time{}, errno
 	}
 
@@ -120,11 +119,11 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 	refTime = time.Unix(refTimeSeconds, nanoseconds(refTimeFractions)).UTC()
 	sysTime = time.Unix(sysTimeSeconds, sysTimeNanoseconds).UTC()
 
-	mbgLog.Printf("RefTime: %v, UTC offset: %v, status: %v, signal: %v",
-		refTime, refTimeUTCOffset, refTimeStatus, refTimeSignal)
-	mbgLog.Printf("SysTime: %v, at: %v, latency: %v, frequency: %v",
-		sysTime, sysTimeCyclesBefore, refTimeCycles-sysTimeCyclesAfter, cycleFrequency)
-	mbgLog.Printf("Offset: %v\n", refTime.Sub(sysTime))
+	log.Printf("%s RefTime: %v, UTC offset: %v, status: %v, signal: %v",
+		mbgLogPrefix, refTime, refTimeUTCOffset, refTimeStatus, refTimeSignal)
+	log.Printf("%s SysTime: %v, at: %v, latency: %v, frequency: %v",
+		mbgLogPrefix, sysTime, sysTimeCyclesBefore, refTimeCycles-sysTimeCyclesAfter, cycleFrequency)
+	log.Printf("%s Offset: %v\n", mbgLogPrefix, refTime.Sub(sysTime))
 
 	return refTime, sysTime, nil
 }

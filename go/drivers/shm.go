@@ -8,15 +8,14 @@ import (
 
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
 
-var (
-	shmLog = log.New(os.Stderr, "[etd/shm] ", log.LstdFlags)
+const shmLogPrefix = "[drivers/shm]"
 
+var (
 	shmInitialized bool
 
 	shmTimeMode                 *int32
@@ -42,12 +41,12 @@ func initSHM() error {
 		if int(id) != -1 {
 			panic(fmt.Errorf("Syscall shmget returned invalid value: %v", id))
 		}
-		shmLog.Printf("Syscall shmget failed: %d", errno)
+		log.Printf("%s Syscall shmget failed: %d", shmLogPrefix, errno)
 		return errno
 	}
 	addr, _, errno := unix.Syscall(unix.SYS_SHMAT, id, uintptr(0), uintptr(0))
 	if int(addr) == -1 {
-		shmLog.Printf("Syscall shmat failed: %d", errno)
+		log.Printf("%s Syscall shmat failed: %d", shmLogPrefix, errno)
 		return errno
 	}
 

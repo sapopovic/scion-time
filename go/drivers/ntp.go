@@ -1,18 +1,17 @@
 package drivers
 
 import (
-	"io/ioutil"
 	"log"
 	"time"
 
 	"github.com/beevik/ntp"
 )
 
-var ntpLog = log.New(ioutil.Discard, "[ets/ntp] ", log.LstdFlags)
+const ntpLogPrefix = "[drivers/ntp]"
 
 func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error) {
-	ntpLog.Printf("[%s] ----------------------", host)
-	ntpLog.Printf("[%s] NTP protocol version %d", host, 4)
+	log.Printf("%s [%s] ----------------------", ntpLogPrefix, host)
+	log.Printf("%s [%s] NTP protocol version %d", ntpLogPrefix, host, 4)
 
 	r, err := ntp.QueryWithOptions(host, ntp.QueryOptions{Timeout: 3 * time.Second})
 	if err != nil {
@@ -25,21 +24,21 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 
 	now := time.Now()
 
-	ntpLog.Printf("[%s]  LocalTime: %v\n", host, now)
-	ntpLog.Printf("[%s]   XmitTime: %v\n", host, r.Time)
-	ntpLog.Printf("[%s]    RefTime: %v\n", host, r.ReferenceTime)
-	ntpLog.Printf("[%s]        RTT: %v\n", host, r.RTT)
-	ntpLog.Printf("[%s]     Offset: %v\n", host, r.ClockOffset)
-	ntpLog.Printf("[%s]       Poll: %v\n", host, r.Poll)
-	ntpLog.Printf("[%s]  Precision: %v\n", host, r.Precision)
-	ntpLog.Printf("[%s]    Stratum: %v\n", host, r.Stratum)
-	ntpLog.Printf("[%s]      RefID: 0x%08x\n", host, r.ReferenceID)
-	ntpLog.Printf("[%s]  RootDelay: %v\n", host, r.RootDelay)
-	ntpLog.Printf("[%s]   RootDisp: %v\n", host, r.RootDispersion)
-	ntpLog.Printf("[%s]   RootDist: %v\n", host, r.RootDistance)
-	ntpLog.Printf("[%s]   MinError: %v\n", host, r.MinError)
-	ntpLog.Printf("[%s]       Leap: %v\n", host, r.Leap)
-	ntpLog.Printf("[%s]   KissCode: \"%v\"\n", host, r.KissCode)
+	log.Printf("%s [%s]  LocalTime: %v", ntpLogPrefix, host, now)
+	log.Printf("%s [%s]   XmitTime: %v", ntpLogPrefix, host, r.Time)
+	log.Printf("%s [%s]    RefTime: %v", ntpLogPrefix, host, r.ReferenceTime)
+	log.Printf("%s [%s]        RTT: %v", ntpLogPrefix, host, r.RTT)
+	log.Printf("%s [%s]     Offset: %v", ntpLogPrefix, host, r.ClockOffset)
+	log.Printf("%s [%s]       Poll: %v", ntpLogPrefix, host, r.Poll)
+	log.Printf("%s [%s]  Precision: %v", ntpLogPrefix, host, r.Precision)
+	log.Printf("%s [%s]    Stratum: %v", ntpLogPrefix, host, r.Stratum)
+	log.Printf("%s [%s]      RefID: 0x%08x", ntpLogPrefix, host, r.ReferenceID)
+	log.Printf("%s [%s]  RootDelay: %v", ntpLogPrefix, host, r.RootDelay)
+	log.Printf("%s [%s]   RootDisp: %v", ntpLogPrefix, host, r.RootDispersion)
+	log.Printf("%s [%s]   RootDist: %v", ntpLogPrefix, host, r.RootDistance)
+	log.Printf("%s [%s]   MinError: %v", ntpLogPrefix, host, r.MinError)
+	log.Printf("%s [%s]       Leap: %v", ntpLogPrefix, host, r.Leap)
+	log.Printf("%s [%s]   KissCode: \"%v\"", ntpLogPrefix, host, r.KissCode)
 
 	return r.ReferenceTime, now, nil
 }

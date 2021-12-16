@@ -112,7 +112,7 @@ func medianTimeInfo(tis []timeInfo) timeInfo {
 			b := make([]byte, 1)
 			_, err  := crand.Read(b)
 			if err != nil {
-				log.Printf("Failed to read random number: %v\n", err)
+				log.Printf("Failed to read random number: %v", err)
 			}
 			if b[0] > 127 {
 				m = tis[i]
@@ -148,7 +148,7 @@ func fetchTime() <-chan timeInfo {
 			go func(s timeSource) {
 				refTime, sysTime, err := s.fetchTime()
 				if err != nil {
-					log.Printf("Failed to fetch clock offset from %v: %v\n", s, err)
+					log.Printf("Failed to fetch clock offset from %v: %v", s, err)
 					ch <- timeInfo{}
 					return
 				}
@@ -162,7 +162,7 @@ func fetchTime() <-chan timeInfo {
 			}
 		}
 		m := medianTimeInfo(tis)
-		log.Printf("Fetched local time info: refTime: %v, sysTime: %v\n", m.refTime, m.sysTime)
+		log.Printf("Fetched local time info: refTime: %v, sysTime: %v", m.refTime, m.sysTime)
 		ti <- m
 	}()
 	return ti
@@ -295,9 +295,9 @@ func main() {
 	for {
 		select {
 		case pathInfo = <-pathInfos:
-			log.Printf("Received new path info.\n")
+			log.Printf("Received new path info.")
 		case syncInfo := <-syncInfos:
-			log.Printf("Received new sync info: %v\n", syncInfo)
+			log.Printf("Received new sync info: %v", syncInfo)
 			se := syncEntryForIA(syncEntries, syncInfo.Source.IA)
 			if se == nil {
 				syncEntries = append(syncEntries, syncEntry{
@@ -313,10 +313,10 @@ func main() {
 			}
 		case now := <-syncTimer.C:
 			now = now.UTC()
-			log.Printf("Received new timer signal: %v\n", now)
+			log.Printf("Received new timer signal: %v", now)
 			switch flag {
 			case flagStartRound:
-				log.Printf("START ROUND\n")
+				log.Printf("START ROUND")
 
 				syncEntries = nil
 				localTimeInfo.i = timeInfo{}
@@ -325,7 +325,7 @@ func main() {
 				flag = flagBroadcast
 				scheduleBroadcast(syncTimer, syncTime)
 			case flagBroadcast:
-				log.Printf("BROADCAST\n")
+				log.Printf("BROADCAST\")
 
 				if len(localTimeInfo.c) == 0 {
 					scheduleNextRound(syncTimer, &syncTime)
@@ -382,7 +382,7 @@ func main() {
 					scheduleUpdate(syncTimer, syncTime)
 				}
 			case flagUpdate:
-				log.Printf("UPDATE\n")
+				log.Printf("UPDATE")
 
 				var clockOffsets []time.Duration
 				for _, se := range syncEntries {
@@ -393,9 +393,9 @@ func main() {
 						d = localTimeInfo.i.clockOffset()
 					}
 					clockOffsets = append(clockOffsets, d)
-					log.Printf("\t%v:\n", se.ia)
+					log.Printf("\t%v:", se.ia)
 					for _, si := range se.syncInfos {
-						log.Printf("\t\t%v\n", si)
+						log.Printf("\t\t%v", si)
 					}
 				}
 
@@ -409,7 +409,7 @@ func main() {
 				}
 				gref := lref.Add(loff - goff)
 
-				log.Printf("refTime: %v, sysTime: %v\n", gref , localTimeInfo.i.sysTime)
+				log.Printf("refTime: %v, sysTime: %v", gref , localTimeInfo.i.sysTime)
 
 				drivers.StoreSHMClockSample(gref, localTimeInfo.i.sysTime)
 

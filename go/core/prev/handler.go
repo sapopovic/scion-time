@@ -1,10 +1,9 @@
-package core
+package prev
 
 import (
 	"context"
 	"log"
 	"net"
-	"os"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
@@ -12,22 +11,22 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
+const handlerLogPrefix = "[core/prev/handler]"
+
 type SyncInfo struct {
 	Source      snet.SCIONAddress
 	ClockOffset time.Duration
 }
 
-var handlerLog = log.New(os.Stderr, "[ts/handler] ", log.LstdFlags)
-
 func StartHandler(s snet.PacketDispatcherService, ctx context.Context,
 	localIA addr.IA, localHost *net.UDPAddr) (<-chan SyncInfo, error) {
-	conn, localPort, err := s.Register(ctx, localIA, localHost, addr.SvcTS)
+	conn, localPort, err := s.Register(ctx, localIA, localHost, addr.SvcNone /* addr.SvcTS */)
 	if err != nil {
 		return nil, err
 	}
 
-	handlerLog.Printf("Listening in %v on %v:%d - %v\n",
-		localIA, localHost.IP, localPort, addr.SvcTS)
+	log.Printf("%s Listening in %v on %v:%d - %v",
+		handlerLogPrefix, localIA, localHost.IP, localPort, addr.SvcNone /* addr.SvcTS */)
 
 	syncInfos := make(chan SyncInfo)
 
@@ -37,18 +36,18 @@ func StartHandler(s snet.PacketDispatcherService, ctx context.Context,
 			var lastHop net.UDPAddr
 			err := conn.ReadFrom(&packet, &lastHop)
 			if err != nil {
-				handlerLog.Printf("Failed to read packet: %v\n", err)
+				log.Printf("%s Failed to read packet: %v", handlerLogPrefix, err)
 				continue
 			}
 			payload, ok := packet.Payload.(snet.UDPPayload)
 			if !ok {
-				handlerLog.Printf("Failed to read packet payload: %v\n", common.TypeOf(packet.Payload))
+				log.Printf("%s Failed to read packet payload: %v", handlerLogPrefix, common.TypeOf(packet.Payload))
 				continue
 			}
 
 			clockOffset, err := time.ParseDuration(string(payload.Payload))
 			if err != nil {
-				handlerLog.Printf("Failed to decode packet: %v\n", err)
+				log.Printf("%s Failed to decode packet: %v", handlerLogPrefix, err)
 				continue
 			}
 
