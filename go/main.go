@@ -16,7 +16,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/facebookincubator/ntp/protocol/ntp"
+	"github.com/facebook/time/ntp/protocol/ntp"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/config"
@@ -24,7 +24,7 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
-	_ "example.com/scion-time/go/drivers"
+	"example.com/scion-time/go/drivers"
 
 	_ "example.com/scion-time/go/core/prev"
 
@@ -52,8 +52,7 @@ func (s mbgTimeSource) fetchTime() (time.Time, time.Time, error) {
 }
 
 func (s ntpTimeSource) fetchTime() (time.Time, time.Time, error) {
-	// TODO: return drivers.FetchNTPTime(string(s))
-	return time.Time{}, time.Time{}, nil
+	return drivers.FetchNTPTime(string(s))
 }
 
 func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
@@ -95,6 +94,15 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 		log.Print("ntp_time_source: ", s)
 		timeSources = append(timeSources, ntpTimeSource(s))
 	}
+
+	for _, s := range timeSources {
+		refTime, sysTime, err := s.fetchTime()
+		if err != nil {
+			log.Fatalf("Failed to fetch clock offset from %v: %v", s, err)
+		}
+		log.Printf("Clock offset to %v: refTime = %v, sysTime = %v", s, refTime, sysTime)
+	}
+
 	var peerIAs []addr.IA
 	var peerHosts []*net.UDPAddr
 	for _, s := range cfg.SCIONPeers {
