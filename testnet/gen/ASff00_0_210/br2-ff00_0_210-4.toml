@@ -1,0 +1,11 @@
+[general]
+id = "br2-ff00_0_210-4"
+config_dir = "gen/ASff00_0_210"
+
+[metrics]
+prometheus = "10.10.0.196:30442"
+
+[features]
+
+[log.console]
+level = "debug"

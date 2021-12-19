@@ -6,50 +6,67 @@
     "voting"
   ],
   "isd_as": "1-ff00:0:110",
-  "mtu": 1280,
+  "mtu": 1472,
   "control_service": {
     "cs1-ff00_0_110-1": {
-      "addr": "127.0.0.11:31000"
+      "addr": "10.10.0.69:31000"
     }
   },
   "discovery_service": {
     "cs1-ff00_0_110-1": {
-      "addr": "127.0.0.11:31000"
+      "addr": "10.10.0.69:31000"
     }
   },
   "border_routers": {
     "br1-ff00_0_110-1": {
-      "ctrl_addr": "127.0.0.9:31002",
-      "internal_addr": "127.0.0.9:31004",
+      "internal_addr": "10.10.0.65:31004",
       "interfaces": {
         "1": {
           "underlay": {
-            "public": "127.0.0.4:50000",
-            "remote": "127.0.0.5:50000"
+            "public": "10.10.0.0:50000",
+            "remote": "10.10.0.1:50000"
           },
-          "bandwidth": 1000,
-          "isd_as": "1-ff00:0:111",
-          "link_to": "CHILD",
-          "mtu": 1280
+          "bandwidth": 10000,
+          "isd_as": "1-ff00:0:120",
+          "link_to": "CORE",
+          "mtu": 1472
         }
       }
     },
     "br1-ff00_0_110-2": {
-      "ctrl_addr": "127.0.0.10:31006",
-      "internal_addr": "127.0.0.10:31008",
+      "internal_addr": "10.10.0.66:31006",
       "interfaces": {
         "2": {
           "underlay": {
-            "public": "127.0.0.6:50000",
-            "remote": "127.0.0.7:50000"
+            "public": "10.10.0.2:50000",
+            "remote": "10.10.0.3:50000"
           },
-          "bandwidth": 500,
-          "isd_as": "1-ff00:0:112",
-          "link_to": "CHILD",
-          "mtu": 1280
+          "bandwidth": 10000,
+          "isd_as": "1-ff00:0:130",
+          "link_to": "CORE",
+          "mtu": 1472
+        }
+      }
+    },
+    "br1-ff00_0_110-3": {
+      "internal_addr": "10.10.0.67:31008",
+      "interfaces": {
+        "3": {
+          "underlay": {
+            "public": "10.10.0.4:50000",
+            "remote": "10.10.0.5:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "2-ff00:0:210",
+          "link_to": "CORE",
+          "mtu": 1472
         }
       }
     }
   },
-  "colibri_service": {}
+  "colibri_service": {
+    "co1-ff00_0_110-1": {
+      "addr": "10.10.0.68:31002"
+    }
+  }
 }

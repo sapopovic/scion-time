@@ -6,53 +6,101 @@ cd ~/scion
 rm -rf gen*
 export PYTHONPATH=python/:.
 printf '#!/bin/bash\necho "0.0.0.0"' > tools/docker-ip
-python3 python/topology/generator.py -c ~/scion-time/testnet/tiny4.topo
-rm gen/jaeger-dc.yml
-mkdir gen-cache
+python3 python/topology/generator.py -c ~/scion-time/testnet/default4.topo
 
 cd ~/scion-time/testnet/
-rm -rf gen/ASff00_0_110/certs
-rm -rf gen/ASff00_0_110/crypto
-rm -rf gen/ASff00_0_110/keys
-rm -rf gen/ASff00_0_111/certs
-rm -rf gen/ASff00_0_111/crypto
-rm -rf gen/ASff00_0_111/keys
-rm -rf gen/ASff00_0_112/certs
-rm -rf gen/ASff00_0_112/crypto
-rm -rf gen/ASff00_0_112/keys
-rm -rf gen/ISD1/trcs
-rm -rf gen/certs
-rm -rf gen/trcs
-rm -rf gen-eh/ASff00_0_111/certs
-rm -rf gen-eh/ASff00_0_111/crypto
-rm -rf gen-eh/ASff00_0_111/keys
-rm -rf gen-eh/ASff00_0_112/certs
-rm -rf gen-eh/ASff00_0_112/crypto
-rm -rf gen-eh/ASff00_0_112/keys
 
-cp -r ~/scion/gen/ASff00_0_110/certs ~/scion-time/testnet/gen/ASff00_0_110/
-cp -r ~/scion/gen/ASff00_0_110/crypto ~/scion-time/testnet/gen/ASff00_0_110/
-cp -r ~/scion/gen/ASff00_0_110/keys ~/scion-time/testnet/gen/ASff00_0_110/
+gen_delete_crypto () {
+	rm -rf gen/certs
+	rm -rf gen/trcs
+}
 
-cp -r ~/scion/gen/ASff00_0_111/certs ~/scion-time/testnet/gen/ASff00_0_111/
-cp -r ~/scion/gen/ASff00_0_111/crypto ~/scion-time/testnet/gen/ASff00_0_111/
-cp -r ~/scion/gen/ASff00_0_111/keys ~/scion-time/testnet/gen/ASff00_0_111/
+gen_copy_crypto () {
+	cp -r ~/scion/gen/certs gen/
+	cp -r ~/scion/gen/trcs gen/
+}
 
-cp -r ~/scion/gen/ASff00_0_112/certs ~/scion-time/testnet/gen/ASff00_0_112/
-cp -r ~/scion/gen/ASff00_0_112/crypto ~/scion-time/testnet/gen/ASff00_0_112/
-cp -r ~/scion/gen/ASff00_0_112/keys ~/scion-time/testnet/gen/ASff00_0_112/
+isd_delete_crypto () {
+	rm -rf gen/$1/trcs
+}
 
-cp -r ~/scion/gen/ISD1/trcs ~/scion-time/testnet/gen/ISD1/
-cp -r ~/scion/gen/certs ~/scion-time/testnet/gen/
-cp -r ~/scion/gen/trcs ~/scion-time/testnet/gen/
+isd_copy_crypto () {
+	cp -r ~/scion/gen/$1/trcs gen/$1/
+}
 
-cp -r ~/scion/gen/ASff00_0_111/certs ~/scion-time/testnet/gen-eh/ASff00_0_111/
-cp -r ~/scion/gen/ASff00_0_111/crypto ~/scion-time/testnet/gen-eh/ASff00_0_111/
-cp -r ~/scion/gen/ASff00_0_111/keys ~/scion-time/testnet/gen-eh/ASff00_0_111/
+as_delete_crypto () {
+	rm -rf gen/$1/certs
+	rm -rf gen/$1/crypto
+	rm -rf gen/$1/keys
+}
 
-cp -r ~/scion/gen/ASff00_0_112/certs ~/scion-time/testnet/gen-eh/ASff00_0_112/
-cp -r ~/scion/gen/ASff00_0_112/crypto ~/scion-time/testnet/gen-eh/ASff00_0_112/
-cp -r ~/scion/gen/ASff00_0_112/keys ~/scion-time/testnet/gen-eh/ASff00_0_112/
+as_copy_crypto () {
+	cp -r ~/scion/gen/$1/certs gen/$1/
+	cp -r ~/scion/gen/$1/crypto gen/$1/
+	cp -r ~/scion/gen/$1/keys gen/$1/
+}
+
+eh_delete_crypto () {
+	rm -rf gen-eh/$1/certs
+	rm -rf gen-eh/$1/crypto
+	rm -rf gen-eh/$1/keys
+}
+
+eh_copy_crypto () {
+	cp -r ~/scion/gen/$1/certs gen-eh/$1/
+	cp -r ~/scion/gen/$1/crypto gen-eh/$1/
+	cp -r ~/scion/gen/$1/keys gen-eh/$1/
+}
+
+eh_delete_crypto ASff00_0_111
+eh_delete_crypto ASff00_0_112
+
+as_delete_crypto ASff00_0_110
+as_delete_crypto ASff00_0_111
+as_delete_crypto ASff00_0_112
+as_delete_crypto ASff00_0_120
+as_delete_crypto ASff00_0_121
+as_delete_crypto ASff00_0_122
+as_delete_crypto ASff00_0_130
+as_delete_crypto ASff00_0_131
+as_delete_crypto ASff00_0_132
+as_delete_crypto ASff00_0_133
+as_delete_crypto ASff00_0_210
+as_delete_crypto ASff00_0_211
+as_delete_crypto ASff00_0_212
+as_delete_crypto ASff00_0_220
+as_delete_crypto ASff00_0_221
+as_delete_crypto ASff00_0_222
+
+isd_delete_crypto ISD1
+isd_delete_crypto ISD2
+
+gen_delete_crypto
+
+eh_copy_crypto ASff00_0_111
+eh_copy_crypto ASff00_0_112
+
+as_copy_crypto ASff00_0_110
+as_copy_crypto ASff00_0_111
+as_copy_crypto ASff00_0_112
+as_copy_crypto ASff00_0_120
+as_copy_crypto ASff00_0_121
+as_copy_crypto ASff00_0_122
+as_copy_crypto ASff00_0_130
+as_copy_crypto ASff00_0_131
+as_copy_crypto ASff00_0_132
+as_copy_crypto ASff00_0_133
+as_copy_crypto ASff00_0_210
+as_copy_crypto ASff00_0_211
+as_copy_crypto ASff00_0_212
+as_copy_crypto ASff00_0_220
+as_copy_crypto ASff00_0_221
+as_copy_crypto ASff00_0_222
+
+isd_copy_crypto ISD1
+isd_copy_crypto ISD2
+
+gen_copy_crypto
 
 rm -rf gen-cache
 mkdir gen-cache

@@ -1,0 +1,87 @@
+{
+  "attributes": [
+    "authoritative",
+    "core",
+    "issuing",
+    "voting"
+  ],
+  "isd_as": "2-ff00:0:220",
+  "mtu": 1472,
+  "control_service": {
+    "cs2-ff00_0_220-1": {
+      "addr": "10.10.0.230:31104"
+    }
+  },
+  "discovery_service": {
+    "cs2-ff00_0_220-1": {
+      "addr": "10.10.0.230:31104"
+    }
+  },
+  "border_routers": {
+    "br2-ff00_0_220-1": {
+      "internal_addr": "10.10.0.225:31108",
+      "interfaces": {
+        "501": {
+          "underlay": {
+            "public": "10.10.0.25:50000",
+            "remote": "10.10.0.24:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "1-ff00:0:120",
+          "link_to": "CORE",
+          "mtu": 1350
+        }
+      }
+    },
+    "br2-ff00_0_220-2": {
+      "internal_addr": "10.10.0.226:31110",
+      "interfaces": {
+        "502": {
+          "underlay": {
+            "public": "10.10.0.27:50000",
+            "remote": "10.10.0.26:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "1-ff00:0:120",
+          "link_to": "CORE",
+          "mtu": 1400
+        }
+      }
+    },
+    "br2-ff00_0_220-3": {
+      "internal_addr": "10.10.0.227:31112",
+      "interfaces": {
+        "503": {
+          "underlay": {
+            "public": "10.10.0.41:50000",
+            "remote": "10.10.0.40:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "2-ff00:0:210",
+          "link_to": "CORE",
+          "mtu": 1472
+        }
+      }
+    },
+    "br2-ff00_0_220-4": {
+      "internal_addr": "10.10.0.228:31114",
+      "interfaces": {
+        "500": {
+          "underlay": {
+            "public": "10.10.0.54:50000",
+            "remote": "10.10.0.55:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "2-ff00:0:221",
+          "link_to": "CHILD",
+          "mtu": 1472
+        }
+      }
+    }
+  },
+  "colibri_service": {
+    "co2-ff00_0_220-1": {
+      "addr": "10.10.0.229:31106"
+    }
+  }
+}

@@ -1,34 +1,97 @@
 {
   "attributes": [],
   "isd_as": "1-ff00:0:111",
-  "mtu": 1280,
+  "mtu": 1472,
   "control_service": {
     "cs1-ff00_0_111-1": {
-      "addr": "10.248.1.1:31010"
+      "addr": "10.10.0.85:31028"
     }
   },
   "discovery_service": {
     "cs1-ff00_0_111-1": {
-      "addr": "10.248.1.1:31010"
+      "addr": "10.10.0.85:31028"
     }
   },
   "border_routers": {
     "br1-ff00_0_111-1": {
-      "ctrl_addr": "10.248.1.1:31012",
-      "internal_addr": "10.248.1.1:31014",
+      "internal_addr": "10.10.0.81:31032",
       "interfaces": {
-        "1": {
+        "104": {
           "underlay": {
-            "public": "127.0.0.5:50000",
-            "remote": "127.0.0.4:50000"
+            "public": "10.10.0.6:50000",
+            "remote": "10.10.0.7:50000"
           },
-          "bandwidth": 1000,
-          "isd_as": "1-ff00:0:110",
+          "bandwidth": 10000,
+          "isd_as": "1-ff00:0:120",
           "link_to": "PARENT",
-          "mtu": 1280
+          "mtu": 1472
+        },
+        "101": {
+          "underlay": {
+            "public": "10.10.0.8:50000",
+            "remote": "10.10.0.9:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "2-ff00:0:211",
+          "link_to": "PEER",
+          "mtu": 1472
+        }
+      }
+    },
+    "br1-ff00_0_111-2": {
+      "internal_addr": "10.10.0.82:31034",
+      "interfaces": {
+        "105": {
+          "underlay": {
+            "public": "10.10.0.12:50000",
+            "remote": "10.10.0.13:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "1-ff00:0:130",
+          "link_to": "PARENT",
+          "mtu": 1472
+        },
+        "103": {
+          "underlay": {
+            "public": "10.10.0.10:50000",
+            "remote": "10.10.0.11:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "1-ff00:0:112",
+          "link_to": "CHILD",
+          "mtu": 1472
+        }
+      }
+    },
+    "br1-ff00_0_111-3": {
+      "internal_addr": "10.10.0.83:31036",
+      "interfaces": {
+        "100": {
+          "underlay": {
+            "public": "10.10.0.14:50000",
+            "remote": "10.10.0.15:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "1-ff00:0:121",
+          "link_to": "PEER",
+          "mtu": 1472
+        },
+        "102": {
+          "underlay": {
+            "public": "10.10.0.16:50000",
+            "remote": "10.10.0.17:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "2-ff00:0:211",
+          "link_to": "PEER",
+          "mtu": 1472
         }
       }
     }
   },
-  "colibri_service": {}
+  "colibri_service": {
+    "co1-ff00_0_111-1": {
+      "addr": "10.10.0.84:31030"
+    }
+  }
 }

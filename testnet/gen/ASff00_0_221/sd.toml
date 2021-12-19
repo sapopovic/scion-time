@@ -1,0 +1,26 @@
+[general]
+id = "sd2-ff00_0_221"
+config_dir = "gen/ASff00_0_221"
+reconnect_to_dispatcher = true
+
+[trust_db]
+connection = "gen-cache/sd2-ff00_0_221.trust.db"
+
+[path_db]
+connection = "gen-cache/sd2-ff00_0_221.path.db"
+
+[sd]
+address = "10.10.0.246:30255"
+
+[tracing]
+enabled = true
+debug = true
+agent = "0.0.0.0:6831"
+
+[metrics]
+prometheus = "10.10.0.246:30455"
+
+[features]
+
+[log.console]
+level = "debug"

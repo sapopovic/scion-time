@@ -1,0 +1,52 @@
+{
+  "attributes": [],
+  "isd_as": "2-ff00:0:222",
+  "mtu": 1472,
+  "control_service": {
+    "cs2-ff00_0_222-1": {
+      "addr": "10.10.0.220:31140"
+    }
+  },
+  "discovery_service": {
+    "cs2-ff00_0_222-1": {
+      "addr": "10.10.0.220:31140"
+    }
+  },
+  "border_routers": {
+    "br2-ff00_0_222-1": {
+      "internal_addr": "10.10.0.217:31144",
+      "interfaces": {
+        "301": {
+          "underlay": {
+            "public": "10.10.0.53:50000",
+            "remote": "10.10.0.52:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "2-ff00:0:211",
+          "link_to": "PARENT",
+          "mtu": 1472
+        }
+      }
+    },
+    "br2-ff00_0_222-2": {
+      "internal_addr": "10.10.0.218:31146",
+      "interfaces": {
+        "302": {
+          "underlay": {
+            "public": "10.10.0.57:50000",
+            "remote": "10.10.0.56:50000"
+          },
+          "bandwidth": 10000,
+          "isd_as": "2-ff00:0:221",
+          "link_to": "PARENT",
+          "mtu": 1472
+        }
+      }
+    }
+  },
+  "colibri_service": {
+    "co2-ff00_0_222-1": {
+      "addr": "10.10.0.219:31142"
+    }
+  }
+}
