@@ -3,7 +3,7 @@ id = "br2-ff00_0_210-3"
 config_dir = "gen/ASff00_0_210"
 
 [metrics]
-prometheus = "10.10.0.195:30442"
+prometheus = "10.0.0.195:30442"
 
 [features]
 
