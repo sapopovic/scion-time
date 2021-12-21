@@ -24,9 +24,9 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
-	"example.com/scion-time/go/drivers"
-
 	_ "example.com/scion-time/go/core/prev"
+
+	"example.com/scion-time/go/driver"
 
 	"example.com/scion-time/go/core"
 )
@@ -125,120 +125,17 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 		}
 	}()
 
-	localAddr.Host.Port = underlay.EndhostPort
-
-	log.Printf("Listening in %v on %v:%d", localAddr.IA, localAddr.Host.IP, localAddr.Host.Port)
-
-	conn, err := net.ListenUDP("udp", localAddr.Host)
+	err = core.StartIPServer(localAddr.IA, snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
-		log.Fatalf("Failed to listen for packets: %v", err)
+		log.Fatalf("Failed to start IP server: %v", err)
 	}
-	defer conn.Close()
 
-	err = ntp.EnableKernelTimestampsSocket(conn);
+	err = core.StartSCIONServer(localAddr.IA, snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
-		log.Fatalf("Failed to enable kernel timestamping for packets: %v", err)
+		log.Fatalf("Failed to start SCION server: %v", err)
 	}
 
-	for {
-		var pkt snet.Packet
-		pkt.Prepare()
-
-		oob := make([]byte, ntp.ControlHeaderSizeBytes)
-
-		n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
-		if err != nil {
-			log.Printf("Failed to read packet: %v", err)
-			continue
-		}
-
-		var rxt time.Time
-		if oobn != 0 {
-			ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-			rxt = time.Unix(ts.Unix())
-		} else {
-			log.Printf("Failed to receive kernel timestamp")
-			rxt = time.Now().UTC()
-		}
-
-		pkt.Bytes = pkt.Bytes[:n]
-		err = pkt.Decode()
-		if err != nil {
-			log.Printf("Failed to decode packet: %v", err)
-			continue
-		}
-
-		pld, ok := pkt.Payload.(snet.UDPPayload)
-		if !ok {
-			log.Printf("Failed to read packet payload")
-			continue
-		}
-
-		log.Printf("Received payload at %v via %v with flags = %v: \"%v\":", rxt, lastHop, flags)
-		fmt.Printf("%s", hex.Dump(pld.Payload))
-
-		ntpreq, err := ntp.BytesToPacket(pld.Payload)
-		if err != nil {
-			log.Printf("Failed to decode packet payload: %v", err)
-			continue
-		}
-
-		if !ntpreq.ValidSettingsFormat() {
-			log.Printf("Received invalid NTP packet:")
-			fmt.Printf("%s", hex.Dump(pld.Payload))
-			continue
-		}
-
-		log.Printf("Received NTP packet: %+v", ntpreq)
-
-		now := time.Now().UTC()
-
-		ntpresp := &ntp.Packet{
-			Stratum: 1,
-			Precision: -32,
-			RootDelay: 0,
-			RootDispersion: 10,
-			ReferenceID: binary.BigEndian.Uint32([]byte(fmt.Sprintf("%-4s", "STS0"))),
-		}
-
-		ntpresp.Settings = ntpreq.Settings & 0x38
-		ntpresp.Poll = ntpreq.Poll
-
-		refTime := time.Unix(now.Unix()/1000*1000, 0)
-		ntpresp.RefTimeSec, ntpresp.RefTimeFrac = ntp.Time(refTime)
-		ntpresp.OrigTimeSec, ntpresp.OrigTimeFrac = ntpreq.TxTimeSec,ntpreq.TxTimeFrac
-		ntpresp.RxTimeSec, ntpresp.RxTimeFrac = ntp.Time(rxt)
-		ntpresp.TxTimeSec, ntpresp.TxTimeFrac = ntp.Time(now)
-
-		resppld, err := ntpresp.Bytes()
-		if err != nil {
-			log.Printf("Failed to encode %+v: %v", ntpresp, err)
-			continue
-		}
-
-		pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
-		pkt.Payload = snet.UDPPayload{
-			DstPort: pld.SrcPort,
-			SrcPort: pld.DstPort,
-			Payload: resppld,
-		}
-		if err := pkt.Path.Reverse(); err != nil {
-			log.Printf("Failed to reverse path: %v", err)
-			continue
-		}
-
-		err = pkt.Serialize()
-		if err != nil {
-			log.Printf("Failed to serialize packet: %v", err)
-			continue
-		}
-
-		_, err = conn.WriteTo(pkt.Bytes, lastHop);
-		if err != nil {
-			log.Printf("Failed to write packet: %v", err)
-			continue
-		}
-	}
+	select {}
 }
 
 func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
@@ -279,7 +176,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		TxTimeSec:  sec,
 		TxTimeFrac: frac,
 	}
-	err = binary.Write(buf, binary.BigEndian, request);
+	err = binary.Write(buf, binary.BigEndian, request)
 	if err != nil {
 		log.Fatalf("Failed to send NTP packet, %v", err)
 	}
@@ -325,7 +222,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 	defer conn.Close()
 
-	err = ntp.EnableKernelTimestampsSocket(conn);
+	err = ntp.EnableKernelTimestampsSocket(conn)
 	if err != nil {
 		log.Fatalf("Failed to enable kernel timestamping for packets: %v", err)
 	}
