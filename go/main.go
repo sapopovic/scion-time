@@ -16,7 +16,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/facebook/time/ntp/protocol/ntp"
+	fbntp "github.com/facebook/time/ntp/protocol/ntp"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/config"
@@ -27,6 +27,7 @@ import (
 	_ "example.com/scion-time/go/core/prev"
 
 	"example.com/scion-time/go/driver"
+	"example.com/scion-time/go/protocol/ntp"
 
 	"example.com/scion-time/go/core"
 )
@@ -170,8 +171,8 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 
 	buf := new(bytes.Buffer)
 	clientTxTime := time.Now().UTC()
-	sec, frac := ntp.Time(clientTxTime)
-	request := &ntp.Packet{
+	sec, frac := fbntp.Time(clientTxTime)
+	request := &fbntp.Packet{
 		Settings:   0x1B,
 		TxTimeSec:  sec,
 		TxTimeFrac: frac,
@@ -222,7 +223,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 	defer conn.Close()
 
-	err = ntp.EnableKernelTimestampsSocket(conn)
+	err = fbntp.EnableKernelTimestampsSocket(conn)
 	if err != nil {
 		log.Fatalf("Failed to enable kernel timestamping for packets: %v", err)
 	}
@@ -234,7 +235,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 
 	pkt.Prepare()
-	oob := make([]byte, ntp.ControlHeaderSizeBytes)
+	oob := make([]byte, fbntp.ControlHeaderSizeBytes)
 
 	n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
 	if err != nil {
@@ -267,22 +268,50 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	log.Printf("Received payload at %v via %v with flags = %v:", clientRxTime, lastHop, flags)
 	fmt.Printf("%s", hex.Dump(pld.Payload))
 
-	ntpresp, err := ntp.BytesToPacket(pld.Payload)
+	ntpresp0, err := fbntp.BytesToPacket(pld.Payload)
 	if err != nil {
 		log.Printf("Failed to decode packet payload: %v", err)
 		return
 	}
 
-	log.Printf("Received NTP packet: %+v", ntpresp)
+	var ntpresp ntp.Packet
+	err = ntp.DecodePacket(pld.Payload, &ntpresp)
+	if err != nil {
+		log.Printf("Failed to decode packet payload: %v", err)
+		return
+	}
 
-	serverRxTime := ntp.Unix(ntpresp.RxTimeSec, ntpresp.RxTimeFrac)
-	serverTxTime := ntp.Unix(ntpresp.TxTimeSec, ntpresp.TxTimeFrac)
+	if ntpresp.LIVNMode != ntpresp0.Settings ||
+		ntpresp.Stratum != ntpresp0.Stratum ||
+		ntpresp.Poll != ntpresp0.Poll ||
+		ntpresp.Precision != ntpresp0.Precision ||
+		ntpresp.RootDelay.Seconds != uint16(ntpresp0.RootDelay >> 16) ||
+		ntpresp.RootDelay.Fraction != uint16(ntpresp0.RootDelay) ||
+		ntpresp.RootDispersion.Seconds != uint16(ntpresp0.RootDispersion >> 16) ||
+		ntpresp.RootDispersion.Fraction != uint16(ntpresp0.RootDispersion) ||
+		ntpresp.ReferenceID != ntpresp0.ReferenceID ||
+		ntpresp.ReferenceTime.Seconds != ntpresp0.RefTimeSec ||
+		ntpresp.ReferenceTime.Fraction != ntpresp0.RefTimeFrac ||
+		ntpresp.OriginTime.Seconds != ntpresp0.OrigTimeSec ||
+		ntpresp.OriginTime.Fraction != ntpresp0.OrigTimeFrac ||
+		ntpresp.ReceiveTime.Seconds != ntpresp0.RxTimeSec ||
+		ntpresp.ReceiveTime.Fraction != ntpresp0.RxTimeFrac ||
+		ntpresp.TransmitTime.Seconds != ntpresp0.TxTimeSec ||
+		ntpresp.TransmitTime.Fraction != ntpresp0.TxTimeFrac {
+		panic("NTP packet decoder error")
+	}
+	log.Printf("NTP packet decoder check passed")
 
-	avgNetworkDelay := ntp.AvgNetworkDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
-	currentRealTime := ntp.CurrentRealTime(serverTxTime, avgNetworkDelay)
-	offset := ntp.CalculateOffset(currentRealTime, time.Now().UTC())
+	log.Printf("Received NTP packet: %+v", ntpresp0)
 
-	log.Printf("Stratum: %d, Current time: %s", ntpresp.Stratum, currentRealTime)
+	serverRxTime := fbntp.Unix(ntpresp0.RxTimeSec, ntpresp0.RxTimeFrac)
+	serverTxTime := fbntp.Unix(ntpresp0.TxTimeSec, ntpresp0.TxTimeFrac)
+
+	avgNetworkDelay := fbntp.AvgNetworkDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
+	currentRealTime := fbntp.CurrentRealTime(serverTxTime, avgNetworkDelay)
+	offset := fbntp.CalculateOffset(currentRealTime, time.Now().UTC())
+
+	log.Printf("Stratum: %d, Current time: %s", ntpresp0.Stratum, currentRealTime)
 	log.Printf("Offset: %fs (%fms), Network delay: %fs (%fms)",
 		float64(offset)/float64(time.Second.Nanoseconds()),
 		float64(offset)/float64(time.Millisecond.Nanoseconds()),

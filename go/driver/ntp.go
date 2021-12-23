@@ -11,7 +11,9 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/facebook/time/ntp/protocol/ntp"
+	fbntp "github.com/facebook/time/ntp/protocol/ntp"
+
+	"example.com/scion-time/go/protocol/ntp"
 )
 
 const ntpLogPrefix = "[drivers/ntp]"
@@ -28,14 +30,14 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 	}
 	defer conn.Close()
 
-	err = ntp.EnableKernelTimestampsSocket(conn.(*net.UDPConn))
+	err = fbntp.EnableKernelTimestampsSocket(conn.(*net.UDPConn))
 	if err != nil {
 		return
 	}
 
 	clientTxTime := time.Now().UTC()
-	sec, frac := ntp.Time(clientTxTime)
-	request := &ntp.Packet{
+	sec, frac := fbntp.Time(clientTxTime)
+	request := &fbntp.Packet{
 		Settings:   0x1B,
 		TxTimeSec:  sec,
 		TxTimeFrac: frac,
@@ -45,8 +47,8 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		return
 	}
 
-	buf := make([]byte, ntp.PacketSizeBytes)
-	oob := make([]byte, ntp.ControlHeaderSizeBytes)
+	buf := make([]byte, fbntp.PacketSizeBytes)
+	oob := make([]byte, fbntp.ControlHeaderSizeBytes)
 	var n, oobn int
 
 	blockingRead := make(chan bool, 1)
@@ -73,22 +75,50 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		clientRxTime = time.Now().UTC()
 	}
 	buf = buf[:n]
-	response, err := ntp.BytesToPacket(buf)
+	response, err := fbntp.BytesToPacket(buf)
 	if err != nil {
 		log.Printf("%s Failed to decode packet payload: %v", ntpLogPrefix, err)
 		return
-	}	
+	}
 
-	serverRxTime := ntp.Unix(response.RxTimeSec, response.RxTimeFrac)
-	serverTxTime := ntp.Unix(response.TxTimeSec, response.TxTimeFrac)
+	var ntpreq ntp.Packet
+	err = ntp.DecodePacket(buf, &ntpreq)
+	if err != nil {
+		log.Printf("%s Failed to decode packet payload: %v", ntpLogPrefix, err)
+		return
+	}
 
-	avgNetworkDelay := ntp.AvgNetworkDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
-	refTime = ntp.CurrentRealTime(serverTxTime, avgNetworkDelay)
+	if ntpreq.LIVNMode != response.Settings ||
+		ntpreq.Stratum != response.Stratum ||
+		ntpreq.Poll != response.Poll ||
+		ntpreq.Precision != response.Precision ||
+		ntpreq.RootDelay.Seconds != uint16(response.RootDelay >> 16) ||
+		ntpreq.RootDelay.Fraction != uint16(response.RootDelay) ||
+		ntpreq.RootDispersion.Seconds != uint16(response.RootDispersion >> 16) ||
+		ntpreq.RootDispersion.Fraction != uint16(response.RootDispersion) ||
+		ntpreq.ReferenceID != response.ReferenceID ||
+		ntpreq.ReferenceTime.Seconds != response.RefTimeSec ||
+		ntpreq.ReferenceTime.Fraction != response.RefTimeFrac ||
+		ntpreq.OriginTime.Seconds != response.OrigTimeSec ||
+		ntpreq.OriginTime.Fraction != response.OrigTimeFrac ||
+		ntpreq.ReceiveTime.Seconds != response.RxTimeSec ||
+		ntpreq.ReceiveTime.Fraction != response.RxTimeFrac ||
+		ntpreq.TransmitTime.Seconds != response.TxTimeSec ||
+		ntpreq.TransmitTime.Fraction != response.TxTimeFrac {
+		panic("NTP packet decoder error")
+	}
+	log.Printf("%s NTP packet decoder check passed", ntpLogPrefix)	
+
+	serverRxTime := fbntp.Unix(response.RxTimeSec, response.RxTimeFrac)
+	serverTxTime := fbntp.Unix(response.TxTimeSec, response.TxTimeFrac)
+
+	avgNetworkDelay := fbntp.AvgNetworkDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
+	refTime = fbntp.CurrentRealTime(serverTxTime, avgNetworkDelay)
 	sysTime = time.Now().UTC()
 
 	log.Printf("%s Received NTP packet from %s: %+v", ntpLogPrefix, host, response)
 
-	offset := ntp.CalculateOffset(refTime, sysTime)
+	offset := fbntp.CalculateOffset(refTime, sysTime)
 	log.Printf("%s Offset: %fs (%fms), Network delay: %fs (%fms)",
 		ntpLogPrefix,
 		float64(offset)/float64(time.Second.Nanoseconds()),

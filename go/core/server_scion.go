@@ -11,20 +11,20 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/facebook/time/ntp/protocol/ntp"
+	fbntp "github.com/facebook/time/ntp/protocol/ntp"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
-	sntp "example.com/scion-time/go/protocol/ntp"
+	"example.com/scion-time/go/protocol/ntp"
 )
 
 const scionServerLogPrefix = "[core/server_scion]"
 
 func prepareOOB(b *[]byte) {
 	if *b == nil {
-		*b = make([]byte, ntp.ControlHeaderSizeBytes)
+		*b = make([]byte, fbntp.ControlHeaderSizeBytes)
 	}
 	*b = (*b)[:cap(*b)]
 }
@@ -40,7 +40,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
 	}
 	defer conn.Close()
-	err = ntp.EnableKernelTimestampsSocket(conn)
+	err = fbntp.EnableKernelTimestampsSocket(conn)
 	if err != nil {
 		log.Fatalf("%s Failed to enable kernel timestamping for packets: %v", scionServerLogPrefix, err)
 	}
@@ -87,37 +87,60 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 		log.Printf("%s Received payload at %v via %v with flags = %v:", scionServerLogPrefix, rxt, lastHop, flags)
 		fmt.Printf("%s", hex.Dump(reqpld.Payload))
 
-		ntpreq, err := ntp.BytesToPacket(reqpld.Payload)
+		ntpreq0, err := fbntp.BytesToPacket(reqpld.Payload)
 		if err != nil {
 			log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
 			continue
 		}
 
-		if !ntpreq.ValidSettingsFormat() {
-			log.Printf("%s Received invalid NTP packet", scionServerLogPrefix)
+		var ntpreq ntp.Packet
+		err = ntp.DecodePacket(reqpld.Payload, &ntpreq)
+		if err != nil {
+			log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
 			continue
 		}
+
+		if ntpreq.LIVNMode != ntpreq0.Settings ||
+			ntpreq.Stratum != ntpreq0.Stratum ||
+			ntpreq.Poll != ntpreq0.Poll ||
+			ntpreq.Precision != ntpreq0.Precision ||
+			ntpreq.RootDelay.Seconds != uint16(ntpreq0.RootDelay >> 16) ||
+			ntpreq.RootDelay.Fraction != uint16(ntpreq0.RootDelay) ||
+			ntpreq.RootDispersion.Seconds != uint16(ntpreq0.RootDispersion >> 16) ||
+			ntpreq.RootDispersion.Fraction != uint16(ntpreq0.RootDispersion) ||
+			ntpreq.ReferenceID != ntpreq0.ReferenceID ||
+			ntpreq.ReferenceTime.Seconds != ntpreq0.RefTimeSec ||
+			ntpreq.ReferenceTime.Fraction != ntpreq0.RefTimeFrac ||
+			ntpreq.OriginTime.Seconds != ntpreq0.OrigTimeSec ||
+			ntpreq.OriginTime.Fraction != ntpreq0.OrigTimeFrac ||
+			ntpreq.ReceiveTime.Seconds != ntpreq0.RxTimeSec ||
+			ntpreq.ReceiveTime.Fraction != ntpreq0.RxTimeFrac ||
+			ntpreq.TransmitTime.Seconds != ntpreq0.TxTimeSec ||
+			ntpreq.TransmitTime.Fraction != ntpreq0.TxTimeFrac {
+			panic("NTP packet decoder error")
+		}
+		log.Printf("%s NTP packet decoder check passed", scionServerLogPrefix)	
 
 		log.Printf("%s Received NTP packet: %+v", scionServerLogPrefix, ntpreq)
 
 		now := time.Now().UTC()
 
-		ntpresp := &ntp.Packet{
+		ntpresp := &fbntp.Packet{
 			Stratum: 1,
 			Precision: -32,
 			RootDelay: 0,
 			RootDispersion: 10,
-			ReferenceID: sntp.ServerRefID,
+			ReferenceID: ntp.ServerRefID,
 		}
 
-		ntpresp.Settings = ntpreq.Settings & 0x38
-		ntpresp.Poll = ntpreq.Poll
+		ntpresp.Settings = ntpreq0.Settings & 0x38
+		ntpresp.Poll = ntpreq0.Poll
 
 		refTime := time.Unix(now.Unix()/1000*1000, 0)
-		ntpresp.RefTimeSec, ntpresp.RefTimeFrac = ntp.Time(refTime)
-		ntpresp.OrigTimeSec, ntpresp.OrigTimeFrac = ntpreq.TxTimeSec, ntpreq.TxTimeFrac
-		ntpresp.RxTimeSec, ntpresp.RxTimeFrac = ntp.Time(rxt)
-		ntpresp.TxTimeSec, ntpresp.TxTimeFrac = ntp.Time(now)
+		ntpresp.RefTimeSec, ntpresp.RefTimeFrac = fbntp.Time(refTime)
+		ntpresp.OrigTimeSec, ntpresp.OrigTimeFrac = ntpreq0.TxTimeSec, ntpreq0.TxTimeFrac
+		ntpresp.RxTimeSec, ntpresp.RxTimeFrac = fbntp.Time(rxt)
+		ntpresp.TxTimeSec, ntpresp.TxTimeFrac = fbntp.Time(now)
 
 		resppld, err := ntpresp.Bytes()
 		if err != nil {
