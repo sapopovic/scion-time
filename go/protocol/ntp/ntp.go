@@ -1,4 +1,4 @@
 package ntp
 
-const ServerPort = 123
+const ServerRefID = 0x58535453
 

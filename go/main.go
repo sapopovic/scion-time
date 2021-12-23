@@ -264,7 +264,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 
-	log.Printf("Received payload at %v via %v with flags = %v: \"%v\":", clientRxTime, lastHop, flags)
+	log.Printf("Received payload at %v via %v with flags = %v:", clientRxTime, lastHop, flags)
 	fmt.Printf("%s", hex.Dump(pld.Payload))
 
 	ntpresp, err := ntp.BytesToPacket(pld.Payload)
