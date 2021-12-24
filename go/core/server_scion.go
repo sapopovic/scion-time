@@ -100,7 +100,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			continue
 		}
 
-		if ntpreq.LIVNMode != ntpreq0.Settings ||
+		if ntpreq.LVM != ntpreq0.Settings ||
 			ntpreq.Stratum != ntpreq0.Stratum ||
 			ntpreq.Poll != ntpreq0.Poll ||
 			ntpreq.Precision != ntpreq0.Precision ||
@@ -119,9 +119,32 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			ntpreq.TransmitTime.Fraction != ntpreq0.TxTimeFrac {
 			panic("NTP packet decoder error")
 		}
-		log.Printf("%s NTP packet decoder check passed", scionServerLogPrefix)	
+		log.Printf("%s NTP packet decoder check passed", scionServerLogPrefix)
 
-		log.Printf("%s Received NTP packet: %+v", scionServerLogPrefix, ntpreq)
+		li := ntp.LeapIndicator(ntpreq.LVM)
+		if li != ntp.LeapIndicatorNoWarning && li != ntp.LeapIndicatorUnknown {
+			log.Printf("%s Unexpected NTP request packet: LI = %v, dropping packet",
+				scionServerLogPrefix, li)
+			continue
+		}
+		vn := ntp.Version(ntpreq.LVM)
+		if vn < ntp.VersionMin || ntp.VersionMax < vn {
+			log.Printf("%s Unexpected NTP request packet: VN = %v, dropping packet",
+				scionServerLogPrefix, vn)
+			continue
+		}
+		mode := ntp.Mode(ntpreq.LVM)
+		if vn == 1 && mode != ntp.ModeReserved0 ||
+			vn != 1 && mode != ntp.ModeClient {
+			log.Printf("%s Unexpected NTP request packet: Mode = %v, dropping packet",
+				scionServerLogPrefix, mode)
+			continue
+		}
+		if vn == 1 && reqpld.SrcPort == ntp.ServerPort {
+			log.Printf("%s Unexpected NTP request packet: VN = %v, SrcPort = %v, dropping packet",
+				scionServerLogPrefix, vn, reqpld.SrcPort)
+			continue
+		}
 
 		now := time.Now().UTC()
 

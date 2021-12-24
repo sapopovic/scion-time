@@ -281,7 +281,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 
-	if ntpresp.LIVNMode != ntpresp0.Settings ||
+	if ntpresp.LVM != ntpresp0.Settings ||
 		ntpresp.Stratum != ntpresp0.Stratum ||
 		ntpresp.Poll != ntpresp0.Poll ||
 		ntpresp.Precision != ntpresp0.Precision ||

@@ -5,7 +5,27 @@ import (
 	"errors"
 )
 
-const ServerRefID = 0x58535453
+const (
+	ServerPort  = 123
+	ServerRefID = 0x58535453
+
+	LeapIndicatorNoWarning    = 0
+	LeapIndicatorInsertSecond = 1
+	LeapIndicatorDeleteSecond = 2
+  LeapIndicatorUnknown      = 3
+
+  VersionMin = 1
+  VersionMax = 4
+
+  ModeReserved0        = 0
+  ModeSymmetricActive  = 1
+  ModeSymmetricPassive = 2
+  ModeClient           = 3
+  ModeServer           = 4
+  ModeBroadcast        = 5
+  ModeControl          = 6
+  ModeReserved7        = 7
+)
 
 type Timestamp32 struct {
 	Seconds uint16
@@ -18,7 +38,7 @@ type Timestamp64 struct {
 }
 
 type Packet struct {
-	LIVNMode       uint8
+	LVM            uint8
 	Stratum	       uint8
 	Poll           int8
 	Precision      int8
@@ -31,14 +51,14 @@ type Packet struct {
 	TransmitTime   Timestamp64
 }
 
-var errInvalidPacketSize = errors.New("invalid packet size")
+var errUnexpectedPacketSize = errors.New("unexpected packet size")
 
 func DecodePacket(b []byte, pkt *Packet) error {
 	if len(b) != 48 {
-		return errInvalidPacketSize
+		return errUnexpectedPacketSize
 	}
 
-	pkt.LIVNMode = uint8(b[0])
+	pkt.LVM = uint8(b[0])
 	pkt.Stratum = uint8(b[1])
 	pkt.Poll = int8(b[2])
 	pkt.Precision = int8(b[3])
@@ -56,4 +76,16 @@ func DecodePacket(b []byte, pkt *Packet) error {
 	pkt.TransmitTime.Seconds = binary.BigEndian.Uint32(b[40:])
 	pkt.TransmitTime.Fraction = binary.BigEndian.Uint32(b[44:])
 	return nil
+}
+
+func LeapIndicator(lvm uint8) uint8 {
+	return (lvm >> 6) & 0x3
+}
+
+func Version(lvm uint8) uint8 {
+	return (lvm >> 3) & 0x7
+}
+
+func Mode(lvm uint8) uint8 {
+	return lvm & 0x7
 }

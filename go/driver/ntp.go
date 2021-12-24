@@ -88,7 +88,7 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		return
 	}
 
-	if ntpreq.LIVNMode != response.Settings ||
+	if ntpreq.LVM != response.Settings ||
 		ntpreq.Stratum != response.Stratum ||
 		ntpreq.Poll != response.Poll ||
 		ntpreq.Precision != response.Precision ||
