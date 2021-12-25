@@ -12,7 +12,7 @@ var pll PLL
 
 func PLLInstance() PLL {
 	if pll == nil {
-		panic("No PLL registered")
+		panic("no PLL registered")
 	}
 	return pll
 }

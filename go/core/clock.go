@@ -14,17 +14,17 @@ var localClock LocalClock
 
 func LocalClockInstance() LocalClock {
 	if localClock == nil {
-		panic("No local clock registered")
+		panic("no local clock registered")
 	}
 	return localClock
 }
 
 func RegisterLocalClock(c LocalClock) {
 	if c == nil {
-		panic("Local clock must not be nil")
+		panic("local clock must not be nil")
 	}
 	if localClock != nil {
-		panic("Local clock already registered")
+		panic("local clock already registered")
 	}
 	localClock = c
 }

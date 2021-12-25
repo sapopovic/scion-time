@@ -40,11 +40,11 @@ func StartPather(c daemon.Connector, peerIAs []addr.IA) (<-chan PathInfo, error)
 				peerIAPaths := map[addr.IA][]snet.Path{}
 				if peerIAs == nil {
 					//TODO: Implement peerIA lookup based on TRCs				
-					panic("Not yet implemented: peer IA lookup based on TRCs")
+					panic("not yet implemented: peer IA lookup based on TRCs")
 				}
 				for _, peerIA := range peerIAs {
 					if peerIA.IsWildcard() {
-						panic("Unexpected peer IA: wildcard.")
+						panic("unexpected peer IA: wildcard.")
 					}
 				}
 				for _, peerIA := range peerIAs {

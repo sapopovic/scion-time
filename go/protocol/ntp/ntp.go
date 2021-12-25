@@ -3,6 +3,7 @@ package ntp
 import (
 	"encoding/binary"
 	"errors"
+	"time"
 )
 
 const (
@@ -27,12 +28,12 @@ const (
   ModeReserved7        = 7
 )
 
-type Timestamp32 struct {
+type Time32 struct {
 	Seconds uint16
 	Fraction uint16
 }
 
-type Timestamp64 struct {
+type Time64 struct {
 	Seconds uint32
 	Fraction uint32
 }
@@ -42,16 +43,25 @@ type Packet struct {
 	Stratum	       uint8
 	Poll           int8
 	Precision      int8
-	RootDelay      Timestamp32
-	RootDispersion Timestamp32
+	RootDelay      Time32
+	RootDispersion Time32
 	ReferenceID    uint32
-	ReferenceTime  Timestamp64
-	OriginTime     Timestamp64
-	ReceiveTime    Timestamp64
-	TransmitTime   Timestamp64
+	ReferenceTime  Time64
+	OriginTime     Time64
+	ReceiveTime    Time64
+	TransmitTime   Time64
 }
 
-var errUnexpectedPacketSize = errors.New("unexpected packet size")
+var (
+	epoch = time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	errUnexpectedPacketSize = errors.New("unexpected packet size")
+)
+
+func Time64FromTime(t time.Time) Time64 {
+	_ = t.Sub(epoch).Nanoseconds()
+	panic("not yet implemented")
+}
 
 func DecodePacket(b []byte, pkt *Packet) error {
 	if len(b) != 48 {
@@ -79,13 +89,35 @@ func DecodePacket(b []byte, pkt *Packet) error {
 }
 
 func LeapIndicator(lvm uint8) uint8 {
-	return (lvm >> 6) & 0x3
+	return (lvm >> 6) & 0b0000_0011
+}
+
+func SetLeapIndicator(lvm *uint8, l uint8) {
+	if l & 0b0000_0011 != l {
+		panic("unexpected NTP leap indicator value")
+	}
+	*lvm = (*lvm & 0b0011_1111) | (l << 6)
 }
 
 func Version(lvm uint8) uint8 {
-	return (lvm >> 3) & 0x7
+	return (lvm >> 3) & 0b0000_0111
+}
+
+func SetVersion(lvm *uint8, v uint8) {
+	if v & 0b0000_0111 != v {
+		panic("unexpected NTP version value")
+	}
+	*lvm = (*lvm & 0b_1100_0111) | (v << 3)
 }
 
 func Mode(lvm uint8) uint8 {
-	return lvm & 0x7
+	return lvm & 0b0000_0111
 }
+
+func SetMode(lvm *uint8, m uint8) {
+	if m & 0b0000_0111 != m {
+		panic("unexpected NTP mode value")
+	}
+	*lvm = (*lvm & 0b1111_1000) | m
+}
+
