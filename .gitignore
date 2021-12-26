@@ -3,3 +3,4 @@ bin/ts
 misc/no_dispatcher/c
 misc/no_dispatcher/s
 misc/shmc/shmc
+misc/time64/time64

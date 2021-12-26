@@ -59,8 +59,13 @@ var (
 )
 
 func Time64FromTime(t time.Time) Time64 {
-	_ = t.Sub(epoch).Nanoseconds()
-	panic("not yet implemented")
+	d := t.Sub(epoch).Nanoseconds()
+	return Time64{
+		Seconds: uint32(
+			d / time.Second.Nanoseconds()),
+		Fraction: uint32(
+			(d % time.Second.Nanoseconds() << 32 + time.Second.Nanoseconds() / 2) / time.Second.Nanoseconds()),
+	}
 }
 
 func DecodePacket(b []byte, pkt *Packet) error {
