@@ -7,6 +7,8 @@ import (
 )
 
 const (
+	nanosecondsPerSecond int64 = 1_000_000_000
+
 	ServerPort  = 123
 	ServerRefID = 0x58535453
 
@@ -62,10 +64,24 @@ func Time64FromTime(t time.Time) Time64 {
 	d := t.Sub(epoch).Nanoseconds()
 	return Time64{
 		Seconds: uint32(
-			d / time.Second.Nanoseconds()),
+			d / nanosecondsPerSecond),
 		Fraction: uint32(
-			(d % time.Second.Nanoseconds() << 32 + time.Second.Nanoseconds() / 2) / time.Second.Nanoseconds()),
+			(d % nanosecondsPerSecond << 32 + nanosecondsPerSecond / 2) / nanosecondsPerSecond),
 	}
+}
+
+func TimeFromTime64(t Time64) time.Time {
+	return epoch.Add(time.Duration(
+		int64(t.Seconds) * nanosecondsPerSecond +
+		(int64(t.Fraction) * nanosecondsPerSecond + 1 << 31) >> 32))
+}
+
+func ClockOffset(t0, t1, t2, t3 time.Time) time.Duration {
+	return (t1.Sub(t0) + t2.Sub(t3)) / 2
+}
+
+func RoundTripDelay(t0, t1, t2, t3 time.Time) time.Duration {
+	return t3.Sub(t0) - t2.Sub(t1)
 }
 
 func DecodePacket(b []byte, pkt *Packet) error {
@@ -125,4 +141,3 @@ func SetMode(lvm *uint8, m uint8) {
 	}
 	*lvm = (*lvm & 0b1111_1000) | m
 }
-

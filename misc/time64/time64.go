@@ -39,6 +39,9 @@ func do(t time.Time) {
 }
 
 func main() {
+	do(time.Now())
+	fmt.Println()
+
 	do(time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC))
 	fmt.Println()
 
@@ -48,5 +51,18 @@ func main() {
 	do(time.Date(1900, 1, 1, 0, 0, 0, 999_999_999, time.UTC))
 	fmt.Println()
 
-	do(time.Now())
+	do(time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC))
+	fmt.Println()
+
+	do(time.Date(2036, 2, 7, 0, 0, 0, 0, time.UTC))
+	fmt.Println()
+
+	do(time.Date(2036, 2, 8, 0, 0, 0, 0, time.UTC))
+	fmt.Println()
+
+	do(time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC))
+	fmt.Println()
+
+	do(time.Date(1999, 12, 31, 23, 59, 59, 0, time.UTC))
+	fmt.Println()
 }
