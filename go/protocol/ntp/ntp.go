@@ -12,6 +12,8 @@ const (
 	ServerPort  = 123
 	ServerRefID = 0x58535453
 
+	PacketLen = 48
+
 	LeapIndicatorNoWarning    = 0
 	LeapIndicatorInsertSecond = 1
 	LeapIndicatorDeleteSecond = 2
@@ -84,8 +86,34 @@ func RoundTripDelay(t0, t1, t2, t3 time.Time) time.Duration {
 	return t3.Sub(t0) - t2.Sub(t1)
 }
 
+func EncodePacket(pkt *Packet, b *[]byte) {
+	if cap(*b) < PacketLen {
+		*b = make([]byte, PacketLen)
+	} else {
+		*b = (*b)[:PacketLen]
+	}
+
+	(*b)[0] = byte(pkt.LVM)
+	(*b)[1] = byte(pkt.Stratum)
+	(*b)[2] = byte(pkt.Poll)
+	(*b)[3] = byte(pkt.Precision)
+	binary.BigEndian.PutUint16((*b)[4:], pkt.RootDelay.Seconds)
+	binary.BigEndian.PutUint16((*b)[6:], pkt.RootDelay.Fraction)
+	binary.BigEndian.PutUint16((*b)[8:], pkt.RootDispersion.Seconds)
+	binary.BigEndian.PutUint16((*b)[10:], pkt.RootDispersion.Fraction)
+	binary.BigEndian.PutUint32((*b)[12:], pkt.ReferenceID)
+	binary.BigEndian.PutUint32((*b)[16:], pkt.ReferenceTime.Seconds)
+	binary.BigEndian.PutUint32((*b)[20:], pkt.ReferenceTime.Fraction)
+	binary.BigEndian.PutUint32((*b)[24:], pkt.OriginTime.Seconds)
+	binary.BigEndian.PutUint32((*b)[28:], pkt.OriginTime.Fraction)
+	binary.BigEndian.PutUint32((*b)[32:], pkt.ReceiveTime.Seconds)
+	binary.BigEndian.PutUint32((*b)[36:], pkt.ReceiveTime.Fraction)
+	binary.BigEndian.PutUint32((*b)[40:], pkt.TransmitTime.Seconds)
+	binary.BigEndian.PutUint32((*b)[44:], pkt.TransmitTime.Fraction)
+}
+
 func DecodePacket(b []byte, pkt *Packet) error {
-	if len(b) != 48 {
+	if len(b) != PacketLen {
 		return errUnexpectedPacketSize
 	}
 

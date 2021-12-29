@@ -3,9 +3,9 @@ package drivers
 import (
 	"unsafe"
 
-	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"time"
 
@@ -35,21 +35,23 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		return
 	}
 
+	pkt := ntp.Packet{}
+	buf := make([]byte, ntp.PacketLen)
+	oob := make([]byte, fbntp.ControlHeaderSizeBytes)
+	var n, oobn int
+
 	clientTxTime := time.Now().UTC()
-	sec, frac := fbntp.Time(clientTxTime)
-	request := &fbntp.Packet{
-		Settings:   0x1B,
-		TxTimeSec:  sec,
-		TxTimeFrac: frac,
-	}
-	err = binary.Write(conn, binary.BigEndian, request)
+
+	ntp.SetLeapIndicator(&pkt.LVM, ntp.LeapIndicatorUnknown)
+	ntp.SetVersion(&pkt.LVM, ntp.VersionMax)
+	ntp.SetMode(&pkt.LVM, ntp.ModeClient)
+	pkt.TransmitTime = ntp.Time64FromTime(clientTxTime)
+	ntp.EncodePacket(&pkt, &buf)
+
+	_, err = conn.Write(buf)
 	if err != nil {
 		return
 	}
-
-	buf := make([]byte, fbntp.PacketSizeBytes)
-	oob := make([]byte, fbntp.ControlHeaderSizeBytes)
-	var n, oobn int
 
 	blockingRead := make(chan bool, 1)
 	go func() {
@@ -81,36 +83,42 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		return
 	}
 
-	var ntpreq ntp.Packet
-	err = ntp.DecodePacket(buf, &ntpreq)
+	err = ntp.DecodePacket(buf, &pkt)
 	if err != nil {
 		log.Printf("%s Failed to decode packet payload: %v", ntpLogPrefix, err)
 		return
 	}
 
-	if ntpreq.LVM != response.Settings ||
-		ntpreq.Stratum != response.Stratum ||
-		ntpreq.Poll != response.Poll ||
-		ntpreq.Precision != response.Precision ||
-		ntpreq.RootDelay.Seconds != uint16(response.RootDelay >> 16) ||
-		ntpreq.RootDelay.Fraction != uint16(response.RootDelay) ||
-		ntpreq.RootDispersion.Seconds != uint16(response.RootDispersion >> 16) ||
-		ntpreq.RootDispersion.Fraction != uint16(response.RootDispersion) ||
-		ntpreq.ReferenceID != response.ReferenceID ||
-		ntpreq.ReferenceTime.Seconds != response.RefTimeSec ||
-		ntpreq.ReferenceTime.Fraction != response.RefTimeFrac ||
-		ntpreq.OriginTime.Seconds != response.OrigTimeSec ||
-		ntpreq.OriginTime.Fraction != response.OrigTimeFrac ||
-		ntpreq.ReceiveTime.Seconds != response.RxTimeSec ||
-		ntpreq.ReceiveTime.Fraction != response.RxTimeFrac ||
-		ntpreq.TransmitTime.Seconds != response.TxTimeSec ||
-		ntpreq.TransmitTime.Fraction != response.TxTimeFrac {
+	if pkt.LVM != response.Settings ||
+		pkt.Stratum != response.Stratum ||
+		pkt.Poll != response.Poll ||
+		pkt.Precision != response.Precision ||
+		pkt.RootDelay.Seconds != uint16(response.RootDelay >> 16) ||
+		pkt.RootDelay.Fraction != uint16(response.RootDelay) ||
+		pkt.RootDispersion.Seconds != uint16(response.RootDispersion >> 16) ||
+		pkt.RootDispersion.Fraction != uint16(response.RootDispersion) ||
+		pkt.ReferenceID != response.ReferenceID ||
+		pkt.ReferenceTime.Seconds != response.RefTimeSec ||
+		pkt.ReferenceTime.Fraction != response.RefTimeFrac ||
+		pkt.OriginTime.Seconds != response.OrigTimeSec ||
+		pkt.OriginTime.Fraction != response.OrigTimeFrac ||
+		pkt.ReceiveTime.Seconds != response.RxTimeSec ||
+		pkt.ReceiveTime.Fraction != response.RxTimeFrac ||
+		pkt.TransmitTime.Seconds != response.TxTimeSec ||
+		pkt.TransmitTime.Fraction != response.TxTimeFrac {
 		panic("NTP packet decoder error")
 	}
-	log.Printf("%s NTP packet decoder check passed", ntpLogPrefix)	
+	log.Printf("%s NTP packet decoder check passed", ntpLogPrefix)
 
-	serverRxTime := fbntp.Unix(response.RxTimeSec, response.RxTimeFrac)
-	serverTxTime := fbntp.Unix(response.TxTimeSec, response.TxTimeFrac)
+	serverRxTime := ntp.TimeFromTime64(pkt.ReceiveTime)
+	serverTxTime := ntp.TimeFromTime64(pkt.TransmitTime)
+
+	if math.Abs(serverRxTime.Sub(fbntp.Unix(response.RxTimeSec, response.RxTimeFrac)).Seconds()) > 1e-9 {
+		panic("NTP timestamp converter error")
+	}
+	if math.Abs(serverTxTime.Sub(fbntp.Unix(response.TxTimeSec, response.TxTimeFrac)).Seconds()) > 1e-9 {
+		panic("NTP timestamp converter error")
+	}
 
 	avgNetworkDelay := fbntp.AvgNetworkDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
 	refTime = fbntp.CurrentRealTime(serverTxTime, avgNetworkDelay)
@@ -125,6 +133,20 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		float64(offset)/float64(time.Millisecond.Nanoseconds()),
 		float64(avgNetworkDelay)/float64(time.Second.Nanoseconds()),
 		float64(avgNetworkDelay)/float64(time.Millisecond.Nanoseconds()))
+
+	clockOffset := ntp.ClockOffset(clientTxTime, serverRxTime, serverTxTime, clientRxTime).Nanoseconds()
+	roundTripDelay := ntp.RoundTripDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime).Nanoseconds()
+
+	if math.Abs(float64(clockOffset - offset)) > 1e6 {
+		panic("NTP timestamp calculator error")
+	}
+
+	log.Printf("%s Clock offset: %fs (%fms), round trip delay: %fs (%fms)",
+		ntpLogPrefix,
+		float64(clockOffset)/float64(time.Second.Nanoseconds()),
+		float64(clockOffset)/float64(time.Millisecond.Nanoseconds()),
+		float64(roundTripDelay)/float64(time.Second.Nanoseconds()),
+		float64(roundTripDelay)/float64(time.Millisecond.Nanoseconds()))
 
 	return
 }
