@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	nanosecondsPerSecond int64 = 1_000_000_000
+	nanosecondsPerSecond int64 = 1e9
 
 	ServerPort  = 123
 	ServerRefID = 0x58535453
