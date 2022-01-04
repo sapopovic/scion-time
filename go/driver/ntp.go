@@ -9,9 +9,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	fbntp "github.com/facebook/time/ntp/protocol/ntp"
-
-	"example.com/scion-time/go/protocol/ntp"
+	"example.com/scion-time/go/net/ntp"
+	"example.com/scion-time/go/net/udp"
 )
 
 const ntpLogPrefix = "[drivers/ntp]"
@@ -32,14 +31,14 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 	conn.SetDeadline(deadline)
 	udpConn := conn.(*net.UDPConn)
 
-	err = fbntp.EnableKernelTimestampsSocket(udpConn)
+	err = udp.EnableTimestamping(udpConn)
 	if err != nil {
 		return
 	}
 
 	pkt := ntp.Packet{}
 	buf := make([]byte, ntp.PacketLen)
-	oob := make([]byte, fbntp.ControlHeaderSizeBytes)
+	oob := make([]byte, udp.TimestampControlMessageLen)
 
 	clientTxTime := time.Now().UTC()
 

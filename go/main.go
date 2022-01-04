@@ -27,7 +27,7 @@ import (
 	_ "example.com/scion-time/go/core/prev"
 
 	"example.com/scion-time/go/driver"
-	"example.com/scion-time/go/protocol/ntp"
+	"example.com/scion-time/go/net/ntp"
 
 	"example.com/scion-time/go/core"
 )

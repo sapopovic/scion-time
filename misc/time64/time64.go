@@ -5,7 +5,7 @@ import (
 	"time"
 
 	fbntp "github.com/facebook/time/ntp/protocol/ntp"
-	"example.com/scion-time/go/protocol/ntp"
+	"example.com/scion-time/go/net/ntp"
 )
 
 func toNtpTime(t time.Time) ntp.Time64 {
