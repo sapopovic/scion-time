@@ -191,8 +191,8 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 
 	clientTxTime := time.Now().UTC()
 
-	ntp.SetVersion(&ntpreq.LVM, ntp.VersionMax)
-	ntp.SetMode(&ntpreq.LVM, ntp.ModeClient)
+	ntpreq.SetVersion(ntp.VersionMax)
+	ntpreq.SetMode(ntp.ModeClient)
 	ntpreq.TransmitTime = ntp.Time64FromTime(clientTxTime)
 	ntp.EncodePacket(&ntpreq, &buf)
 

@@ -42,8 +42,8 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 
 	clientTxTime := time.Now().UTC()
 
-	ntp.SetVersion(&pkt.LVM, ntp.VersionMax)
-	ntp.SetMode(&pkt.LVM, ntp.ModeClient)
+	pkt.SetVersion(ntp.VersionMax)
+	pkt.SetMode(ntp.ModeClient)
 	pkt.TransmitTime = ntp.Time64FromTime(clientTxTime)
 	ntp.EncodePacket(&pkt, &buf)
 

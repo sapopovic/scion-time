@@ -93,19 +93,19 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			continue
 		}
 
-		li := ntp.LeapIndicator(ntpreq.LVM)
+		li := ntpreq.LeapIndicator()
 		if li != ntp.LeapIndicatorNoWarning && li != ntp.LeapIndicatorUnknown {
 			log.Printf("%s Unexpected NTP request packet: LI = %v, dropping packet",
 				scionServerLogPrefix, li)
 			continue
 		}
-		vn := ntp.Version(ntpreq.LVM)
+		vn := ntpreq.Version()
 		if vn < ntp.VersionMin || ntp.VersionMax < vn {
 			log.Printf("%s Unexpected NTP request packet: VN = %v, dropping packet",
 				scionServerLogPrefix, vn)
 			continue
 		}
-		mode := ntp.Mode(ntpreq.LVM)
+		mode := ntpreq.Mode()
 		if vn == 1 && mode != ntp.ModeReserved0 ||
 			vn != 1 && mode != ntp.ModeClient {
 			log.Printf("%s Unexpected NTP request packet: Mode = %v, dropping packet",
@@ -121,8 +121,8 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 		now := time.Now().UTC()
 
 		ntpresp := ntp.Packet{}
-		ntp.SetVersion(&ntpresp.LVM, ntp.VersionMax)
-		ntp.SetMode(&ntpresp.LVM, ntp.ModeServer)
+		ntpresp.SetVersion(ntp.VersionMax)
+		ntpresp.SetMode(ntp.ModeServer)
 		ntpresp.Stratum = 1
 		ntpresp.Poll = ntpreq.Poll
 		ntpresp.Precision = -32

@@ -137,35 +137,35 @@ func DecodePacket(b []byte, pkt *Packet) error {
 	return nil
 }
 
-func LeapIndicator(lvm uint8) uint8 {
-	return (lvm >> 6) & 0b0000_0011
+func (p *Packet) LeapIndicator() uint8 {
+	return (p.LVM >> 6) & 0b0000_0011
 }
 
-func SetLeapIndicator(lvm *uint8, l uint8) {
+func (p *Packet) SetLeapIndicator(l uint8) {
 	if l & 0b0000_0011 != l {
 		panic("unexpected NTP leap indicator value")
 	}
-	*lvm = (*lvm & 0b0011_1111) | (l << 6)
+	p.LVM = (p.LVM & 0b0011_1111) | (l << 6)
 }
 
-func Version(lvm uint8) uint8 {
-	return (lvm >> 3) & 0b0000_0111
+func (p *Packet) Version() uint8 {
+	return (p.LVM >> 3) & 0b0000_0111
 }
 
-func SetVersion(lvm *uint8, v uint8) {
+func (p *Packet) SetVersion(v uint8) {
 	if v & 0b0000_0111 != v {
 		panic("unexpected NTP version value")
 	}
-	*lvm = (*lvm & 0b_1100_0111) | (v << 3)
+	p.LVM = (p.LVM & 0b_1100_0111) | (v << 3)
 }
 
-func Mode(lvm uint8) uint8 {
-	return lvm & 0b0000_0111
+func (p *Packet) Mode() uint8 {
+	return p.LVM & 0b0000_0111
 }
 
-func SetMode(lvm *uint8, m uint8) {
+func (p *Packet) SetMode(m uint8) {
 	if m & 0b0000_0111 != m {
 		panic("unexpected NTP mode value")
 	}
-	*lvm = (*lvm & 0b1111_1000) | m
+	p.LVM = (p.LVM & 0b1111_1000) | m
 }
