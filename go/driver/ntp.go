@@ -61,7 +61,7 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
 		clientRxTime = time.Unix(ts.Unix())
 	} else {
-		log.Printf("%s %s, failed to receive kernel timestamp", ntpLogPrefix, host)
+		log.Printf("%s %s, failed to packet timestamp", ntpLogPrefix, host)
 	}
 	buf = buf[:n]
 	err = ntp.DecodePacket(buf, &pkt)

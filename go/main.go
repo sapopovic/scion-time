@@ -3,9 +3,7 @@ package main
 import (
 	"unsafe"
 
-	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -15,8 +13,6 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
-
-	fbntp "github.com/facebook/time/ntp/protocol/ntp"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/config"
@@ -28,6 +24,7 @@ import (
 
 	"example.com/scion-time/go/driver"
 	"example.com/scion-time/go/net/ntp"
+	"example.com/scion-time/go/net/udp"
 
 	"example.com/scion-time/go/core"
 )
@@ -152,7 +149,6 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	if err != nil {
 		log.Fatalf("Failed to lookup paths: %v:", err)
 	}
-
 	if len(ps) == 0 {
 		log.Fatalf("No paths to %v available", remoteAddr.IA)
 	}
@@ -168,44 +164,6 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	log.Printf("\t%v", sp)
 
 	localAddr.Host.Port = underlay.EndhostPort
-
-	buf := new(bytes.Buffer)
-	clientTxTime := time.Now().UTC()
-	sec, frac := fbntp.Time(clientTxTime)
-	request := &fbntp.Packet{
-		Settings:   0x1B,
-		TxTimeSec:  sec,
-		TxTimeFrac: frac,
-	}
-	err = binary.Write(buf, binary.BigEndian, request)
-	if err != nil {
-		log.Fatalf("Failed to send NTP packet, %v", err)
-	}
-
-	pkt := &snet.Packet{
-		PacketInfo: snet.PacketInfo{
-			Source: snet.SCIONAddress{
-				IA: localAddr.IA,
-				Host: addr.HostFromIP(localAddr.Host.IP),
-			},
-			Destination: snet.SCIONAddress{
-				IA: remoteAddr.IA,
-				Host: addr.HostFromIP(remoteAddr.Host.IP),
-			},
-			Path: sp.Path(),
-			Payload: snet.UDPPayload{
-				SrcPort: uint16(localAddr.Host.Port),
-				DstPort: uint16(remoteAddr.Host.Port),
-				Payload: buf.Bytes(),
-			},
-		},
-	}
-
-	err = pkt.Serialize()
-	if err != nil {
-		log.Printf("Failed to serialize packet: %v", err)
-		return
-	}
 
 	nextHop := sp.UnderlayNextHop()
 	if nextHop == nil && remoteAddr.IA.Equal(localAddr.IA) {
@@ -223,9 +181,44 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 	defer conn.Close()
 
-	err = fbntp.EnableKernelTimestampsSocket(conn)
+	err = udp.EnableTimestamping(conn)
 	if err != nil {
-		log.Fatalf("Failed to enable kernel timestamping for packets: %v", err)
+		log.Fatalf("Failed to enable timestamping for packets: %v", err)
+	}
+
+	ntpreq := ntp.Packet{}
+	buf := make([]byte, ntp.PacketLen)
+
+	clientTxTime := time.Now().UTC()
+
+	ntp.SetVersion(&ntpreq.LVM, ntp.VersionMax)
+	ntp.SetMode(&ntpreq.LVM, ntp.ModeClient)
+	ntpreq.TransmitTime = ntp.Time64FromTime(clientTxTime)
+	ntp.EncodePacket(&ntpreq, &buf)
+
+	pkt := &snet.Packet{
+		PacketInfo: snet.PacketInfo{
+			Source: snet.SCIONAddress{
+				IA: localAddr.IA,
+				Host: addr.HostFromIP(localAddr.Host.IP),
+			},
+			Destination: snet.SCIONAddress{
+				IA: remoteAddr.IA,
+				Host: addr.HostFromIP(remoteAddr.Host.IP),
+			},
+			Path: sp.Path(),
+			Payload: snet.UDPPayload{
+				SrcPort: uint16(localAddr.Host.Port),
+				DstPort: uint16(remoteAddr.Host.Port),
+				Payload: buf,
+			},
+		},
+	}
+
+	err = pkt.Serialize()
+	if err != nil {
+		log.Printf("Failed to serialize packet: %v", err)
+		return
 	}
 
 	_, err = conn.Write(pkt.Bytes)
@@ -235,7 +228,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 
 	pkt.Prepare()
-	oob := make([]byte, fbntp.ControlHeaderSizeBytes)
+	oob := make([]byte, udp.TimestampControlMessageLen)
 
 	n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
 	if err != nil {
@@ -248,7 +241,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
 		clientRxTime = time.Unix(ts.Unix())
 	} else {
-		log.Printf("Failed to receive kernel timestamp")
+		log.Printf("Failed to receive packet timestamp")
 		clientRxTime = time.Now().UTC()
 	}
 
@@ -259,64 +252,36 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 
-	pld, ok := pkt.Payload.(snet.UDPPayload)
+	udppkt, ok := pkt.Payload.(snet.UDPPayload)
 	if !ok {
-		log.Printf("Failed to read packet payload")
+		log.Printf("Failed to read packet payload: not a UDP packet")
 		return
 	}
 
 	log.Printf("Received payload at %v via %v with flags = %v:", clientRxTime, lastHop, flags)
-	fmt.Printf("%s", hex.Dump(pld.Payload))
-
-	ntpresp0, err := fbntp.BytesToPacket(pld.Payload)
-	if err != nil {
-		log.Printf("Failed to decode packet payload: %v", err)
-		return
-	}
+	fmt.Printf("%s", hex.Dump(udppkt.Payload))
 
 	var ntpresp ntp.Packet
-	err = ntp.DecodePacket(pld.Payload, &ntpresp)
+	err = ntp.DecodePacket(udppkt.Payload, &ntpresp)
 	if err != nil {
 		log.Printf("Failed to decode packet payload: %v", err)
 		return
 	}
 
-	if ntpresp.LVM != ntpresp0.Settings ||
-		ntpresp.Stratum != ntpresp0.Stratum ||
-		ntpresp.Poll != ntpresp0.Poll ||
-		ntpresp.Precision != ntpresp0.Precision ||
-		ntpresp.RootDelay.Seconds != uint16(ntpresp0.RootDelay >> 16) ||
-		ntpresp.RootDelay.Fraction != uint16(ntpresp0.RootDelay) ||
-		ntpresp.RootDispersion.Seconds != uint16(ntpresp0.RootDispersion >> 16) ||
-		ntpresp.RootDispersion.Fraction != uint16(ntpresp0.RootDispersion) ||
-		ntpresp.ReferenceID != ntpresp0.ReferenceID ||
-		ntpresp.ReferenceTime.Seconds != ntpresp0.RefTimeSec ||
-		ntpresp.ReferenceTime.Fraction != ntpresp0.RefTimeFrac ||
-		ntpresp.OriginTime.Seconds != ntpresp0.OrigTimeSec ||
-		ntpresp.OriginTime.Fraction != ntpresp0.OrigTimeFrac ||
-		ntpresp.ReceiveTime.Seconds != ntpresp0.RxTimeSec ||
-		ntpresp.ReceiveTime.Fraction != ntpresp0.RxTimeFrac ||
-		ntpresp.TransmitTime.Seconds != ntpresp0.TxTimeSec ||
-		ntpresp.TransmitTime.Fraction != ntpresp0.TxTimeFrac {
-		panic("NTP packet decoder error")
-	}
-	log.Printf("NTP packet decoder check passed")
+	log.Printf("Received NTP packet: %+v", ntpresp)
 
-	log.Printf("Received NTP packet: %+v", ntpresp0)
+	serverRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
+	serverTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
 
-	serverRxTime := fbntp.Unix(ntpresp0.RxTimeSec, ntpresp0.RxTimeFrac)
-	serverTxTime := fbntp.Unix(ntpresp0.TxTimeSec, ntpresp0.TxTimeFrac)
+	clockOffset := ntp.ClockOffset(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
+	roundTripDelay := ntp.RoundTripDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
 
-	avgNetworkDelay := fbntp.AvgNetworkDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
-	currentRealTime := fbntp.CurrentRealTime(serverTxTime, avgNetworkDelay)
-	offset := fbntp.CalculateOffset(currentRealTime, time.Now().UTC())
-
-	log.Printf("Stratum: %d, Current time: %s", ntpresp0.Stratum, currentRealTime)
-	log.Printf("Offset: %fs (%fms), Network delay: %fs (%fms)",
-		float64(offset)/float64(time.Second.Nanoseconds()),
-		float64(offset)/float64(time.Millisecond.Nanoseconds()),
-		float64(avgNetworkDelay)/float64(time.Second.Nanoseconds()),
-		float64(avgNetworkDelay)/float64(time.Millisecond.Nanoseconds()))
+	log.Printf("%s,%s clock offset: %fs (%fms), round trip delay: %fs (%fms)",
+		remoteAddr.IA, remoteAddr.Host,
+		float64(clockOffset.Nanoseconds())/float64(time.Second.Nanoseconds()),
+		float64(clockOffset.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
+		float64(roundTripDelay.Nanoseconds())/float64(time.Second.Nanoseconds()),
+		float64(roundTripDelay.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
 }
 
 func exitWithUsage() {

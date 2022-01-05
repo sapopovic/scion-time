@@ -61,7 +61,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
 			rxt = time.Unix(ts.Unix())
 		} else {
-			log.Printf("%s Failed to receive kernel timestamp", scionServerLogPrefix)
+			log.Printf("%s Failed to receive packet timestamp", scionServerLogPrefix)
 			rxt = time.Now().UTC()
 		}
 
@@ -126,7 +126,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 		ntpresp.Stratum = 1
 		ntpresp.Poll = ntpreq.Poll
 		ntpresp.Precision = -32
-		ntpresp.RootDispersion = ntp.Time32{ Seconds: 10, Fraction: 0, }
+		ntpresp.RootDispersion = ntp.Time32{ Seconds: 0, Fraction: 10, }
 		ntpresp.ReferenceID = ntp.ServerRefID
 
 		ntpresp.ReferenceTime = ntp.Time64FromTime(now)
