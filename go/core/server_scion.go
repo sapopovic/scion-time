@@ -1,15 +1,11 @@
 package core
 
 import (
-	"unsafe"
-
 	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
 	"time"
-
-	"golang.org/x/sys/unix"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/snet"
@@ -39,7 +35,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 
 	var pkt snet.Packet
 	var udppkt snet.UDPPayload
-	oob := make([]byte, udp.TimestampControlMessageLen)
+	oob := make([]byte, udp.TimestampOutOfBandDataLen())
 	for {
 		pkt.Prepare()
 		oob = oob[:cap(oob)]
@@ -50,12 +46,10 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			continue
 		}
 
-		var rxt time.Time
-		if oobn != 0 {
-			ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-			rxt = time.Unix(ts.Unix())
-		} else {
-			log.Printf("%s Failed to receive packet timestamp", scionServerLogPrefix)
+		oob = oob[:oobn]
+		rxt, err := udp.TimeFromOutOfBandData(oob)
+		if err != nil {
+			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
 			rxt = time.Now().UTC()
 		}
 

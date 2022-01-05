@@ -1,13 +1,9 @@
 package drivers
 
 import (
-	"unsafe"
-
 	"log"
 	"net"
 	"time"
-
-	"golang.org/x/sys/unix"
 
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
@@ -38,7 +34,7 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 
 	pkt := ntp.Packet{}
 	buf := make([]byte, ntp.PacketLen)
-	oob := make([]byte, udp.TimestampControlMessageLen)
+	oob := make([]byte, udp.TimestampOutOfBandDataLen())
 
 	clientTxTime := time.Now().UTC()
 
@@ -56,13 +52,13 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		return
 	}
 
-	clientRxTime := time.Now().UTC()
-	if oobn != 0 {
-		ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-		clientRxTime = time.Unix(ts.Unix())
-	} else {
-		log.Printf("%s %s, failed to packet timestamp", ntpLogPrefix, host)
+	oob = oob[:oobn]
+	clientRxTime, err := udp.TimeFromOutOfBandData(oob)
+	if err != nil {
+		log.Printf("%s %s, failed to read packet timestamp", ntpLogPrefix, host, err)
+		clientRxTime = time.Now().UTC()
 	}
+
 	buf = buf[:n]
 	err = ntp.DecodePacket(&pkt, buf)
 	if err != nil {

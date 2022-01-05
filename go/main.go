@@ -1,8 +1,6 @@
 package main
 
 import (
-	"unsafe"
-
 	"context"
 	"encoding/hex"
 	"flag"
@@ -11,8 +9,6 @@ import (
 	"os"
 	"net"
 	"time"
-
-	"golang.org/x/sys/unix"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/config"
@@ -228,7 +224,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 
 	pkt.Prepare()
-	oob := make([]byte, udp.TimestampControlMessageLen)
+	oob := make([]byte, udp.TimestampOutOfBandDataLen())
 
 	n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
 	if err != nil {
@@ -236,11 +232,9 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 
-	var clientRxTime time.Time
-	if oobn != 0 {
-		ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-		clientRxTime = time.Unix(ts.Unix())
-	} else {
+	oob = oob[:oobn]
+	clientRxTime, err := udp.TimeFromOutOfBandData(oob)
+	if err != nil {
 		log.Printf("Failed to receive packet timestamp")
 		clientRxTime = time.Now().UTC()
 	}
