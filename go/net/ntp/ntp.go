@@ -86,7 +86,7 @@ func RoundTripDelay(t0, t1, t2, t3 time.Time) time.Duration {
 	return t3.Sub(t0) - t2.Sub(t1)
 }
 
-func EncodePacket(pkt *Packet, b *[]byte) {
+func EncodePacket(b *[]byte, pkt *Packet) {
 	if cap(*b) < PacketLen {
 		*b = make([]byte, PacketLen)
 	} else {
@@ -112,7 +112,7 @@ func EncodePacket(pkt *Packet, b *[]byte) {
 	binary.BigEndian.PutUint32((*b)[44:], pkt.TransmitTime.Fraction)
 }
 
-func DecodePacket(b []byte, pkt *Packet) error {
+func DecodePacket(pkt *Packet, b []byte) error {
 	if len(b) != PacketLen {
 		return errUnexpectedPacketSize
 	}

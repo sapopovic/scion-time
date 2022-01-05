@@ -45,7 +45,7 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 	pkt.SetVersion(ntp.VersionMax)
 	pkt.SetMode(ntp.ModeClient)
 	pkt.TransmitTime = ntp.Time64FromTime(clientTxTime)
-	ntp.EncodePacket(&pkt, &buf)
+	ntp.EncodePacket(&buf, &pkt)
 
 	_, err = udpConn.Write(buf)
 	if err != nil {
@@ -64,7 +64,7 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		log.Printf("%s %s, failed to packet timestamp", ntpLogPrefix, host)
 	}
 	buf = buf[:n]
-	err = ntp.DecodePacket(buf, &pkt)
+	err = ntp.DecodePacket(&pkt, buf)
 	if err != nil {
 		log.Printf("%s %s, failed to decode packet payload: %v", ntpLogPrefix, host, err)
 		return

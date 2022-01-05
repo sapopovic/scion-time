@@ -194,7 +194,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	ntpreq.TransmitTime = ntp.Time64FromTime(clientTxTime)
-	ntp.EncodePacket(&ntpreq, &buf)
+	ntp.EncodePacket(&buf, &ntpreq)
 
 	pkt := &snet.Packet{
 		PacketInfo: snet.PacketInfo{
@@ -262,7 +262,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	fmt.Printf("%s", hex.Dump(udppkt.Payload))
 
 	var ntpresp ntp.Packet
-	err = ntp.DecodePacket(udppkt.Payload, &ntpresp)
+	err = ntp.DecodePacket(&ntpresp, udppkt.Payload)
 	if err != nil {
 		log.Printf("Failed to decode packet payload: %v", err)
 		return

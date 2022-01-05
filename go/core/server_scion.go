@@ -82,7 +82,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 		fmt.Printf("%s", hex.Dump(udppkt.Payload))
 
 		var ntpreq ntp.Packet
-		err = ntp.DecodePacket(udppkt.Payload, &ntpreq)
+		err = ntp.DecodePacket(&ntpreq, udppkt.Payload)
 		if err != nil {
 			log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
 			continue
@@ -129,7 +129,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 		ntpresp.ReceiveTime = ntp.Time64FromTime(rxt)
 		ntpresp.TransmitTime = ntp.Time64FromTime(now)
 
-		ntp.EncodePacket(&ntpresp, &udppkt.Payload)
+		ntp.EncodePacket(&udppkt.Payload, &ntpresp)
 		udppkt.DstPort, udppkt.SrcPort = udppkt.SrcPort, udppkt.DstPort
 
 		pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
