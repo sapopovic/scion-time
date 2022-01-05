@@ -21,13 +21,6 @@ import (
 
 const scionServerLogPrefix = "[core/server_scion]"
 
-func prepareOOB(b *[]byte) {
-	if *b == nil {
-		*b = make([]byte, udp.TimestampControlMessageLen)
-	}
-	*b = (*b)[:cap(*b)]
-}
-
 func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 	log.Printf("%s Listening in %v on %v:%d via SCION", scionServerLogPrefix, localIA, localHost.IP, localHost.Port)
 
@@ -45,10 +38,11 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 	}
 
 	var pkt snet.Packet
-	var oob []byte
+	var udppkt snet.UDPPayload
+	oob := make([]byte, udp.TimestampControlMessageLen)
 	for {
 		pkt.Prepare()
-		prepareOOB(&oob)
+		oob = oob[:cap(oob)]
 
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
 		if err != nil {
@@ -72,7 +66,8 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			continue
 		}
 
-		udppkt, ok := pkt.Payload.(snet.UDPPayload)
+		var ok bool
+		udppkt, ok = pkt.Payload.(snet.UDPPayload)
 		if !ok {
 			log.Printf("%s Packet payload is not a UDP packet", scionServerLogPrefix)
 			continue
@@ -143,7 +138,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			log.Printf("%s Failed to reverse path: %v", scionServerLogPrefix, err)
 			continue
 		}
-		pkt.Payload = udppkt
+		pkt.Payload = &udppkt
 		err = pkt.Serialize()
 		if err != nil {
 			log.Printf("%s Failed to serialize packet: %v", scionServerLogPrefix, err)
