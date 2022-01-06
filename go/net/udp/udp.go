@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
-
-	fbntp "github.com/facebook/time/ntp/protocol/ntp"
 )
 
 var (
@@ -23,8 +21,20 @@ var (
 // - https://github.com/google/gopacket, package "github.com/google/gopacket/pcapgo"
 // - https://github.com/facebook/time, package "github.com/facebook/time/ntp/protocol/ntp"
 
-func EnableTimestamping(conn *net.UDPConn) error {
-	return fbntp.EnableKernelTimestampsSocket(conn)
+func enableTimestamping(fd uintptr) {
+	if SO_TIMESTAMPNS != 0 {
+		_ = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, SO_TIMESTAMPNS, 1)
+	} else if SO_TIMESTAMP != 0 {
+		_ = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, SO_TIMESTAMP, 1)
+	}
+}
+
+func EnableTimestamping(conn *net.UDPConn) {
+	sconn, err := conn.SyscallConn()
+	if err != nil {
+		return
+	}
+	_ = sconn.Control(enableTimestamping)
 }
 
 func TimestampOutOfBandDataLen() int {
@@ -38,18 +48,18 @@ func TimeFromOutOfBandData(oob []byte) (time.Time, error) {
 			return time.Time{}, errUnexpectedData
 		}
 		if h.Level == unix.SOL_SOCKET {
-			if h.Type == unix.SO_TIMESTAMPNS {
+			if SCM_TIMESTAMPNS != 0 && h.Type == SCM_TIMESTAMPNS {
 				if unix.CmsgSpace(int(unsafe.Sizeof(unix.Timespec{}))) != int(h.Len) {
 					return time.Time{}, errUnexpectedData
 				}
 				ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-				return time.Unix(int64(ts.Sec), int64(ts.Nsec)), nil
-			} else if h.Type == unix.SO_TIMESTAMP {
+				return time.Unix(ts.Unix()), nil
+			} else if SCM_TIMESTAMP != 0 && h.Type == SCM_TIMESTAMP {
 				if unix.CmsgSpace(int(unsafe.Sizeof(unix.Timeval{}))) != int(h.Len) {
 					return time.Time{}, errUnexpectedData
 				}
 				ts := (*unix.Timeval)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-				return time.Unix(int64(ts.Sec), int64(ts.Usec) * 1000), nil
+				return time.Unix(ts.Unix()), nil
 			}
 		}
 		oob = oob[unix.CmsgSpace(int(h.Len)) - unix.CmsgSpace(0):]

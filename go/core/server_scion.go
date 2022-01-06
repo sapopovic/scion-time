@@ -28,10 +28,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
 	}
 	defer conn.Close()
-	err = udp.EnableTimestamping(conn)
-	if err != nil {
-		log.Fatalf("%s Failed to enable kernel timestamping for packets: %v", scionServerLogPrefix, err)
-	}
+	udp.EnableTimestamping(conn)
 
 	var pkt snet.Packet
 	var udppkt snet.UDPPayload

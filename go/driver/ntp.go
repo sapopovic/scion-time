@@ -26,11 +26,7 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 	defer conn.Close()
 	conn.SetDeadline(deadline)
 	udpConn := conn.(*net.UDPConn)
-
-	err = udp.EnableTimestamping(udpConn)
-	if err != nil {
-		return
-	}
+	udp.EnableTimestamping(udpConn)
 
 	pkt := ntp.Packet{}
 	buf := make([]byte, ntp.PacketLen)

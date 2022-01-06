@@ -176,11 +176,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 	defer conn.Close()
-
-	err = udp.EnableTimestamping(conn)
-	if err != nil {
-		log.Fatalf("Failed to enable timestamping for packets: %v", err)
-	}
+	udp.EnableTimestamping(conn)
 
 	ntpreq := ntp.Packet{}
 	buf := make([]byte, ntp.PacketLen)
