@@ -17,6 +17,12 @@ var (
 	errUnexpectedData    = fmt.Errorf("failed to read out of band data")
 )
 
+// Timestamp handling based on studying code from the following projects:
+// - https://github.com/bsdphk/Ntimed, file udp.c
+// - https://github.com/golang/go, package "golang.org/x/sys/unix"
+// - https://github.com/google/gopacket, package "github.com/google/gopacket/pcapgo"
+// - https://github.com/facebook/time, package "github.com/facebook/time/ntp/protocol/ntp"
+
 func EnableTimestamping(conn *net.UDPConn) error {
 	return fbntp.EnableKernelTimestampsSocket(conn)
 }
