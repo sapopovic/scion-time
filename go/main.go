@@ -119,7 +119,7 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 		}
 	}()
 
-	err = core.StartIPServer(localAddr.IA, snet.CopyUDPAddr(localAddr.Host))
+	err = core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
 		log.Fatalf("Failed to start IP server: %v", err)
 	}
