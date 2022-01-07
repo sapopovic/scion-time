@@ -6,8 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"net"
+	"os"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
@@ -28,7 +28,7 @@ import (
 type tsConfig struct {
 	MBGTimeSources []string `toml:"mbg_time_sources,omitempty"`
 	NTPTimeSources []string `toml:"ntp_time_sources,omitempty"`
-	SCIONPeers []string `toml:"scion_peers,omitempty"`
+	SCIONPeers     []string `toml:"scion_peers,omitempty"`
 }
 
 type timeSource interface {
@@ -164,7 +164,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	nextHop := sp.UnderlayNextHop()
 	if nextHop == nil && remoteAddr.IA.Equal(localAddr.IA) {
 		nextHop = &net.UDPAddr{
-			IP: remoteAddr.Host.IP,
+			IP:   remoteAddr.Host.IP,
 			Port: underlay.EndhostPort,
 			Zone: remoteAddr.Host.Zone,
 		}
@@ -191,11 +191,11 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	pkt := &snet.Packet{
 		PacketInfo: snet.PacketInfo{
 			Source: snet.SCIONAddress{
-				IA: localAddr.IA,
+				IA:   localAddr.IA,
 				Host: addr.HostFromIP(localAddr.Host.IP),
 			},
 			Destination: snet.SCIONAddress{
-				IA: remoteAddr.IA,
+				IA:   remoteAddr.IA,
 				Host: addr.HostFromIP(remoteAddr.Host.IP),
 			},
 			Path: sp.Path(),
@@ -272,10 +272,10 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 
 	log.Printf("%s,%s clock offset: %fs (%fms), round trip delay: %fs (%fms)",
 		remoteAddr.IA, remoteAddr.Host,
-		float64(clockOffset.Nanoseconds()) / float64(time.Second.Nanoseconds()),
-		float64(clockOffset.Nanoseconds()) / float64(time.Millisecond.Nanoseconds()),
-		float64(roundTripDelay.Nanoseconds()) / float64(time.Second.Nanoseconds()),
-		float64(roundTripDelay.Nanoseconds()) / float64(time.Millisecond.Nanoseconds()))
+		float64(clockOffset.Nanoseconds())/float64(time.Second.Nanoseconds()),
+		float64(clockOffset.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
+		float64(roundTripDelay.Nanoseconds())/float64(time.Second.Nanoseconds()),
+		float64(roundTripDelay.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
 }
 
 func exitWithUsage() {

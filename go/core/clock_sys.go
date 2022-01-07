@@ -7,7 +7,7 @@ import (
 
 const sysClockLogPrefix = "[core/clock_sys]"
 
-type SysClock struct {}
+type SysClock struct{}
 
 var _ LocalClock = (*SysClock)(nil)
 

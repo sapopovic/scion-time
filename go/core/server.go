@@ -36,7 +36,7 @@ func handleRequest(req *ntp.Packet, rxt time.Time, resp *ntp.Packet) {
 	resp.Stratum = 1
 	resp.Poll = req.Poll
 	resp.Precision = -32
-	resp.RootDispersion = ntp.Time32{Seconds: 0, Fraction: 10,}
+	resp.RootDispersion = ntp.Time32{Seconds: 0, Fraction: 10}
 	resp.ReferenceID = ntp.ServerRefID
 
 	resp.ReferenceTime = ntp.Time64FromTime(txt)

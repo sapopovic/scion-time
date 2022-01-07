@@ -62,7 +62,7 @@ func TimeFromOutOfBandData(oob []byte) (time.Time, error) {
 				return time.Unix(ts.Unix()), nil
 			}
 		}
-		oob = oob[unix.CmsgSpace(int(h.Len)) - unix.CmsgSpace(0):]
+		oob = oob[unix.CmsgSpace(int(h.Len))-unix.CmsgSpace(0):]
 	}
 	return time.Time{}, errTimestampNotFound
 }

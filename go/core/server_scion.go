@@ -68,7 +68,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
 			continue
 		}
-	
+
 		log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
 
 		err = validateRequest(&ntpreq, int(udppkt.SrcPort))

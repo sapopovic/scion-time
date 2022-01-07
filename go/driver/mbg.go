@@ -60,7 +60,7 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 	fd, err := unix.Open(dev, unix.O_RDWR, 0)
 	if err != nil {
 		log.Printf("%s Failed to open %s: %v", mbgLogPrefix, dev, err)
-		return time.Time{}, time.Time{}, err 
+		return time.Time{}, time.Time{}, err
 	}
 	defer func() {
 		err = unix.Close(fd)

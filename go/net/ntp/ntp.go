@@ -17,34 +17,34 @@ const (
 	LeapIndicatorNoWarning    = 0
 	LeapIndicatorInsertSecond = 1
 	LeapIndicatorDeleteSecond = 2
-  LeapIndicatorUnknown      = 3
+	LeapIndicatorUnknown      = 3
 
-  VersionMin = 1
-  VersionMax = 4
+	VersionMin = 1
+	VersionMax = 4
 
-  ModeReserved0        = 0
-  ModeSymmetricActive  = 1
-  ModeSymmetricPassive = 2
-  ModeClient           = 3
-  ModeServer           = 4
-  ModeBroadcast        = 5
-  ModeControl          = 6
-  ModeReserved7        = 7
+	ModeReserved0        = 0
+	ModeSymmetricActive  = 1
+	ModeSymmetricPassive = 2
+	ModeClient           = 3
+	ModeServer           = 4
+	ModeBroadcast        = 5
+	ModeControl          = 6
+	ModeReserved7        = 7
 )
 
 type Time32 struct {
-	Seconds uint16
+	Seconds  uint16
 	Fraction uint16
 }
 
 type Time64 struct {
-	Seconds uint32
+	Seconds  uint32
 	Fraction uint32
 }
 
 type Packet struct {
 	LVM            uint8
-	Stratum	       uint8
+	Stratum        uint8
 	Poll           int8
 	Precision      int8
 	RootDelay      Time32
@@ -68,14 +68,14 @@ func Time64FromTime(t time.Time) Time64 {
 		Seconds: uint32(
 			d / nanosecondsPerSecond),
 		Fraction: uint32(
-			(d % nanosecondsPerSecond << 32 + nanosecondsPerSecond / 2) / nanosecondsPerSecond),
+			(d%nanosecondsPerSecond<<32 + nanosecondsPerSecond/2) / nanosecondsPerSecond),
 	}
 }
 
 func TimeFromTime64(t Time64) time.Time {
 	return epoch.Add(time.Duration(
-		int64(t.Seconds) * nanosecondsPerSecond +
-		(int64(t.Fraction) * nanosecondsPerSecond + 1 << 31) >> 32))
+		int64(t.Seconds)*nanosecondsPerSecond +
+			(int64(t.Fraction)*nanosecondsPerSecond+1<<31)>>32))
 }
 
 func ClockOffset(t0, t1, t2, t3 time.Time) time.Duration {
@@ -142,7 +142,7 @@ func (p *Packet) LeapIndicator() uint8 {
 }
 
 func (p *Packet) SetLeapIndicator(l uint8) {
-	if l & 0b0000_0011 != l {
+	if l&0b0000_0011 != l {
 		panic("unexpected NTP leap indicator value")
 	}
 	p.LVM = (p.LVM & 0b0011_1111) | (l << 6)
@@ -153,7 +153,7 @@ func (p *Packet) Version() uint8 {
 }
 
 func (p *Packet) SetVersion(v uint8) {
-	if v & 0b0000_0111 != v {
+	if v&0b0000_0111 != v {
 		panic("unexpected NTP version value")
 	}
 	p.LVM = (p.LVM & 0b_1100_0111) | (v << 3)
@@ -164,7 +164,7 @@ func (p *Packet) Mode() uint8 {
 }
 
 func (p *Packet) SetMode(m uint8) {
-	if m & 0b0000_0111 != m {
+	if m&0b0000_0111 != m {
 		panic("unexpected NTP mode value")
 	}
 	p.LVM = (p.LVM & 0b1111_1000) | m

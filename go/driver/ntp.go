@@ -77,10 +77,10 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 
 	log.Printf("%s %s, clock offset: %fs (%fms), round trip delay: %fs (%fms)",
 		ntpLogPrefix, host,
-		float64(clockOffset.Nanoseconds()) / float64(time.Second.Nanoseconds()),
-		float64(clockOffset.Nanoseconds()) / float64(time.Millisecond.Nanoseconds()),
-		float64(roundTripDelay.Nanoseconds()) / float64(time.Second.Nanoseconds()),
-		float64(roundTripDelay.Nanoseconds()) / float64(time.Millisecond.Nanoseconds()))
+		float64(clockOffset.Nanoseconds())/float64(time.Second.Nanoseconds()),
+		float64(clockOffset.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
+		float64(roundTripDelay.Nanoseconds())/float64(time.Second.Nanoseconds()),
+		float64(roundTripDelay.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
 
 	sysTime = clientRxTime
 	refTime = clientRxTime.Add(clockOffset)

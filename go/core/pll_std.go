@@ -7,7 +7,7 @@ import (
 
 const stdPLLLogPrefix = "[core/pll_std]"
 
-type StdPLL struct {}
+type StdPLL struct{}
 
 var _ PLL = (*StdPLL)(nil)
 
