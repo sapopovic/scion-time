@@ -1,8 +1,6 @@
 package core
 
 import (
-	"encoding/hex"
-	"fmt"
 	"log"
 	"net"
 	"time"
@@ -17,16 +15,7 @@ import (
 
 const scionServerLogPrefix = "[core/server_scion]"
 
-func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
-	log.Printf("%s Listening in %v on %v:%d via SCION", scionServerLogPrefix, localIA, localHost.IP, localHost.Port)
-
-	localHostPort := localHost.Port
-	localHost.Port = underlay.EndhostPort
-
-	conn, err := net.ListenUDP("udp", localHost)
-	if err != nil {
-		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
-	}
+func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	defer conn.Close()
 	udp.EnableTimestamping(conn)
 
@@ -42,6 +31,10 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			log.Printf("%s Failed to read packet: %v", scionServerLogPrefix, err)
 			continue
 		}
+		if flags != 0 {
+			log.Printf("%s Failed to read packet, flags: %v", scionServerLogPrefix, flags)
+			continue
+		}
 
 		oob = oob[:oobn]
 		rxt, err := udp.TimeFromOutOfBandData(oob)
@@ -49,8 +42,8 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
 			rxt = time.Now().UTC()
 		}
-
 		pkt.Bytes = pkt.Bytes[:n]
+
 		err = pkt.Decode()
 		if err != nil {
 			log.Printf("%s Failed to decode packet: %v", err, scionServerLogPrefix)
@@ -69,56 +62,22 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			continue
 		}
 
-		log.Printf("%s Received payload at %v via %v with flags = %v:", scionServerLogPrefix, rxt, lastHop, flags)
-		fmt.Printf("%s", hex.Dump(udppkt.Payload))
-
 		var ntpreq ntp.Packet
 		err = ntp.DecodePacket(&ntpreq, udppkt.Payload)
 		if err != nil {
 			log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
 			continue
 		}
+	
+		log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
 
-		li := ntpreq.LeapIndicator()
-		if li != ntp.LeapIndicatorNoWarning && li != ntp.LeapIndicatorUnknown {
-			log.Printf("%s Unexpected NTP request packet: LI = %v, dropping packet",
-				scionServerLogPrefix, li)
+		err = validateRequest(&ntpreq, int(udppkt.SrcPort))
+		if err != nil {
+			log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
 			continue
 		}
-		vn := ntpreq.Version()
-		if vn < ntp.VersionMin || ntp.VersionMax < vn {
-			log.Printf("%s Unexpected NTP request packet: VN = %v, dropping packet",
-				scionServerLogPrefix, vn)
-			continue
-		}
-		mode := ntpreq.Mode()
-		if vn == 1 && mode != ntp.ModeReserved0 ||
-			vn != 1 && mode != ntp.ModeClient {
-			log.Printf("%s Unexpected NTP request packet: Mode = %v, dropping packet",
-				scionServerLogPrefix, mode)
-			continue
-		}
-		if vn == 1 && udppkt.SrcPort == ntp.ServerPort {
-			log.Printf("%s Unexpected NTP request packet: VN = %v, SrcPort = %v, dropping packet",
-				scionServerLogPrefix, vn, udppkt.SrcPort)
-			continue
-		}
-
-		now := time.Now().UTC()
-
-		ntpresp := ntp.Packet{}
-		ntpresp.SetVersion(ntp.VersionMax)
-		ntpresp.SetMode(ntp.ModeServer)
-		ntpresp.Stratum = 1
-		ntpresp.Poll = ntpreq.Poll
-		ntpresp.Precision = -32
-		ntpresp.RootDispersion = ntp.Time32{ Seconds: 0, Fraction: 10, }
-		ntpresp.ReferenceID = ntp.ServerRefID
-
-		ntpresp.ReferenceTime = ntp.Time64FromTime(now)
-		ntpresp.OriginTime = ntpreq.TransmitTime
-		ntpresp.ReceiveTime = ntp.Time64FromTime(rxt)
-		ntpresp.TransmitTime = ntp.Time64FromTime(now)
+		var ntpresp ntp.Packet
+		handleRequest(&ntpreq, rxt, &ntpresp)
 
 		ntp.EncodePacket(&udppkt.Payload, &ntpresp)
 		udppkt.DstPort, udppkt.SrcPort = udppkt.SrcPort, udppkt.DstPort
@@ -146,4 +105,20 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			continue
 		}
 	}
+}
+
+func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
+	log.Printf("%s Listening in %v on %v:%d via SCION", scionServerLogPrefix, localIA, localHost.IP, localHost.Port)
+
+	localHostPort := localHost.Port
+	localHost.Port = underlay.EndhostPort
+
+	conn, err := net.ListenUDP("udp", localHost)
+	if err != nil {
+		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
+	}
+
+	go runSCIONServer(conn, localHostPort)
+
+	return nil
 }

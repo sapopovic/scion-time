@@ -227,6 +227,10 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		log.Printf("Failed to read packet: %v", err)
 		return
 	}
+	if flags != 0 {
+		log.Printf("Failed to read packet, flags: %v", flags)
+		return
+	}
 
 	oob = oob[:oobn]
 	clientRxTime, err := udp.TimeFromOutOfBandData(oob)
@@ -234,8 +238,8 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		log.Printf("Failed to receive packet timestamp")
 		clientRxTime = time.Now().UTC()
 	}
-
 	pkt.Bytes = pkt.Bytes[:n]
+
 	err = pkt.Decode()
 	if err != nil {
 		log.Printf("Failed to decode packet: %v", err)

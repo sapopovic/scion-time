@@ -43,8 +43,13 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 	if err != nil {
 		return
 	}
-	n, oobn, _, _, err := udpConn.ReadMsgUDP(buf, oob)
+	n, oobn, flags, srcAddr, err := udpConn.ReadMsgUDP(buf, oob)
 	if err != nil {
+		log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+		return
+	}
+	if flags != 0 {
+		log.Printf("%s Failed to read packet, flags: %v", ntpLogPrefix, flags)
 		return
 	}
 
@@ -54,15 +59,15 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 		log.Printf("%s %s, failed to read packet timestamp", ntpLogPrefix, host, err)
 		clientRxTime = time.Now().UTC()
 	}
-
 	buf = buf[:n]
+
 	err = ntp.DecodePacket(&pkt, buf)
 	if err != nil {
 		log.Printf("%s %s, failed to decode packet payload: %v", ntpLogPrefix, host, err)
 		return
 	}
 
-	log.Printf("%s %s, received packet: %+v", ntpLogPrefix, host, pkt)
+	log.Printf("%s %s, received packet at %v from srcAddr: %+v", ntpLogPrefix, host, pkt, clientRxTime, srcAddr)
 
 	serverRxTime := ntp.TimeFromTime64(pkt.ReceiveTime)
 	serverTxTime := ntp.TimeFromTime64(pkt.TransmitTime)
