@@ -46,8 +46,6 @@ func StartPather(c daemon.Connector, peerIAs []addr.IA) (<-chan PathInfo, error)
 					if peerIA.IsWildcard() {
 						panic("unexpected peer IA: wildcard.")
 					}
-				}
-				for _, peerIA := range peerIAs {
 					ps, err := c.Paths(ctx, peerIA, localIA, daemon.PathReqFlags{Refresh: true})
 					if err != nil {
 						log.Printf("%s Failed to look up peer paths: %v", patherLogPrefix, err)
