@@ -76,6 +76,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
 			continue
 		}
+		
 		var ntpresp ntp.Packet
 		handleRequest(&ntpreq, rxt, &ntpresp)
 
