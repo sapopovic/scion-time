@@ -16,7 +16,16 @@ func (c *SysClock) Now() time.Time {
 	return time.Time{}
 }
 
-func (c *SysClock) Adjust(offset, duration time.Duration, frequency float64) {
+func (c *SysClock) MaxDrift(duration time.Duration) time.Duration {
+	log.Printf("%s core.SysClock.MaxDrift", sysClockLogPrefix)
+	return 0
+}
+
+func (c *SysClock) Step(offset time.Duration) {
+	log.Printf("%s core.SysClock.Step", sysClockLogPrefix)
+}
+
+func (c *SysClock) Adjust(offset, duration time.Duration) {
 	log.Printf("%s core.SysClock.Adjust", sysClockLogPrefix)
 }
 

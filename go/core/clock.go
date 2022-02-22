@@ -6,7 +6,9 @@ import (
 
 type LocalClock interface {
 	Now() time.Time
-	Adjust(offset, duration time.Duration, frequency float64)
+	MaxDrift(duration time.Duration) time.Duration
+	Step(offset time.Duration)
+	Adjust(offset, duration time.Duration) // TODO: add argument 'frequency float64'
 	Sleep(duration time.Duration)
 }
 
