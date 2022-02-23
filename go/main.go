@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math"
 	"net"
 	"os"
 	"time"
@@ -17,8 +16,6 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
-	_ "example.com/scion-time/go/core/prev"
-
 	"example.com/scion-time/go/driver"
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
@@ -27,11 +24,13 @@ import (
 )
 
 const (
-	refClockImpact = 1.25
-	refClockSyncTimeout = 5*time.Second
+	refClockImpact       = 1.25
+	refClockCutoff       = 0
+	refClockSyncTimeout  = 5*time.Second
 	refClockSyncInterval = 60*time.Second
-	netClockImpact = 2.5
-	netClockSyncTimeout = 5*time.Second
+	netClockImpact       = 2.5
+	netClockCutoff       = time.Millisecond
+	netClockSyncTimeout  = 5*time.Second
 	netClockSyncInterval = 3600*time.Second
 )
 
@@ -44,7 +43,13 @@ type tsConfig struct {
 type mbgTimeSource string
 type ntpTimeSource string
 
-var timeSources []core.TimeSource
+var (
+	timeSources []core.TimeSource
+	pathInfo core.PathInfo
+
+	refcc core.ReferenceClockClient
+	netcc core.NetworkClockClient
+)
 
 func (s mbgTimeSource) FetchTime() (time.Time, time.Time, error) {
 	// TODO: return drivers.FetchMBGTime(string(s))
@@ -66,52 +71,35 @@ func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector
 	return c
 }
 
-func abs(d time.Duration) float64 {
-	if d == math.MinInt64 {
-		panic("Failure to compute abs(math.MinInt64)")
-	}
-	if d < 0 {
-		d = -d
-	}
-	return float64(d)
-}
-
-func sign(d time.Duration) float64 {
-	if d < 0 {
-		return -1
-	}
-	if d > 0 {
-		return 1
-	}
-	return 0
-}
-
-var refc core.ReferenceClockClient
-
-func runLocalSync() {
-	lclk := core.LocalClockInstance()
+func syncToRefClock(lclk core.LocalClock) {
 	for {
 		ctx, _ := context.WithTimeout(context.Background(), refClockSyncTimeout)
-		corr, err := refc.MeasureClockOffset(ctx, timeSources)
+		corr, err := refcc.MeasureClockOffset(ctx, timeSources)
 		if err == nil && corr != 0 {
 			lclk.Step(corr)
-			break
+			return
 		}
 		lclk.Sleep(time.Second)
 	}
+}
+
+func runLocalClockSync(lclk core.LocalClock) {
 	if refClockImpact <= 1.0 {
 		panic("invalid reference clock impact factor")
 	}
-	if refClockSyncTimeout >= refClockSyncInterval/2 {
+	if refClockSyncInterval <= 0 {
+		panic("invalid reference clock sync interval")
+	}
+	if refClockSyncTimeout < 0 || refClockSyncTimeout >= refClockSyncInterval/2 {
 		panic("invalid reference clock sync timeout")
 	}
 	maxCorr := refClockImpact * float64(lclk.MaxDrift(refClockSyncInterval));
 	for {
 		ctx, _ := context.WithTimeout(context.Background(), refClockSyncTimeout)
-		corr, err := refc.MeasureClockOffset(ctx, timeSources)
-		if err == nil && corr != 0 {
-		  if abs(corr) > maxCorr {
-		    corr = time.Duration(sign(corr) * maxCorr)
+		corr, err := refcc.MeasureClockOffset(ctx, timeSources)
+		if err == nil && core.Abs(corr) > refClockCutoff {
+		  if float64(core.Abs(corr)) > maxCorr {
+		    corr = time.Duration(float64(core.Sign(corr)) * maxCorr + 0.5)
 		  }
 			lclk.Adjust(corr, refClockSyncInterval)
 		}
@@ -119,20 +107,36 @@ func runLocalSync() {
 	}
 }
 
+func runGlobalClockSync(lclk core.LocalClock) {
+	if netClockImpact <= 1.0 {
+		panic("invalid reference clock impact factor")
+	}
+	if netClockImpact - 1.0 <= refClockImpact {
+		panic("invalid network clock impact factor")
+	}
+	if netClockSyncInterval < refClockSyncInterval {
+		panic("invalid network clock sync interval")
+	}
+	if netClockSyncTimeout < 0 || netClockSyncTimeout >= netClockSyncInterval/2 {
+		panic("invalid network clock sync timeout")
+	}
+	maxCorr := netClockImpact * float64(lclk.MaxDrift(netClockSyncInterval));
+	for {
+		ctx, _ := context.WithTimeout(context.Background(), netClockSyncTimeout)
+		corr, err := netcc.MeasureClockOffset(ctx, pathInfo)
+		if err == nil && core.Abs(corr) > netClockCutoff {
+		  if float64(core.Abs(corr)) > maxCorr {
+		    corr = time.Duration(float64(core.Sign(corr)) * maxCorr + 0.5)
+		  }
+			lclk.Adjust(corr, netClockSyncInterval)
+		}
+		lclk.Sleep(netClockSyncInterval)
+	}
+}
+
 func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
-
-	core.RegisterLocalClock(&core.SysClock{})
-
-	localClock := core.LocalClockInstance()
-	_ = localClock.Now()
-	localClock.Adjust(0, 0)
-	localClock.Sleep(0)
-
-	core.RegisterPLL(&core.StdPLL{})
-	pll := core.PLLInstance()
-	pll.Do(0, 0.0)
 
 	var cfg tsConfig
 	err = config.LoadFile(configFile, &cfg)
@@ -166,21 +170,26 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	}
 	go func() {
 		for {
-			<-pathInfos
+			pathInfo = <-pathInfos
 		}
 	}()
+
+	core.RegisterPLL(&core.StdPLL{})
+	core.RegisterLocalClock(&core.SysClock{})
+	lclk := core.LocalClockInstance()
+	syncToRefClock(lclk)
 
 	err = core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
 		log.Fatalf("Failed to start IP server: %v", err)
 	}
-
 	err = core.StartSCIONServer(localAddr.IA, snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
 		log.Fatalf("Failed to start SCION server: %v", err)
 	}
 
-	go runLocalSync()
+	go runLocalClockSync(lclk)
+	go runGlobalClockSync(lclk)
 
 	select {}
 }

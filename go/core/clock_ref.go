@@ -2,9 +2,6 @@ package core
 
 import (
 	"context"
-	"crypto/rand"
-	"log"
-	"sort"
 	"time"
 )
 
@@ -16,35 +13,7 @@ type TimeSource interface {
 
 type ReferenceClockClient struct {}
 
-func medianTimeInfo(tis []time.Duration) time.Duration {
-	sort.Slice(tis, func(i, j int) bool {
-		return tis[i] < tis[j]
-	})
-	var m time.Duration
-	n := len(tis)
-	if n == 0 {
-		m = 0
-	} else {
-		i := n / 2
-		if n%2 != 0 {
-			m = tis[i]
-		} else {
-			b := make([]byte, 1)
-			_, err  := rand.Read(b)
-			if err != nil {
-				log.Fatalf("%s Failed to read random number: %v", refClockLogPrefix, err)
-			}
-			if b[0] > 127 {
-				m = tis[i]
-			} else {
-				m = tis[i-1]
-			}
-		}
-	}
-	return m
-}
-
-func (r *ReferenceClockClient) MeasureClockOffset(ctx context.Context, tss []TimeSource) (time.Duration, error) {
+func (rcc *ReferenceClockClient) MeasureClockOffset(ctx context.Context, tss []TimeSource) (time.Duration, error) {
 	// for _, ts := range tss {
 	// 	go func(ts TimeSource) {
 	// 		refTime, sysTime, err := ts.FetchTime()
