@@ -56,11 +56,11 @@ func nanoseconds(frac uint32) int64 {
 	return int64((uint64(frac) * uint64(time.Second)) / (1 << 32))
 }
 
-func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) {
+func MeasureMBGClockOffset(dev string) (time.Duration, error) {
 	fd, err := unix.Open(dev, unix.O_RDWR, 0)
 	if err != nil {
 		log.Printf("%s Failed to open %s: %v", mbgLogPrefix, dev, err)
-		return time.Time{}, time.Time{}, err
+		return 0, err
 	}
 	defer func() {
 		err = unix.Close(fd)
@@ -81,7 +81,7 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 		uintptr(unsafe.Pointer(&featureData[0])))
 	if errno != 0 {
 		log.Printf("%s Failed to ioctl %s (features) or HR time not supported: %d", mbgLogPrefix, dev, errno)
-		return time.Time{}, time.Time{}, errno
+		return 0, errno
 	}
 
 	cycleFrequencyData := make([]byte, 8)
@@ -90,7 +90,7 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 		uintptr(unsafe.Pointer(&cycleFrequencyData[0])))
 	if errno != 0 {
 		log.Printf("%s Failed to ioctl %s (cycle frequency): %d", mbgLogPrefix, dev, errno)
-		return time.Time{}, time.Time{}, errno
+		return 0, errno
 	}
 
 	cycleFrequency := binary.LittleEndian.Uint64(cycleFrequencyData[0:])
@@ -102,7 +102,7 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 		uintptr(unsafe.Pointer(&timeData[0])))
 	if errno != 0 {
 		log.Printf("%s Failed to ioctl %s (time): %d", mbgLogPrefix, dev, errno)
-		return time.Time{}, time.Time{}, errno
+		return 0, errno
 	}
 
 	refTimeCycles := int64(binary.LittleEndian.Uint64(timeData[0:]))
@@ -116,8 +116,8 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 	sysTimeSeconds := int64(binary.LittleEndian.Uint64(timeData[39:]))
 	sysTimeNanoseconds := int64(binary.LittleEndian.Uint64(timeData[47:]))
 
-	refTime = time.Unix(refTimeSeconds, nanoseconds(refTimeFractions)).UTC()
-	sysTime = time.Unix(sysTimeSeconds, sysTimeNanoseconds).UTC()
+	refTime := time.Unix(refTimeSeconds, nanoseconds(refTimeFractions)).UTC()
+	sysTime := time.Unix(sysTimeSeconds, sysTimeNanoseconds).UTC()
 
 	log.Printf("%s RefTime: %v, UTC offset: %v, status: %v, signal: %v",
 		mbgLogPrefix, refTime, refTimeUTCOffset, refTimeStatus, refTimeSignal)
@@ -125,5 +125,5 @@ func FetchMBGTime(dev string) (refTime time.Time, sysTime time.Time, err error) 
 		mbgLogPrefix, sysTime, sysTimeCyclesBefore, refTimeCycles-sysTimeCyclesAfter, cycleFrequency)
 	log.Printf("%s Offset: %v\n", mbgLogPrefix, refTime.Sub(sysTime))
 
-	return refTime, sysTime, nil
+	return refTime.Sub(sysTime), nil
 }

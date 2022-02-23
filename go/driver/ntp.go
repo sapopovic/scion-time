@@ -1,6 +1,7 @@
 package drivers
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"time"
@@ -11,17 +12,16 @@ import (
 
 const ntpLogPrefix = "[drivers/ntp]"
 
-func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error) {
-	refTime = time.Time{}
-	sysTime = time.Time{}
+var errUnexpectedPacketFlags = fmt.Errorf("failed to read packet: unexpected flags")
 
+func MeasureNTPClockOffset(host string) (time.Duration, error) {
 	timeout := 5 * time.Second
 	now := time.Now().UTC()
 	deadline := now.Add(timeout)
 	addr := net.JoinHostPort(host, "123")
 	conn, err := net.DialTimeout("udp", addr, deadline.Sub(now))
 	if err != nil {
-		return
+		return 0, err
 	}
 	defer conn.Close()
 	conn.SetDeadline(deadline)
@@ -41,16 +41,16 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 
 	_, err = udpConn.Write(buf)
 	if err != nil {
-		return
+		return 0, err
 	}
 	n, oobn, flags, srcAddr, err := udpConn.ReadMsgUDP(buf, oob)
 	if err != nil {
 		log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
-		return
+		return 0, err
 	}
 	if flags != 0 {
 		log.Printf("%s Failed to read packet, flags: %v", ntpLogPrefix, flags)
-		return
+		return 0, errUnexpectedPacketFlags
 	}
 
 	oob = oob[:oobn]
@@ -64,7 +64,7 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 	err = ntp.DecodePacket(&pkt, buf)
 	if err != nil {
 		log.Printf("%s %s, failed to decode packet payload: %v", ntpLogPrefix, host, err)
-		return
+		return 0, err
 	}
 
 	log.Printf("%s %s, received packet at %v from srcAddr: %+v", ntpLogPrefix, host, pkt, clientRxTime, srcAddr)
@@ -72,17 +72,15 @@ func FetchNTPTime(host string) (refTime time.Time, sysTime time.Time, err error)
 	serverRxTime := ntp.TimeFromTime64(pkt.ReceiveTime)
 	serverTxTime := ntp.TimeFromTime64(pkt.TransmitTime)
 
-	clockOffset := ntp.ClockOffset(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
-	roundTripDelay := ntp.RoundTripDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
+	off := ntp.ClockOffset(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
+	rtd := ntp.RoundTripDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
 
 	log.Printf("%s %s, clock offset: %fs (%fms), round trip delay: %fs (%fms)",
 		ntpLogPrefix, host,
-		float64(clockOffset.Nanoseconds())/float64(time.Second.Nanoseconds()),
-		float64(clockOffset.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
-		float64(roundTripDelay.Nanoseconds())/float64(time.Second.Nanoseconds()),
-		float64(roundTripDelay.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
+		float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()),
+		float64(off.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
+		float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()),
+		float64(rtd.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
 
-	sysTime = clientRxTime
-	refTime = clientRxTime.Add(clockOffset)
-	return
+	return off, nil
 }

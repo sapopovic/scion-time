@@ -51,13 +51,12 @@ var (
 	netcc core.NetworkClockClient
 )
 
-func (s mbgTimeSource) FetchTime() (time.Time, time.Time, error) {
-	// TODO: return drivers.FetchMBGTime(string(s))
-	return time.Time{}, time.Time{}, nil
+func (s mbgTimeSource) MeasureClockOffset() (time.Duration, error) {
+	return drivers.MeasureMBGClockOffset(string(s))
 }
 
-func (s ntpTimeSource) FetchTime() (time.Time, time.Time, error) {
-	return drivers.FetchNTPTime(string(s))
+func (s ntpTimeSource) MeasureClockOffset() (time.Duration, error) {
+	return drivers.MeasureNTPClockOffset(string(s))
 }
 
 func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
@@ -73,13 +72,16 @@ func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector
 
 func syncToRefClock(lclk core.LocalClock) {
 	for {
-		ctx, _ := context.WithTimeout(context.Background(), refClockSyncTimeout)
-		corr, err := refcc.MeasureClockOffset(ctx, timeSources)
-		if err == nil && corr != 0 {
-			lclk.Step(corr)
-			return
-		}
-		lclk.Sleep(time.Second)
+		func() {
+			ctx, cancel := context.WithTimeout(context.Background(), refClockSyncTimeout)
+			defer cancel()
+			corr, err := refcc.MeasureClockOffset(ctx, timeSources)
+			if err == nil && corr != 0 {
+				lclk.Step(corr)
+				return
+			}
+			lclk.Sleep(time.Second)
+		}()
 	}
 }
 
@@ -95,15 +97,18 @@ func runLocalClockSync(lclk core.LocalClock) {
 	}
 	maxCorr := refClockImpact * float64(lclk.MaxDrift(refClockSyncInterval));
 	for {
-		ctx, _ := context.WithTimeout(context.Background(), refClockSyncTimeout)
-		corr, err := refcc.MeasureClockOffset(ctx, timeSources)
-		if err == nil && core.Abs(corr) > refClockCutoff {
-		  if float64(core.Abs(corr)) > maxCorr {
-		    corr = time.Duration(float64(core.Sign(corr)) * maxCorr + 0.5)
-		  }
-			lclk.Adjust(corr, refClockSyncInterval)
-		}
-		lclk.Sleep(refClockSyncInterval)
+		func() {
+			ctx, cancel := context.WithTimeout(context.Background(), refClockSyncTimeout)
+			defer cancel()
+			corr, err := refcc.MeasureClockOffset(ctx, timeSources)
+			if err == nil && core.Abs(corr) > refClockCutoff {
+			  if float64(core.Abs(corr)) > maxCorr {
+			    corr = time.Duration(float64(core.Sign(corr)) * maxCorr + 0.5)
+			  }
+				lclk.Adjust(corr, refClockSyncInterval)
+			}
+			lclk.Sleep(refClockSyncInterval)
+		}()
 	}
 }
 
@@ -122,15 +127,18 @@ func runGlobalClockSync(lclk core.LocalClock) {
 	}
 	maxCorr := netClockImpact * float64(lclk.MaxDrift(netClockSyncInterval));
 	for {
-		ctx, _ := context.WithTimeout(context.Background(), netClockSyncTimeout)
-		corr, err := netcc.MeasureClockOffset(ctx, pathInfo)
-		if err == nil && core.Abs(corr) > netClockCutoff {
-		  if float64(core.Abs(corr)) > maxCorr {
-		    corr = time.Duration(float64(core.Sign(corr)) * maxCorr + 0.5)
-		  }
-			lclk.Adjust(corr, netClockSyncInterval)
-		}
-		lclk.Sleep(netClockSyncInterval)
+		func() {
+			ctx, cancel := context.WithTimeout(context.Background(), netClockSyncTimeout)
+			defer cancel()
+			corr, err := netcc.MeasureClockOffset(ctx, pathInfo)
+			if err == nil && core.Abs(corr) > netClockCutoff {
+			  if float64(core.Abs(corr)) > maxCorr {
+			    corr = time.Duration(float64(core.Sign(corr)) * maxCorr + 0.5)
+			  }
+				lclk.Adjust(corr, netClockSyncInterval)
+			}
+			lclk.Sleep(netClockSyncInterval)
+		}()
 	}
 }
 
