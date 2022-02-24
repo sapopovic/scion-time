@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-const refClockLogPrefix = "[core/clock_ref]"
-
 type TimeSource interface {
 	MeasureClockOffset() (time.Duration, error)
 }
@@ -50,7 +48,7 @@ loop:
 		}
 	}(len(tss) - i)
 	if len(off) == 0 {
-		return 0, nil
+		return 0, errNoClockMeasurements
 	}
 	return Median(off), nil
 }

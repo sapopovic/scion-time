@@ -85,8 +85,10 @@ func measureOffsetToRefClock(tss []core.TimeSource, timeout time.Duration) (time
 func syncToRefClock(lclk core.LocalClock) {
 	for {
 		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
-		if err == nil && corr != 0 {
-			lclk.Step(corr)
+		if err == nil {
+			if corr != 0 {
+				lclk.Step(corr)
+			}
 			return
 		}
 		lclk.Sleep(time.Second)

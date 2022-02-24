@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -12,7 +13,11 @@ type LocalClock interface {
 	Sleep(duration time.Duration)
 }
 
-var localClock LocalClock
+var (
+	localClock LocalClock
+
+	errNoClockMeasurements = fmt.Errorf("failed to measure clock values")
+)
 
 func LocalClockInstance() LocalClock {
 	if localClock == nil {
