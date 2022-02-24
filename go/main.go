@@ -26,12 +26,12 @@ import (
 const (
 	refClockImpact       = 1.25
 	refClockCutoff       = 0
-	refClockSyncTimeout  = 5*time.Second
-	refClockSyncInterval = 60*time.Second
+	refClockSyncTimeout  = 5 * time.Second
+	refClockSyncInterval = 60 * time.Second
 	netClockImpact       = 2.5
 	netClockCutoff       = time.Millisecond
-	netClockSyncTimeout  = 5*time.Second
-	netClockSyncInterval = 3600*time.Second
+	netClockSyncTimeout  = 5 * time.Second
+	netClockSyncInterval = 3600 * time.Second
 )
 
 type tsConfig struct {
@@ -45,7 +45,7 @@ type ntpTimeSource string
 
 var (
 	timeSources []core.TimeSource
-	pathInfo core.PathInfo
+	pathInfo    core.PathInfo
 
 	refcc core.ReferenceClockClient
 	netcc core.NetworkClockClient
@@ -59,29 +59,37 @@ func (s ntpTimeSource) MeasureClockOffset() (time.Duration, error) {
 	return drivers.MeasureNTPClockOffset(string(s))
 }
 
-func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
+func newDaemonConnector(daemonAddr string) daemon.Connector {
 	s := &daemon.Service{
 		Address: daemonAddr,
 	}
-	c, err := s.Connect(ctx)
+	c, err := s.Connect(context.Background())
 	if err != nil {
 		log.Fatal("Failed to create SCION Daemon connector:", err)
 	}
 	return c
 }
 
+func handlePathInfos(pis <-chan core.PathInfo) {
+	for {
+		pathInfo = <-pis
+	}
+}
+
+func measureOffsetToRefClock(tss []core.TimeSource, timeout time.Duration) (time.Duration, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return refcc.MeasureClockOffset(ctx, tss)
+}
+
 func syncToRefClock(lclk core.LocalClock) {
 	for {
-		func() {
-			ctx, cancel := context.WithTimeout(context.Background(), refClockSyncTimeout)
-			defer cancel()
-			corr, err := refcc.MeasureClockOffset(ctx, timeSources)
-			if err == nil && corr != 0 {
-				lclk.Step(corr)
-				return
-			}
-			lclk.Sleep(time.Second)
-		}()
+		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
+		if err == nil && corr != 0 {
+			lclk.Step(corr)
+			return
+		}
+		lclk.Sleep(time.Second)
 	}
 }
 
@@ -95,28 +103,30 @@ func runLocalClockSync(lclk core.LocalClock) {
 	if refClockSyncTimeout < 0 || refClockSyncTimeout >= refClockSyncInterval/2 {
 		panic("invalid reference clock sync timeout")
 	}
-	maxCorr := refClockImpact * float64(lclk.MaxDrift(refClockSyncInterval));
+	maxCorr := refClockImpact * float64(lclk.MaxDrift(refClockSyncInterval))
 	for {
-		func() {
-			ctx, cancel := context.WithTimeout(context.Background(), refClockSyncTimeout)
-			defer cancel()
-			corr, err := refcc.MeasureClockOffset(ctx, timeSources)
-			if err == nil && core.Abs(corr) > refClockCutoff {
-			  if float64(core.Abs(corr)) > maxCorr {
-			    corr = time.Duration(float64(core.Sign(corr)) * maxCorr + 0.5)
-			  }
-				lclk.Adjust(corr, refClockSyncInterval)
+		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
+		if err == nil && core.Abs(corr) > refClockCutoff {
+			if float64(core.Abs(corr)) > maxCorr {
+				corr = time.Duration(float64(core.Sign(corr)) * maxCorr)
 			}
-			lclk.Sleep(refClockSyncInterval)
-		}()
+			lclk.Adjust(corr, refClockSyncInterval)
+		}
+		lclk.Sleep(refClockSyncInterval)
 	}
+}
+
+func measureOffsetToNetClock(pi core.PathInfo, timeout time.Duration) (time.Duration, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return netcc.MeasureClockOffset(ctx, pi)
 }
 
 func runGlobalClockSync(lclk core.LocalClock) {
 	if netClockImpact <= 1.0 {
-		panic("invalid reference clock impact factor")
+		panic("invalid network clock impact factor")
 	}
-	if netClockImpact - 1.0 <= refClockImpact {
+	if netClockImpact-1.0 <= refClockImpact {
 		panic("invalid network clock impact factor")
 	}
 	if netClockSyncInterval < refClockSyncInterval {
@@ -125,29 +135,22 @@ func runGlobalClockSync(lclk core.LocalClock) {
 	if netClockSyncTimeout < 0 || netClockSyncTimeout >= netClockSyncInterval/2 {
 		panic("invalid network clock sync timeout")
 	}
-	maxCorr := netClockImpact * float64(lclk.MaxDrift(netClockSyncInterval));
+	maxCorr := netClockImpact * float64(lclk.MaxDrift(netClockSyncInterval))
 	for {
-		func() {
-			ctx, cancel := context.WithTimeout(context.Background(), netClockSyncTimeout)
-			defer cancel()
-			corr, err := netcc.MeasureClockOffset(ctx, pathInfo)
-			if err == nil && core.Abs(corr) > netClockCutoff {
-			  if float64(core.Abs(corr)) > maxCorr {
-			    corr = time.Duration(float64(core.Sign(corr)) * maxCorr + 0.5)
-			  }
-				lclk.Adjust(corr, netClockSyncInterval)
+		corr, err := measureOffsetToNetClock(pathInfo, netClockSyncTimeout)
+		if err == nil && core.Abs(corr) > netClockCutoff {
+			if float64(core.Abs(corr)) > maxCorr {
+				corr = time.Duration(float64(core.Sign(corr)) * maxCorr)
 			}
-			lclk.Sleep(netClockSyncInterval)
-		}()
+			lclk.Adjust(corr, netClockSyncInterval)
+		}
+		lclk.Sleep(netClockSyncInterval)
 	}
 }
 
 func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
-	var err error
-	ctx := context.Background()
-
 	var cfg tsConfig
-	err = config.LoadFile(configFile, &cfg)
+	err := config.LoadFile(configFile, &cfg)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -172,15 +175,11 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 		peerHosts = append(peerHosts, addr.Host)
 	}
 
-	pathInfos, err := core.StartPather(newDaemonConnector(ctx, daemonAddr), peerIAs)
+	pathInfos, err := core.StartPather(newDaemonConnector(daemonAddr), peerIAs)
 	if err != nil {
 		log.Fatal("Failed to start pather:", err)
 	}
-	go func() {
-		for {
-			pathInfo = <-pathInfos
-		}
-	}()
+	go handlePathInfos(pathInfos)
 
 	core.RegisterPLL(&core.StdPLL{})
 	core.RegisterLocalClock(&core.SysClock{})
