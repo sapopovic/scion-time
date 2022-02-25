@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"log"
 	"net"
@@ -40,7 +41,13 @@ func sendHello(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	log.Printf("Selected path to %v:\n", remoteAddr.IA)
 	log.Printf("\t%v\n", sp)
 
-	localAddr.Host.Port = underlay.EndhostPort
+	lconn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
+	if err != nil {
+		log.Fatalf("Failed to bind UDP connection: %v\n", err)
+	}
+	defer lconn.Close()
+
+	localAddr.Host.Port = lconn.LocalAddr().(*net.UDPAddr).Port
 
 	pkt := &snet.Packet{
 		PacketInfo: snet.PacketInfo{
@@ -72,43 +79,64 @@ func sendHello(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 
 	err = pkt.Serialize()
 	if err != nil {
-		log.Printf("Failed to serialize SCION packet: %v\n", err)
-		return
+		log.Fatalf("Failed to serialize SCION packet: %v\n", err)
 	}
 
-	conn, err := net.DialUDP("udp", localAddr.Host, nextHop)
-	if err != nil {
-		log.Printf("Failed to dial UDP connection: %v\n", err)
-		return
-	}
-	defer conn.Close()
+	localAddr.Host.Port = underlay.EndhostPort
 
-	_, err = conn.Write(pkt.Bytes)
+	dconn, err := net.ListenUDP("udp", localAddr.Host)
 	if err != nil {
-		log.Printf("Failed to write packet: %v\n", err)
-		return
+		log.Fatalf("Failed to bind UDP connection: %v\n", err)
+	}
+	defer dconn.Close()
+
+	_, err = lconn.WriteTo(pkt.Bytes, nextHop)
+	if err != nil {
+		log.Fatalf("Failed to write packet: %v\n", err)
 	}
 
 	pkt.Prepare()
-	n, err := conn.Read(pkt.Bytes)
+	n, lastHop, err := dconn.ReadFrom(pkt.Bytes)
 	if err != nil {
-		log.Printf("Failed to read packet: %v\n", err)
-		return
+		log.Fatalf("Failed to read packet: %v\n", err)
 	}
-
 	pkt.Bytes = pkt.Bytes[:n]
+
+	log.Printf("[D]: received from %v\n%s", lastHop, hex.Dump(pkt.Bytes))
+
 	err = pkt.Decode()
 	if err != nil {
-		log.Printf("Failed to decode packet: %v\n", err)
-		return
+		log.Fatalf("Failed to decode packet: %v\n", err)
 	}
 
 	pld, ok := pkt.Payload.(snet.UDPPayload)
 	if !ok {
-		log.Printf("Failed to read packet payload\n")
-		return
+		log.Fatalf("Failed to read packet payload\n")
 	}
-	log.Printf("Received payload: \"%v\"\n", string(pld.Payload))
+
+	m, err := dconn.WriteTo(pkt.Bytes, &net.UDPAddr{IP: pkt.Destination.Host.IP(), Port: int(pld.DstPort)})
+	if err != nil || m != n {
+		log.Fatalf("Failed to forward packet: %v, %v\n", err, m)
+	}
+
+	pkt.Prepare()
+	n, lastHop, err = lconn.ReadFrom(pkt.Bytes)
+	if err != nil {
+		log.Fatalf("Failed to read packet: %v\n", err)
+	}
+	pkt.Bytes = pkt.Bytes[:n]
+
+	log.Printf("[L]: received from %v\n%s", lastHop, hex.Dump(pkt.Bytes))
+
+	err = pkt.Decode()
+	if err != nil {
+		log.Fatalf("Failed to decode packet: %v\n", err)
+	}
+
+	pld, ok = pkt.Payload.(snet.UDPPayload)
+	if !ok {
+		log.Fatalf("Failed to read packet payload\n")
+	}
 }
 
 func main() {
