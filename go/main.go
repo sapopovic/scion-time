@@ -183,9 +183,7 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	}
 	go handlePathInfos(pathInfos)
 
-	core.RegisterPLL(&core.StdPLL{})
-	core.RegisterLocalClock(&core.SysClock{})
-	lclk := core.LocalClockInstance()
+	lclk := &core.SystemClock{}
 	syncToRefClock(lclk)
 
 	err = core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))

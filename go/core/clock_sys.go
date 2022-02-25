@@ -7,28 +7,28 @@ import (
 
 const sysClockLogPrefix = "[core/clock_sys]"
 
-type SysClock struct{}
+type SystemClock struct{}
 
-var _ LocalClock = (*SysClock)(nil)
+var _ LocalClock = (*SystemClock)(nil)
 
-func (c *SysClock) Now() time.Time {
-	log.Printf("%s core.SysClock.Now", sysClockLogPrefix)
+func (c *SystemClock) Now() time.Time {
+	log.Printf("%s core.SystemClock.Now", sysClockLogPrefix)
 	return time.Time{}
 }
 
-func (c *SysClock) MaxDrift(duration time.Duration) time.Duration {
-	log.Printf("%s core.SysClock.MaxDrift", sysClockLogPrefix)
+func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
+	log.Printf("%s core.SystemClock.MaxDrift", sysClockLogPrefix)
 	return 0
 }
 
-func (c *SysClock) Step(offset time.Duration) {
-	log.Printf("%s core.SysClock.Step", sysClockLogPrefix)
+func (c *SystemClock) Step(offset time.Duration) {
+	log.Printf("%s core.SystemClock.Step", sysClockLogPrefix)
 }
 
-func (c *SysClock) Adjust(offset, duration time.Duration) {
-	log.Printf("%s core.SysClock.Adjust", sysClockLogPrefix)
+func (c *SystemClock) Adjust(offset, duration time.Duration) {
+	log.Printf("%s core.SystemClock.Adjust", sysClockLogPrefix)
 }
 
-func (c SysClock) Sleep(duration time.Duration) {
-	log.Printf("%s core.SysClock.Sleep", sysClockLogPrefix)
+func (c SystemClock) Sleep(duration time.Duration) {
+	log.Printf("%s core.SystemClock.Sleep", sysClockLogPrefix)
 }
