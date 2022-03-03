@@ -6,6 +6,8 @@ import (
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/snet"
+
+	"example.com/scion-time/go/core/timemath"
 )
 
 type NetworkClockClient struct{}
@@ -45,5 +47,5 @@ loop:
 	if len(off) == 0 {
 		return 0, errNoClockMeasurements
 	}
-	return FaultTolerantMidpoint(off), nil
+	return timemath.FaultTolerantMidpoint(off), nil
 }

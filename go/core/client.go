@@ -19,7 +19,7 @@ const (
 	requestBufferCapcity = 256
 )
 
-type SyncInfo struct {
+type syncInfo struct {
 	Source      snet.SCIONAddress
 	ClockOffset time.Duration
 }
@@ -115,17 +115,18 @@ func (h *requestHandler) start() {
 // }
 
 func handleResponse(resp *ntp.Packet, rxt time.Time) {
-	// TODO
+	panic("not yet implemented")
 }
 
-func StartMeasurementRound(chan<- SyncInfo) {
-	// TODO
+func startMeasurementRound(chan<- syncInfo) {
+	panic("not yet implemented")
 }
 
-func MeasureClockOffset(peer addr.IA, paths []snet.Path) {
+func measureClockOffset(peer addr.IA, paths []snet.Path) {
+	panic("not yet implemented")
 	measurementRequests <- measurementRequest{peer, paths}
 }
 
-func StopMeasurementRound() {
-	// TODO
+func stopMeasurementRound() {
+	panic("not yet implemented")
 }

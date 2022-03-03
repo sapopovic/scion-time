@@ -16,12 +16,14 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
+	"example.com/scion-time/go/core"
+	"example.com/scion-time/go/core/timemath"
+
 	mbgd "example.com/scion-time/go/driver/mbg"
 	ntpd "example.com/scion-time/go/driver/ntp"
+
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
-
-	"example.com/scion-time/go/core"
 )
 
 const (
@@ -109,9 +111,9 @@ func runLocalClockSync(lclk core.LocalClock) {
 	maxCorr := refClockImpact * float64(lclk.MaxDrift(refClockSyncInterval))
 	for {
 		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
-		if err == nil && core.Abs(corr) > refClockCutoff {
-			if float64(core.Abs(corr)) > maxCorr {
-				corr = time.Duration(float64(core.Sign(corr)) * maxCorr)
+		if err == nil && timemath.Abs(corr) > refClockCutoff {
+			if float64(timemath.Abs(corr)) > maxCorr {
+				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
 			lclk.Adjust(corr, refClockSyncInterval)
 		}
@@ -141,9 +143,9 @@ func runGlobalClockSync(lclk core.LocalClock) {
 	maxCorr := netClockImpact * float64(lclk.MaxDrift(netClockSyncInterval))
 	for {
 		corr, err := measureOffsetToNetClock(pathInfo, netClockSyncTimeout)
-		if err == nil && core.Abs(corr) > netClockCutoff {
-			if float64(core.Abs(corr)) > maxCorr {
-				corr = time.Duration(float64(core.Sign(corr)) * maxCorr)
+		if err == nil && timemath.Abs(corr) > netClockCutoff {
+			if float64(timemath.Abs(corr)) > maxCorr {
+				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
 			lclk.Adjust(corr, netClockSyncInterval)
 		}

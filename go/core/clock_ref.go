@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"time"
+
+	"example.com/scion-time/go/core/timemath"
 )
 
 type TimeSource interface {
@@ -50,5 +52,5 @@ loop:
 	if len(off) == 0 {
 		return 0, errNoClockMeasurements
 	}
-	return Median(off), nil
+	return timemath.Median(off), nil
 }
