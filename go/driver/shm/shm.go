@@ -1,4 +1,4 @@
-package drivers
+package shm
 
 // References:
 // http://doc.ntp.org/current-stable/drivers/driver28.html
@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const shmLogPrefix = "[drivers/shm]"
+const shmLogPrefix = "[driver/shm]"
 
 var (
 	shmInitialized bool
@@ -80,7 +80,7 @@ func initSHM() error {
 	return nil
 }
 
-func StoreSHMClockSample(refTime, sysTime time.Time) error {
+func StoreClockSamples(refTime, sysTime time.Time) error {
 	if !shmInitialized {
 		err := initSHM()
 		if err != nil {

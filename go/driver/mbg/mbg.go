@@ -1,4 +1,4 @@
-package drivers
+package mbg
 
 // References:
 // https://kb.meinbergglobal.com/kb/driver_software/meinberg_sdks/meinberg_driver_and_api_concepts
@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const mbgLogPrefix = "[drivers/mbg]"
+const mbgLogPrefix = "[driver/mbg]"
 
 const (
 	// See https://man7.org/linux/man-pages/man2/ioctl.2.html#NOTES
@@ -56,7 +56,7 @@ func nanoseconds(frac uint32) int64 {
 	return int64((uint64(frac) * uint64(time.Second)) / (1 << 32))
 }
 
-func MeasureMBGClockOffset(dev string) (time.Duration, error) {
+func MeasureClockOffset(dev string) (time.Duration, error) {
 	fd, err := unix.Open(dev, unix.O_RDWR, 0)
 	if err != nil {
 		log.Printf("%s Failed to open %s: %v", mbgLogPrefix, dev, err)

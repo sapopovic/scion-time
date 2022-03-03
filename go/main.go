@@ -16,7 +16,8 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
-	"example.com/scion-time/go/driver"
+	mbgd "example.com/scion-time/go/driver/mbg"
+	ntpd "example.com/scion-time/go/driver/ntp"
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
 
@@ -52,11 +53,11 @@ var (
 )
 
 func (s mbgTimeSource) MeasureClockOffset() (time.Duration, error) {
-	return drivers.MeasureMBGClockOffset(string(s))
+	return mbgd.MeasureClockOffset(string(s))
 }
 
 func (s ntpTimeSource) MeasureClockOffset() (time.Duration, error) {
-	return drivers.MeasureNTPClockOffset(string(s))
+	return ntpd.MeasureClockOffset(string(s))
 }
 
 func newDaemonConnector(daemonAddr string) daemon.Connector {

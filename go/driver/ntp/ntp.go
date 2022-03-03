@@ -1,4 +1,4 @@
-package drivers
+package ntp
 
 import (
 	"fmt"
@@ -10,11 +10,11 @@ import (
 	"example.com/scion-time/go/net/udp"
 )
 
-const ntpLogPrefix = "[drivers/ntp]"
+const ntpLogPrefix = "[driver/ntp]"
 
 var errUnexpectedPacketFlags = fmt.Errorf("failed to read packet: unexpected flags")
 
-func MeasureNTPClockOffset(host string) (time.Duration, error) {
+func MeasureClockOffset(host string) (time.Duration, error) {
 	timeout := 5 * time.Second
 	now := time.Now().UTC()
 	deadline := now.Add(timeout)
