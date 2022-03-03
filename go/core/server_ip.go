@@ -16,7 +16,7 @@ func runIPServer(conn *net.UDPConn) {
 	udp.EnableTimestamping(conn)
 
 	buf := make([]byte, ntp.PacketLen)
-	oob := make([]byte, udp.TimestampOutOfBandDataLen())
+	oob := make([]byte, udp.TimestampLen())
 	for {
 		oob = oob[:cap(oob)]
 
@@ -31,7 +31,7 @@ func runIPServer(conn *net.UDPConn) {
 		}
 
 		oob = oob[:oobn]
-		rxt, err := udp.TimeFromOutOfBandData(oob)
+		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			log.Printf("%s Failed to read packet timestamp: %v", ipServerLogPrefix, err)
 			rxt = time.Now().UTC()

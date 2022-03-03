@@ -30,7 +30,7 @@ func MeasureNTPClockOffset(host string) (time.Duration, error) {
 
 	pkt := ntp.Packet{}
 	buf := make([]byte, ntp.PacketLen)
-	oob := make([]byte, udp.TimestampOutOfBandDataLen())
+	oob := make([]byte, udp.TimestampLen())
 
 	clientTxTime := time.Now().UTC()
 
@@ -54,7 +54,7 @@ func MeasureNTPClockOffset(host string) (time.Duration, error) {
 	}
 
 	oob = oob[:oobn]
-	clientRxTime, err := udp.TimeFromOutOfBandData(oob)
+	clientRxTime, err := udp.TimestampFromOOBData(oob)
 	if err != nil {
 		log.Printf("%s %s, failed to read packet timestamp", ntpLogPrefix, host, err)
 		clientRxTime = time.Now().UTC()

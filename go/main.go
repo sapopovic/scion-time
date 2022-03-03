@@ -289,7 +289,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 
 	pkt.Prepare()
-	oob := make([]byte, udp.TimestampOutOfBandDataLen())
+	oob := make([]byte, udp.TimestampLen())
 
 	n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
 	if err != nil {
@@ -302,7 +302,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 
 	oob = oob[:oobn]
-	clientRxTime, err := udp.TimeFromOutOfBandData(oob)
+	clientRxTime, err := udp.TimestampFromOOBData(oob)
 	if err != nil {
 		log.Printf("Failed to receive packet timestamp")
 		clientRxTime = time.Now().UTC()

@@ -21,7 +21,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 
 	var pkt snet.Packet
 	var udppkt snet.UDPPayload
-	oob := make([]byte, udp.TimestampOutOfBandDataLen())
+	oob := make([]byte, udp.TimestampLen())
 	for {
 		pkt.Prepare()
 		oob = oob[:cap(oob)]
@@ -37,7 +37,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		}
 
 		oob = oob[:oobn]
-		rxt, err := udp.TimeFromOutOfBandData(oob)
+		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
 			rxt = time.Now().UTC()

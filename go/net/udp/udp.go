@@ -22,10 +22,10 @@ var (
 // - https://github.com/facebook/time, package "github.com/facebook/time/ntp/protocol/ntp"
 
 func enableTimestamping(fd uintptr) {
-	if SO_TIMESTAMPNS != 0 {
-		_ = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, SO_TIMESTAMPNS, 1)
-	} else if SO_TIMESTAMP != 0 {
-		_ = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, SO_TIMESTAMP, 1)
+	if so_timestampns != 0 {
+		_ = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, so_timestampns, 1)
+	} else if so_timestamp != 0 {
+		_ = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, so_timestamp, 1)
 	}
 }
 
@@ -37,24 +37,24 @@ func EnableTimestamping(conn *net.UDPConn) {
 	_ = sconn.Control(enableTimestamping)
 }
 
-func TimestampOutOfBandDataLen() int {
+func TimestampLen() int {
 	return unix.CmsgSpace(int(unsafe.Sizeof(unix.Timespec{})))
 }
 
-func TimeFromOutOfBandData(oob []byte) (time.Time, error) {
+func TimestampFromOOBData(oob []byte) (time.Time, error) {
 	for unix.CmsgSpace(0) <= len(oob) {
 		h := (*unix.Cmsghdr)(unsafe.Pointer(&oob[0]))
 		if h.Len < unix.SizeofCmsghdr || uint64(h.Len) > uint64(len(oob)) {
 			return time.Time{}, errUnexpectedData
 		}
 		if h.Level == unix.SOL_SOCKET {
-			if SCM_TIMESTAMPNS != 0 && h.Type == SCM_TIMESTAMPNS {
+			if scm_timestampns != 0 && h.Type == scm_timestampns {
 				if unix.CmsgSpace(int(unsafe.Sizeof(unix.Timespec{}))) != int(h.Len) {
 					return time.Time{}, errUnexpectedData
 				}
 				ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
 				return time.Unix(ts.Unix()), nil
-			} else if SCM_TIMESTAMP != 0 && h.Type == SCM_TIMESTAMP {
+			} else if scm_timestamp != 0 && h.Type == scm_timestamp {
 				if unix.CmsgSpace(int(unsafe.Sizeof(unix.Timeval{}))) != int(h.Len) {
 					return time.Time{}, errUnexpectedData
 				}
