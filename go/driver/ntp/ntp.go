@@ -32,11 +32,11 @@ func MeasureClockOffset(host string) (time.Duration, error) {
 	buf := make([]byte, ntp.PacketLen)
 	oob := make([]byte, udp.TimestampLen())
 
-	clientTxTime := time.Now().UTC()
+	cTxTime := time.Now().UTC()
 
 	pkt.SetVersion(ntp.VersionMax)
 	pkt.SetMode(ntp.ModeClient)
-	pkt.TransmitTime = ntp.Time64FromTime(clientTxTime)
+	pkt.TransmitTime = ntp.Time64FromTime(cTxTime)
 	ntp.EncodePacket(&buf, &pkt)
 
 	_, err = udpConn.Write(buf)
@@ -54,10 +54,10 @@ func MeasureClockOffset(host string) (time.Duration, error) {
 	}
 
 	oob = oob[:oobn]
-	clientRxTime, err := udp.TimestampFromOOBData(oob)
+	cRxTime, err := udp.TimestampFromOOBData(oob)
 	if err != nil {
 		log.Printf("%s %s, failed to read packet timestamp", ntpLogPrefix, host, err)
-		clientRxTime = time.Now().UTC()
+		cRxTime = time.Now().UTC()
 	}
 	buf = buf[:n]
 
@@ -67,13 +67,13 @@ func MeasureClockOffset(host string) (time.Duration, error) {
 		return 0, err
 	}
 
-	log.Printf("%s %s, received packet at %v from srcAddr: %+v", ntpLogPrefix, host, pkt, clientRxTime, srcAddr)
+	log.Printf("%s %s, received packet at %v from srcAddr: %+v", ntpLogPrefix, host, pkt, cRxTime, srcAddr)
 
-	serverRxTime := ntp.TimeFromTime64(pkt.ReceiveTime)
-	serverTxTime := ntp.TimeFromTime64(pkt.TransmitTime)
+	sRxTime := ntp.TimeFromTime64(pkt.ReceiveTime)
+	sTxTime := ntp.TimeFromTime64(pkt.TransmitTime)
 
-	off := ntp.ClockOffset(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
-	rtd := ntp.RoundTripDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
+	off := ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
+	rtd := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)
 
 	log.Printf("%s %s, clock offset: %fs (%fms), round trip delay: %fs (%fms)",
 		ntpLogPrefix, host,
