@@ -204,6 +204,8 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 		log.Fatalf("Failed to start SCION server: %v", err)
 	}
 
+	netcc.SetLocalHost(snet.CopyUDPAddr(localAddr.Host))
+
 	go runLocalClockSync(lclk)
 	go runGlobalClockSync(lclk)
 

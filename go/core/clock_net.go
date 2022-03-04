@@ -2,6 +2,10 @@ package core
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"net"
+	_ "math/rand"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
@@ -10,7 +14,28 @@ import (
 	"example.com/scion-time/go/core/timemath"
 )
 
-type NetworkClockClient struct{}
+const netClockClientLogPrefix = "[core/clock_net]"
+
+var errNoPaths = fmt.Errorf("failed to measure clock offset: no paths")
+
+type NetworkClockClient struct{
+	localHost *net.UDPAddr
+}
+
+func (ncc *NetworkClockClient) SetLocalHost(localHost *net.UDPAddr) {
+	ncc.localHost = localHost
+}
+
+func MeasureClockOffset(localIA addr.IA, localHost *net.UDPAddr, peerIA addr.IA, paths []snet.Path) (time.Duration, error) {
+	if len(paths) == 0 {
+		return 0, errNoPaths
+	}
+	// sp := paths[rand.Intn(len(paths))]
+
+	panic("not yet implemented")
+
+	return 0, nil
+}
 
 func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context, pi PathInfo) (time.Duration, error) {
 	type measurement struct {
@@ -19,10 +44,13 @@ func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context, pi PathIn
 	}
 	ms := make(chan measurement)
 	for peerIA, paths := range pi.PeerIAPaths {
-		go func(peerIA addr.IA, paths []snet.Path) {
-			panic("not yet implemented")
-			ms <- measurement{0, nil}
-		}(peerIA, paths)
+		go func(localIA addr.IA, localHost *net.UDPAddr, peerIA addr.IA, paths []snet.Path) {
+			off, err := MeasureClockOffset(localIA, localHost, peerIA, paths)
+			if err != nil {
+				log.Printf("%s Failed to fetch clock offset from %v: %v", netClockClientLogPrefix, peerIA, err)
+			}
+			ms <- measurement{off, err}
+		}(pi.LocalIA, ncc.localHost, peerIA, paths)
 	}
 	i := 0
 	var off []time.Duration
