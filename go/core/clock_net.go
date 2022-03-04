@@ -30,7 +30,7 @@ loop:
 	for i != len(pi.PeerIAPaths) {
 		select {
 		case m := <-ms:
-			if m.err != nil {
+			if m.err == nil {
 				off = append(off, m.off)
 			}
 			i++

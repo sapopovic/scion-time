@@ -8,6 +8,8 @@ import (
 	"example.com/scion-time/go/core/timemath"
 )
 
+const refClockClientLogPrefix = "[core/clock_ref]"
+
 type TimeSource interface {
 	MeasureClockOffset() (time.Duration, error)
 }
@@ -24,7 +26,7 @@ func (rcc *ReferenceClockClient) MeasureClockOffset(ctx context.Context, tss []T
 		go func(ts TimeSource) {
 			off, err := ts.MeasureClockOffset()
 			if err != nil {
-				log.Printf("Failed to fetch clock offset from %v: %v", ts, err)
+				log.Printf("%s Failed to fetch clock offset from %v: %v", refClockClientLogPrefix, ts, err)
 			}
 			ms <- measurement{off, err}
 		}(ts)
@@ -35,7 +37,7 @@ loop:
 	for i != len(tss) {
 		select {
 		case m := <-ms:
-			if m.err != nil {
+			if m.err == nil {
 				off = append(off, m.off)
 			}
 			i++

@@ -30,11 +30,11 @@ const (
 	refClockImpact       = 1.25
 	refClockCutoff       = 0
 	refClockSyncTimeout  = 5 * time.Second
-	refClockSyncInterval = 60 * time.Second
+	refClockSyncInterval = 10 * time.Second
 	netClockImpact       = 2.5
 	netClockCutoff       = time.Millisecond
 	netClockSyncTimeout  = 5 * time.Second
-	netClockSyncInterval = 3600 * time.Second
+	netClockSyncInterval = 60 * time.Second
 )
 
 type tsConfig struct {
@@ -105,10 +105,13 @@ func runLocalClockSync(lclk core.LocalClock) {
 	if refClockSyncInterval <= 0 {
 		panic("invalid reference clock sync interval")
 	}
-	if refClockSyncTimeout < 0 || refClockSyncTimeout >= refClockSyncInterval/2 {
+	if refClockSyncTimeout < 0 || refClockSyncTimeout > refClockSyncInterval/2 {
 		panic("invalid reference clock sync timeout")
 	}
 	maxCorr := refClockImpact * float64(lclk.MaxDrift(refClockSyncInterval))
+	if maxCorr <= 0 {
+		panic("invalid reference clock max correction")
+	}
 	for {
 		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
 		if err == nil && timemath.Abs(corr) > refClockCutoff {
@@ -137,10 +140,13 @@ func runGlobalClockSync(lclk core.LocalClock) {
 	if netClockSyncInterval < refClockSyncInterval {
 		panic("invalid network clock sync interval")
 	}
-	if netClockSyncTimeout < 0 || netClockSyncTimeout >= netClockSyncInterval/2 {
+	if netClockSyncTimeout < 0 || netClockSyncTimeout > netClockSyncInterval/2 {
 		panic("invalid network clock sync timeout")
 	}
 	maxCorr := netClockImpact * float64(lclk.MaxDrift(netClockSyncInterval))
+	if maxCorr <= 0 {
+		panic("invalid network clock max correction")
+	}
 	for {
 		corr, err := measureOffsetToNetClock(pathInfo, netClockSyncTimeout)
 		if err == nil && timemath.Abs(corr) > netClockCutoff {
@@ -253,11 +259,11 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	ntpreq := ntp.Packet{}
 	buf := make([]byte, ntp.PacketLen)
 
-	clientTxTime := time.Now().UTC()
+	cTxTime := time.Now().UTC()
 
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
-	ntpreq.TransmitTime = ntp.Time64FromTime(clientTxTime)
+	ntpreq.TransmitTime = ntp.Time64FromTime(cTxTime)
 	ntp.EncodePacket(&buf, &ntpreq)
 
 	pkt := &snet.Packet{
@@ -305,10 +311,10 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	}
 
 	oob = oob[:oobn]
-	clientRxTime, err := udp.TimestampFromOOBData(oob)
+	cRxTime, err := udp.TimestampFromOOBData(oob)
 	if err != nil {
 		log.Printf("Failed to receive packet timestamp")
-		clientRxTime = time.Now().UTC()
+		cRxTime = time.Now().UTC()
 	}
 	pkt.Bytes = pkt.Bytes[:n]
 
@@ -324,7 +330,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 
-	log.Printf("Received payload at %v via %v with flags = %v:", clientRxTime, lastHop, flags)
+	log.Printf("Received payload at %v via %v with flags = %v:", cRxTime, lastHop, flags)
 	fmt.Printf("%s", hex.Dump(udppkt.Payload))
 
 	var ntpresp ntp.Packet
@@ -336,11 +342,11 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 
 	log.Printf("Received NTP packet: %+v", ntpresp)
 
-	serverRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
-	serverTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
+	sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
+	sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
 
-	clockOffset := ntp.ClockOffset(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
-	roundTripDelay := ntp.RoundTripDelay(clientTxTime, serverRxTime, serverTxTime, clientRxTime)
+	clockOffset := ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
+	roundTripDelay := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)
 
 	log.Printf("%s,%s clock offset: %fs (%fms), round trip delay: %fs (%fms)",
 		remoteAddr.IA, remoteAddr.Host,
