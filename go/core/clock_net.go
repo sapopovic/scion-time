@@ -26,36 +26,38 @@ func (ncc *NetworkClockClient) SetLocalHost(localHost *net.UDPAddr) {
 	ncc.localHost = localHost
 }
 
-func MeasureClockOffset(localIA addr.IA, localHost *net.UDPAddr, peerIA addr.IA, paths []snet.Path) (time.Duration, error) {
-	if len(paths) == 0 {
+func MeasureClockOffset(localIA addr.IA, localHost *net.UDPAddr,
+	peer UDPAddr, ps []snet.Path) (time.Duration, error) {
+	if len(ps) == 0 {
 		return 0, errNoPaths
 	}
-	// sp := paths[rand.Intn(len(paths))]
+	// sp := ps[rand.Intn(len(ps))]
 
 	panic("not yet implemented")
 
 	return 0, nil
 }
 
-func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context, pi PathInfo) (time.Duration, error) {
+func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context,
+	peers []UDPAddr, pi PathInfo) (time.Duration, error) {
 	type measurement struct {
 		off time.Duration
 		err error
 	}
 	ms := make(chan measurement)
-	for peerIA, paths := range pi.PeerIAPaths {
-		go func(localIA addr.IA, localHost *net.UDPAddr, peerIA addr.IA, paths []snet.Path) {
-			off, err := MeasureClockOffset(localIA, localHost, peerIA, paths)
+	for _, p := range peers {
+		go func(localIA addr.IA, localHost *net.UDPAddr, peer UDPAddr, paths []snet.Path) {
+			off, err := MeasureClockOffset(localIA, localHost, peer, paths)
 			if err != nil {
-				log.Printf("%s Failed to fetch clock offset from %v: %v", netClockClientLogPrefix, peerIA, err)
+				log.Printf("%s Failed to fetch clock offset from %v: %v", netClockClientLogPrefix, peer.IA, err)
 			}
 			ms <- measurement{off, err}
-		}(pi.LocalIA, ncc.localHost, peerIA, paths)
+		}(pi.LocalIA, ncc.localHost, p, pi.Paths[p.IA])
 	}
 	i := 0
 	var off []time.Duration
 loop:
-	for i != len(pi.PeerIAPaths) {
+	for i != len(peers) {
 		select {
 		case m := <-ms:
 			if m.err == nil {
@@ -71,7 +73,7 @@ loop:
 			<-ms
 			n--
 		}
-	}(len(pi.PeerIAPaths) - i)
+	}(len(peers) - i)
 	if len(off) == 0 {
 		return 0, errNoClockMeasurements
 	}

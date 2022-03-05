@@ -48,7 +48,9 @@ type ntpTimeSource string
 
 var (
 	timeSources []core.TimeSource
-	pathInfo    core.PathInfo
+
+	peers    []core.UDPAddr
+	pathInfo core.PathInfo
 
 	refcc core.ReferenceClockClient
 	netcc core.NetworkClockClient
@@ -124,10 +126,11 @@ func runLocalClockSync(lclk core.LocalClock) {
 	}
 }
 
-func measureOffsetToNetClock(pi core.PathInfo, timeout time.Duration) (time.Duration, error) {
+func measureOffsetToNetClock(peers []core.UDPAddr, pi core.PathInfo,
+	timeout time.Duration) (time.Duration, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	return netcc.MeasureClockOffset(ctx, pi)
+	return netcc.MeasureClockOffset(ctx, peers, pi)
 }
 
 func runGlobalClockSync(lclk core.LocalClock) {
@@ -148,7 +151,7 @@ func runGlobalClockSync(lclk core.LocalClock) {
 		panic("invalid network clock max correction")
 	}
 	for {
-		corr, err := measureOffsetToNetClock(pathInfo, netClockSyncTimeout)
+		corr, err := measureOffsetToNetClock(peers, pathInfo, netClockSyncTimeout)
 		if err == nil && timemath.Abs(corr) > netClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
@@ -174,19 +177,16 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 		timeSources = append(timeSources, ntpTimeSource(s))
 	}
 
-	var peerIAs []addr.IA
-	var peerHosts []*net.UDPAddr
 	for _, s := range cfg.SCIONPeers {
 		log.Print("scion_peer: ", s)
 		addr, err := snet.ParseUDPAddr(s)
 		if err != nil {
 			log.Fatalf("Failed to parse peer address \"%s\": %v", s, err)
 		}
-		peerIAs = append(peerIAs, addr.IA)
-		peerHosts = append(peerHosts, addr.Host)
+		peers = append(peers, core.UDPAddr{addr.IA, addr.Host})
 	}
 
-	pathInfos, err := core.StartPather(newDaemonConnector(daemonAddr), peerIAs)
+	pathInfos, err := core.StartPather(newDaemonConnector(daemonAddr), peers)
 	if err != nil {
 		log.Fatal("Failed to start pather:", err)
 	}
