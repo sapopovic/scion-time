@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net"
-	_ "math/rand"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/snet"
 
+	"example.com/scion-time/go/core/crypto"
 	"example.com/scion-time/go/core/timemath"
 )
 
@@ -28,10 +28,17 @@ func (ncc *NetworkClockClient) SetLocalHost(localHost *net.UDPAddr) {
 
 func MeasureClockOffset(localIA addr.IA, localHost *net.UDPAddr,
 	peer UDPAddr, ps []snet.Path) (time.Duration, error) {
-	if len(ps) == 0 {
+	sp := make([]snet.Path, 5)
+	n, err := crypto.Sample(context.TODO(), len(sp), len(ps), func(dst, src int) {
+		sp[dst] = ps[src]
+	})
+	if err != nil {
+		return 0, err
+	}
+	if n == 0 {
 		return 0, errNoPaths
 	}
-	// sp := ps[rand.Intn(len(ps))]
+	sp = sp[:n]
 
 	panic("not yet implemented")
 
