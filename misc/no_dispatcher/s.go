@@ -48,14 +48,23 @@ func runServer(localAddr snet.UDPAddr) {
 		log.Printf("Received payload: \"%v\"\n", string(pld.Payload))
 
 		pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
+		rpath, ok := pkt.Path.(snet.RawPath)
+		if !ok {
+			log.Printf("Failed to reverse path, unecpected path type: %v", pkt.Path)
+			continue
+		}
+		replypather := snet.DefaultReplyPather{}
+		replyPath, err := replypather.ReplyPath(rpath)
+		if err != nil {
+			log.Printf("Failed to reverse path: %v", err)
+			continue
+		}
+		pkt.Path = replyPath
+
 		pkt.Payload = snet.UDPPayload{
 			DstPort: pld.SrcPort,
 			SrcPort: pld.DstPort,
 			Payload: []byte("!DLROW ,OLLEh"),
-		}
-		if err := pkt.Path.Reverse(); err != nil {
-			log.Printf("Failed to reverse path: %v", err)
-			continue
 		}
 
 		err = pkt.Serialize()
@@ -64,7 +73,7 @@ func runServer(localAddr snet.UDPAddr) {
 			continue
 		}
 
-		_, err = conn.WriteTo(pkt.Bytes, lastHop);
+		_, err = conn.WriteTo(pkt.Bytes, lastHop)
 		if err != nil {
 			log.Printf("Failed to write packet: %v\n", err)
 			continue

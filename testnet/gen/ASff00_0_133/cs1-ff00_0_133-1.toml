@@ -12,6 +12,10 @@ connection = "gen-cache/cs1-ff00_0_133-1.beacon.db"
 [path_db]
 connection = "gen-cache/cs1-ff00_0_133-1.path.db"
 
+[drkey]
+cert_file = "gen/ASff00_0_133/crypto/as/ISD1-ASff00_0_133.pem"
+key_file = "gen/ASff00_0_133/crypto/as/cp-as.key"
+
 [tracing]
 enabled = true
 debug = true
@@ -20,7 +24,17 @@ agent = "0.0.0.0:6831"
 [metrics]
 prometheus = "10.0.0.180:30452"
 
+[api]
+addr = "10.0.0.180:31152"
+
 [features]
 
 [log.console]
 level = "debug"
+
+[drkey.drkey_db]
+connection = "gen-cache/cs1-ff00_0_133-1.drkey.db"
+
+[drkey.delegation]
+colibri = [ "10.0.0.181",]
+piskes = [ "10.0.0.181",]

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	fbntp "github.com/facebook/time/ntp/protocol/ntp"
 	"example.com/scion-time/go/net/ntp"
+	fbntp "github.com/facebook/time/ntp/protocol/ntp"
 )
 
 func toNtpTime(t time.Time) ntp.Time64 {
@@ -22,7 +22,7 @@ func toNtpTime(t time.Time) ntp.Time64 {
 		frac++
 	}
 	return ntp.Time64{
-		Seconds: uint32(sec),
+		Seconds:  uint32(sec),
 		Fraction: uint32(frac),
 	}
 }

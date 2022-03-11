@@ -278,7 +278,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 				IA:   remoteAddr.IA,
 				Host: addr.HostFromIP(remoteAddr.Host.IP),
 			},
-			Path: sp.Path(),
+			Path: sp.Dataplane(),
 			Payload: snet.UDPPayload{
 				SrcPort: uint16(localAddr.Host.Port),
 				DstPort: uint16(remoteAddr.Host.Port),

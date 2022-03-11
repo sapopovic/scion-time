@@ -52,14 +52,14 @@ func sendHello(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	pkt := &snet.Packet{
 		PacketInfo: snet.PacketInfo{
 			Source: snet.SCIONAddress{
-				IA: localAddr.IA,
+				IA:   localAddr.IA,
 				Host: addr.HostFromIP(localAddr.Host.IP),
 			},
 			Destination: snet.SCIONAddress{
-				IA: remoteAddr.IA,
+				IA:   remoteAddr.IA,
 				Host: addr.HostFromIP(remoteAddr.Host.IP),
 			},
-			Path: sp.Path(),
+			Path: sp.Dataplane(),
 			Payload: snet.UDPPayload{
 				SrcPort: uint16(localAddr.Host.Port),
 				DstPort: uint16(remoteAddr.Host.Port),
@@ -71,7 +71,7 @@ func sendHello(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	nextHop := sp.UnderlayNextHop()
 	if nextHop == nil && remoteAddr.IA.Equal(localAddr.IA) {
 		nextHop = &net.UDPAddr{
-			IP: remoteAddr.Host.IP,
+			IP:   remoteAddr.Host.IP,
 			Port: underlay.EndhostPort,
 			Zone: remoteAddr.Host.Zone,
 		}

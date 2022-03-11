@@ -12,8 +12,8 @@
           "L"
         ],
         "end": [
-          "T",
-          "L"
+          "L",
+          "T"
         ]
       },
       "required_count": 1
@@ -27,8 +27,8 @@
       "split_cls": 7,
       "end_props": {
         "start": [
-          "T",
-          "L"
+          "L",
+          "T"
         ],
         "end": [
           "L"
@@ -48,8 +48,8 @@
           "L"
         ],
         "end": [
-          "T",
-          "L"
+          "L",
+          "T"
         ]
       },
       "required_count": 1
@@ -63,8 +63,8 @@
       "split_cls": 7,
       "end_props": {
         "start": [
-          "T",
-          "L"
+          "L",
+          "T"
         ],
         "end": [
           "L"

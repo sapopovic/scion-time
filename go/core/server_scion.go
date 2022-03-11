@@ -84,11 +84,18 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		udppkt.DstPort, udppkt.SrcPort = udppkt.SrcPort, udppkt.DstPort
 
 		pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
-		err = pkt.Path.Reverse()
+		rpath, ok := pkt.Path.(snet.RawPath)
+		if !ok {
+			log.Printf("%s Failed to reverse path, unecpected path type: %v", scionServerLogPrefix, pkt.Path)
+			continue
+		}
+		replypather := snet.DefaultReplyPather{}
+		replyPath, err := replypather.ReplyPath(rpath)
 		if err != nil {
 			log.Printf("%s Failed to reverse path: %v", scionServerLogPrefix, err)
 			continue
 		}
+		pkt.Path = replyPath
 		pkt.Payload = &udppkt
 		err = pkt.Serialize()
 		if err != nil {

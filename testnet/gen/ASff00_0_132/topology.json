@@ -21,7 +21,6 @@
             "public": "10.0.0.37:50000",
             "remote": "10.0.0.36:50000"
           },
-          "bandwidth": 10000,
           "isd_as": "1-ff00:0:131",
           "link_to": "PARENT",
           "mtu": 1472
@@ -36,7 +35,6 @@
             "public": "10.0.0.38:50000",
             "remote": "10.0.0.39:50000"
           },
-          "bandwidth": 10000,
           "isd_as": "1-ff00:0:133",
           "link_to": "CHILD",
           "mtu": 1472
