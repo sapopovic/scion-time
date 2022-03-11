@@ -94,7 +94,7 @@ func Sample(ctx context.Context, k, n int, pick func(dst, src int)) (int, error)
 		pick(i, i)
 	}
 	for i := k; i != n; i++ {
-		j, err := RandIntn(ctx, i + 1)
+		j, err := RandIntn(ctx, i+1)
 		if err != nil {
 			return 0, err
 		}

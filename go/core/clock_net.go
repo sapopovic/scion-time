@@ -18,7 +18,7 @@ const netClockClientLogPrefix = "[core/clock_net]"
 
 var errNoPaths = fmt.Errorf("failed to measure clock offset: no paths")
 
-type NetworkClockClient struct{
+type NetworkClockClient struct {
 	localHost *net.UDPAddr
 }
 
@@ -39,6 +39,10 @@ func MeasureClockOffset(localIA addr.IA, localHost *net.UDPAddr,
 		return 0, errNoPaths
 	}
 	sp = sp[:n]
+
+	for _, p := range sp {
+		log.Printf("%s Selected path to %v: %v", netClockClientLogPrefix, peer.IA, p)
+	}
 
 	panic("not yet implemented")
 
