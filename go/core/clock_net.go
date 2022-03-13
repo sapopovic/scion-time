@@ -20,8 +20,8 @@ import (
 const netClockClientLogPrefix = "[core/clock_net]"
 
 var (
-	errNoPaths = fmt.Errorf("failed to measure clock offset: no paths")
-	errUnexpectedPacketFlags = fmt.Errorf("failed to read packet: unexpected flags")
+	errNoPaths                 = fmt.Errorf("failed to measure clock offset: no paths")
+	errUnexpectedPacketFlags   = fmt.Errorf("failed to read packet: unexpected flags")
 	errUnexpectedPacketPayload = fmt.Errorf("failed to read packet: unexpected payload")
 )
 
@@ -63,10 +63,8 @@ loop:
 }
 
 func measureClockOffsetViaPath(ctx context.Context,
-	localIA addr.IA, localHost *net.UDPAddr,
-	peer UDPAddr, p snet.Path) (time.Duration, error) {
-
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localHost.IP})
+	localAddr, peerAddr UDPAddr, p snet.Path) (time.Duration, error) {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
 	if err != nil {
 		return 0, err
 	}
@@ -76,11 +74,11 @@ func measureClockOffsetViaPath(ctx context.Context,
 	localHost.Port = conn.LocalAddr().(*net.UDPAddr).Port
 
 	nextHop := p.UnderlayNextHop()
-	if nextHop == nil && peer.IA.Equal(localIA) {
+	if nextHop == nil && peerAddr.IA.Equal(localAddr.IA) {
 		nextHop = &net.UDPAddr{
-			IP:   peer.Host.IP,
+			IP:   peerAddr.Host.IP,
 			Port: underlay.EndhostPort,
-			Zone: peer.Host.Zone,
+			Zone: peerAddr.Host.Zone,
 		}
 	}
 
@@ -97,17 +95,17 @@ func measureClockOffsetViaPath(ctx context.Context,
 	pkt := &snet.Packet{
 		PacketInfo: snet.PacketInfo{
 			Source: snet.SCIONAddress{
-				IA:   localIA,
+				IA:   localAddr.IA,
 				Host: addr.HostFromIP(localHost.IP),
 			},
 			Destination: snet.SCIONAddress{
-				IA:   peer.IA,
-				Host: addr.HostFromIP(peer.Host.IP),
+				IA:   peerAddr.IA,
+				Host: addr.HostFromIP(peerAddr.Host.IP),
 			},
 			Path: p.Dataplane(),
 			Payload: snet.UDPPayload{
 				SrcPort: uint16(localHost.Port),
-				DstPort: uint16(peer.Host.Port),
+				DstPort: uint16(peerAddr.Host.Port),
 				Payload: buf,
 			},
 		},
@@ -167,7 +165,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 	roundTripDelay := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)
 
 	log.Printf("%s %s,%s clock offset: %fs (%fms), round trip delay: %fs (%fms)",
-		netClockClientLogPrefix, peer.IA, peer.Host,
+		netClockClientLogPrefix, peerAddr.IA, peerAddr.Host,
 		float64(clockOffset.Nanoseconds())/float64(time.Second.Nanoseconds()),
 		float64(clockOffset.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
 		float64(roundTripDelay.Nanoseconds())/float64(time.Second.Nanoseconds()),
@@ -177,8 +175,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 }
 
 func measureClockOffsetToPeer(ctx context.Context,
-	localIA addr.IA, localHost *net.UDPAddr,
-	peer UDPAddr, ps []snet.Path) (time.Duration, error) {
+	localAddr, peerAddr UDPAddr, ps []snet.Path) (time.Duration, error) {
 	sp := make([]snet.Path, 5)
 	n, err := crypto.Sample(ctx, len(sp), len(ps), func(dst, src int) {
 		sp[dst] = ps[src]
@@ -191,20 +188,19 @@ func measureClockOffsetToPeer(ctx context.Context,
 	}
 	sp = sp[:n]
 	for _, p := range sp {
-		log.Printf("%s Selected path to %v: %v", netClockClientLogPrefix, peer.IA, p)
+		log.Printf("%s Selected path to %v: %v", netClockClientLogPrefix, peerAddr.IA, p)
 	}
 
 	ms := make(chan measurement)
 	for _, p := range sp {
-		go func(ctx context.Context, localIA addr.IA, localHost *net.UDPAddr,
-			peer UDPAddr, p snet.Path) {
-			off, err := measureClockOffsetViaPath(ctx, localIA, localHost, peer, p)
+		go func(ctx context.Context, localAddr, peerAddr UDPAddr, p snet.Path) {
+			off, err := measureClockOffsetViaPath(ctx, localAddr, peerAddr, p)
 			if err != nil {
 				log.Printf("%s Failed to fetch clock offset from %v via %v: %v",
-					netClockClientLogPrefix, peer.IA, p, err)
+					netClockClientLogPrefix, peerAddr.IA, p, err)
 			}
 			ms <- measurement{off, err}
-		}(ctx, localIA, localHost, peer, p)
+		}(ctx, localAddr, peerAddr, p)
 	}
 	off := collectMeasurements(ctx, ms, len(sp))
 	if len(off) == 0 {
@@ -217,15 +213,14 @@ func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context,
 	peers []UDPAddr, pi PathInfo) (time.Duration, error) {
 	ms := make(chan measurement)
 	for _, p := range peers {
-		go func(ctx context.Context, localIA addr.IA, localHost *net.UDPAddr,
-			peer UDPAddr, ps []snet.Path) {
-			off, err := measureClockOffsetToPeer(ctx, localIA, localHost, peer, ps)
+		go func(ctx context.Context, localAddr, peerAddr UDPAddr, ps []snet.Path) {
+			off, err := measureClockOffsetToPeer(ctx, localAddr, peerAddr, ps)
 			if err != nil {
 				log.Printf("%s Failed to fetch clock offset from %v: %v",
-					netClockClientLogPrefix, peer.IA, err)
+					netClockClientLogPrefix, peerAddr.IA, err)
 			}
 			ms <- measurement{off, err}
-		}(ctx, pi.LocalIA, ncc.localHost, p, pi.Paths[p.IA])
+		}(ctx, UDPAddr{pi.LocalIA, ncc.localHost}, p, pi.Paths[p.IA])
 	}
 	off := collectMeasurements(ctx, ms, len(peers))
 	if len(off) == 0 {
