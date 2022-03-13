@@ -32,7 +32,7 @@ const (
 	refClockSyncTimeout  = 5 * time.Second
 	refClockSyncInterval = 10 * time.Second
 	netClockImpact       = 2.5
-	netClockCutoff       = time.Millisecond
+	netClockCutoff       = time.Microsecond
 	netClockSyncTimeout  = 5 * time.Second
 	netClockSyncInterval = 60 * time.Second
 )

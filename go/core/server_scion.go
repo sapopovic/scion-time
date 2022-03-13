@@ -58,59 +58,62 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		}
 
 		if int(udppkt.DstPort) != localHostPort {
-			log.Printf("%s Packet destination port does not match local port", scionServerLogPrefix)
-			continue
-		}
+			m, err := conn.WriteTo(pkt.Bytes, &net.UDPAddr{IP: pkt.Destination.Host.IP(), Port: int(udppkt.DstPort)})
+			if err != nil || m != n {
+				log.Printf("%s Failed to forward packet: %v, %v\n", scionServerLogPrefix, err, m)
+				continue
+			}
+		} else {
+			var ntpreq ntp.Packet
+			err = ntp.DecodePacket(&ntpreq, udppkt.Payload)
+			if err != nil {
+				log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
+				continue
+			}
 
-		var ntpreq ntp.Packet
-		err = ntp.DecodePacket(&ntpreq, udppkt.Payload)
-		if err != nil {
-			log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
-			continue
-		}
+			log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
 
-		log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
+			err = validateRequest(&ntpreq, int(udppkt.SrcPort))
+			if err != nil {
+				log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
+				continue
+			}
 
-		err = validateRequest(&ntpreq, int(udppkt.SrcPort))
-		if err != nil {
-			log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
-			continue
-		}
+			var ntpresp ntp.Packet
+			handleRequest(&ntpreq, rxt, &ntpresp)
 
-		var ntpresp ntp.Packet
-		handleRequest(&ntpreq, rxt, &ntpresp)
+			ntp.EncodePacket(&udppkt.Payload, &ntpresp)
+			udppkt.DstPort, udppkt.SrcPort = udppkt.SrcPort, udppkt.DstPort
 
-		ntp.EncodePacket(&udppkt.Payload, &ntpresp)
-		udppkt.DstPort, udppkt.SrcPort = udppkt.SrcPort, udppkt.DstPort
+			pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
+			rpath, ok := pkt.Path.(snet.RawPath)
+			if !ok {
+				log.Printf("%s Failed to reverse path, unecpected path type: %v", scionServerLogPrefix, pkt.Path)
+				continue
+			}
+			replypather := snet.DefaultReplyPather{}
+			replyPath, err := replypather.ReplyPath(rpath)
+			if err != nil {
+				log.Printf("%s Failed to reverse path: %v", scionServerLogPrefix, err)
+				continue
+			}
+			pkt.Path = replyPath
+			pkt.Payload = &udppkt
+			err = pkt.Serialize()
+			if err != nil {
+				log.Printf("%s Failed to serialize packet: %v", scionServerLogPrefix, err)
+				continue
+			}
 
-		pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
-		rpath, ok := pkt.Path.(snet.RawPath)
-		if !ok {
-			log.Printf("%s Failed to reverse path, unecpected path type: %v", scionServerLogPrefix, pkt.Path)
-			continue
-		}
-		replypather := snet.DefaultReplyPather{}
-		replyPath, err := replypather.ReplyPath(rpath)
-		if err != nil {
-			log.Printf("%s Failed to reverse path: %v", scionServerLogPrefix, err)
-			continue
-		}
-		pkt.Path = replyPath
-		pkt.Payload = &udppkt
-		err = pkt.Serialize()
-		if err != nil {
-			log.Printf("%s Failed to serialize packet: %v", scionServerLogPrefix, err)
-			continue
-		}
-
-		n, err = conn.WriteTo(pkt.Bytes, lastHop)
-		if err != nil {
-			log.Printf("%s Failed to write packet: %v", scionServerLogPrefix, err)
-			continue
-		}
-		if n != len(pkt.Bytes) {
-			log.Printf("%s Failed to write entire packet: %v/%v", scionServerLogPrefix, n, len(pkt.Bytes))
-			continue
+			n, err = conn.WriteTo(pkt.Bytes, lastHop)
+			if err != nil {
+				log.Printf("%s Failed to write packet: %v", scionServerLogPrefix, err)
+				continue
+			}
+			if n != len(pkt.Bytes) {
+				log.Printf("%s Failed to write entire packet: %v/%v", scionServerLogPrefix, n, len(pkt.Bytes))
+				continue
+			}
 		}
 	}
 }

@@ -67,7 +67,7 @@ func MeasureClockOffset(host string) (time.Duration, error) {
 		return 0, err
 	}
 
-	log.Printf("%s %s, received packet at %v from srcAddr: %+v", ntpLogPrefix, host, pkt, cRxTime, srcAddr)
+	log.Printf("%s %s, received packet at %v from srcAddr %v: %+v", ntpLogPrefix, host, cRxTime, srcAddr, pkt)
 
 	sRxTime := ntp.TimeFromTime64(pkt.ReceiveTime)
 	sTxTime := ntp.TimeFromTime64(pkt.TransmitTime)
