@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
@@ -26,7 +27,8 @@ var (
 )
 
 type NetworkClockClient struct {
-	localHost *net.UDPAddr
+	localHost        *net.UDPAddr
+	numOpsInProgress uint32
 }
 
 func (ncc *NetworkClockClient) SetLocalHost(localHost *net.UDPAddr) {
@@ -189,6 +191,17 @@ func measureClockOffsetToPeer(ctx context.Context,
 
 func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context,
 	peers []UDPAddr, pi PathInfo) (time.Duration, error) {
+	swapped := atomic.CompareAndSwapUint32(&ncc.numOpsInProgress, 0, 1)
+	if !swapped {
+		panic("too many network clock offset measurements in progress")
+	}
+	defer func(addr *uint32) {
+		swapped := atomic.CompareAndSwapUint32(addr, 1, 0)
+		if !swapped {
+			panic("inconsistent count of network clock offset measurements")
+		}
+	}(&ncc.numOpsInProgress)
+
 	ms := make(chan measurement)
 	for _, p := range peers {
 		go func(ctx context.Context, localAddr, peerAddr UDPAddr, ps []snet.Path) {
