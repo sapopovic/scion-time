@@ -25,41 +25,12 @@ var (
 	errUnexpectedPacketPayload = fmt.Errorf("failed to read packet: unexpected payload")
 )
 
-type measurement struct {
-	off time.Duration
-	err error
-}
-
 type NetworkClockClient struct {
 	localHost *net.UDPAddr
 }
 
 func (ncc *NetworkClockClient) SetLocalHost(localHost *net.UDPAddr) {
 	ncc.localHost = localHost
-}
-
-func collectMeasurements(ctx context.Context, ms chan measurement, n int) []time.Duration {
-	i := 0
-	var off []time.Duration
-loop:
-	for i != n {
-		select {
-		case m := <-ms:
-			if m.err == nil {
-				off = append(off, m.off)
-			}
-			i++
-		case <-ctx.Done():
-			break loop
-		}
-	}
-	go func(n int) { // drain channel
-		for n != 0 {
-			<-ms
-			n--
-		}
-	}(n - i)
-	return off
 }
 
 func measureClockOffsetViaPath(ctx context.Context,
@@ -69,6 +40,13 @@ func measureClockOffsetViaPath(ctx context.Context,
 		return 0, err
 	}
 	defer conn.Close()
+	deadline, ok := ctx.Deadline()
+	if ok {
+		err := conn.SetDeadline(deadline)
+		if err != nil {
+			return 0, err
+		}
+	}
 	udp.EnableTimestamping(conn)
 
 	localHost.Port = conn.LocalAddr().(*net.UDPAddr).Port
@@ -176,9 +154,9 @@ func measureClockOffsetViaPath(ctx context.Context,
 
 func measureClockOffsetToPeer(ctx context.Context,
 	localAddr, peerAddr UDPAddr, ps []snet.Path) (time.Duration, error) {
-	sp := make([]snet.Path, 5)
-	n, err := crypto.Sample(ctx, len(sp), len(ps), func(dst, src int) {
-		sp[dst] = ps[src]
+	sps := make([]snet.Path, 5)
+	n, err := crypto.Sample(ctx, len(sps), len(ps), func(dst, src int) {
+		sps[dst] = ps[src]
 	})
 	if err != nil {
 		return 0, err
@@ -186,13 +164,13 @@ func measureClockOffsetToPeer(ctx context.Context,
 	if n == 0 {
 		return 0, errNoPaths
 	}
-	sp = sp[:n]
-	for _, p := range sp {
+	sps = sps[:n]
+	for _, p := range sps {
 		log.Printf("%s Selected path to %v: %v", netClockClientLogPrefix, peerAddr.IA, p)
 	}
 
 	ms := make(chan measurement)
-	for _, p := range sp {
+	for _, p := range sps {
 		go func(ctx context.Context, localAddr, peerAddr UDPAddr, p snet.Path) {
 			off, err := measureClockOffsetViaPath(ctx, localAddr, peerAddr, p)
 			if err != nil {
@@ -202,7 +180,7 @@ func measureClockOffsetToPeer(ctx context.Context,
 			ms <- measurement{off, err}
 		}(ctx, localAddr, peerAddr, p)
 	}
-	off := collectMeasurements(ctx, ms, len(sp))
+	off := collectMeasurements(ctx, ms, len(sps))
 	if len(off) == 0 {
 		return 0, errNoClockMeasurements
 	}

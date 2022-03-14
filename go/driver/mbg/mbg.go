@@ -7,6 +7,7 @@ package mbg
 import (
 	"unsafe"
 
+	"context"
 	"encoding/binary"
 	"log"
 	"time"
@@ -56,7 +57,7 @@ func nanoseconds(frac uint32) int64 {
 	return int64((uint64(frac) * uint64(time.Second)) / (1 << 32))
 }
 
-func MeasureClockOffset(dev string) (time.Duration, error) {
+func MeasureClockOffset(ctx context.Context, dev string) (time.Duration, error) {
 	fd, err := unix.Open(dev, unix.O_RDWR, 0)
 	if err != nil {
 		log.Printf("%s Failed to open %s: %v", mbgLogPrefix, dev, err)

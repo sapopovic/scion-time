@@ -56,12 +56,12 @@ var (
 	netcc core.NetworkClockClient
 )
 
-func (s mbgTimeSource) MeasureClockOffset() (time.Duration, error) {
-	return mbgd.MeasureClockOffset(string(s))
+func (s mbgTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+	return mbgd.MeasureClockOffset(ctx, string(s))
 }
 
-func (s ntpTimeSource) MeasureClockOffset() (time.Duration, error) {
-	return ntpd.MeasureClockOffset(string(s))
+func (s ntpTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+	return ntpd.MeasureClockOffset(ctx, string(s))
 }
 
 func newDaemonConnector(daemonAddr string) daemon.Connector {

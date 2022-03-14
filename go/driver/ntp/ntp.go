@@ -1,6 +1,7 @@
 package ntp
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -14,17 +15,22 @@ const ntpLogPrefix = "[driver/ntp]"
 
 var errUnexpectedPacketFlags = fmt.Errorf("failed to read packet: unexpected flags")
 
-func MeasureClockOffset(host string) (time.Duration, error) {
-	timeout := 5 * time.Second
+func MeasureClockOffset(ctx context.Context, host string) (time.Duration, error) {
 	now := time.Now().UTC()
-	deadline := now.Add(timeout)
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		deadline = now.Add(5 * time.Second)
+	}
 	addr := net.JoinHostPort(host, "123")
 	conn, err := net.DialTimeout("udp", addr, deadline.Sub(now))
 	if err != nil {
 		return 0, err
 	}
 	defer conn.Close()
-	conn.SetDeadline(deadline)
+	err = conn.SetDeadline(deadline)
+	if err != nil {
+		return 0, err
+	}
 	udpConn := conn.(*net.UDPConn)
 	udp.EnableTimestamping(udpConn)
 
