@@ -51,7 +51,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 	}
 	udp.EnableTimestamping(conn)
 
-	localHost.Port = conn.LocalAddr().(*net.UDPAddr).Port
+	localAddr.Host.Port = conn.LocalAddr().(*net.UDPAddr).Port
 
 	nextHop := p.UnderlayNextHop()
 	if nextHop == nil && peerAddr.IA.Equal(localAddr.IA) {
@@ -76,7 +76,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 		PacketInfo: snet.PacketInfo{
 			Source: snet.SCIONAddress{
 				IA:   localAddr.IA,
-				Host: addr.HostFromIP(localHost.IP),
+				Host: addr.HostFromIP(localAddr.Host.IP),
 			},
 			Destination: snet.SCIONAddress{
 				IA:   peerAddr.IA,
@@ -84,7 +84,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 			},
 			Path: p.Dataplane(),
 			Payload: snet.UDPPayload{
-				SrcPort: uint16(localHost.Port),
+				SrcPort: uint16(localAddr.Host.Port),
 				DstPort: uint16(peerAddr.Host.Port),
 				Payload: buf,
 			},

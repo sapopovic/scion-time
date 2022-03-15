@@ -11,7 +11,11 @@ import (
 	"example.com/scion-time/go/net/udp"
 )
 
-const ntpLogPrefix = "[driver/ntp]"
+const (
+	ntpLogPrefix = "[driver/ntp]"
+
+	timeout = 5 * time.Second
+)
 
 var errUnexpectedPacketFlags = fmt.Errorf("failed to read packet: unexpected flags")
 
@@ -19,7 +23,7 @@ func MeasureClockOffset(ctx context.Context, host string) (time.Duration, error)
 	now := time.Now().UTC()
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		deadline = now.Add(5 * time.Second)
+		deadline = now.Add(timeout)
 	}
 	addr := net.JoinHostPort(host, "123")
 	conn, err := net.DialTimeout("udp", addr, deadline.Sub(now))
