@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
 )
@@ -20,7 +21,7 @@ const (
 var errUnexpectedPacketFlags = fmt.Errorf("failed to read packet: unexpected flags")
 
 func MeasureClockOffset(ctx context.Context, host string) (time.Duration, error) {
-	now := time.Now().UTC()
+	now := timebase.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {
 		deadline = now.Add(timeout)
@@ -42,7 +43,7 @@ func MeasureClockOffset(ctx context.Context, host string) (time.Duration, error)
 	buf := make([]byte, ntp.PacketLen)
 	oob := make([]byte, udp.TimestampLen())
 
-	cTxTime := time.Now().UTC()
+	cTxTime := timebase.Now()
 
 	pkt.SetVersion(ntp.VersionMax)
 	pkt.SetMode(ntp.ModeClient)
@@ -67,7 +68,7 @@ func MeasureClockOffset(ctx context.Context, host string) (time.Duration, error)
 	cRxTime, err := udp.TimestampFromOOBData(oob)
 	if err != nil {
 		log.Printf("%s %s, failed to read packet timestamp", ntpLogPrefix, host, err)
-		cRxTime = time.Now().UTC()
+		cRxTime = timebase.Now()
 	}
 	buf = buf[:n]
 

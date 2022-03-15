@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
 )
 
@@ -29,7 +30,7 @@ func validateRequest(req *ntp.Packet, srcPort int) error {
 }
 
 func handleRequest(req *ntp.Packet, rxt time.Time, resp *ntp.Packet) {
-	txt := time.Now().UTC()
+	txt := timebase.Now()
 
 	resp.SetVersion(ntp.VersionMax)
 	resp.SetMode(ntp.ModeServer)

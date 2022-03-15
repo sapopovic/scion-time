@@ -13,6 +13,7 @@ import (
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
 	"example.com/scion-time/go/core/crypto"
+	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/core/timemath"
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
@@ -65,7 +66,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 	ntpreq := ntp.Packet{}
 	buf := make([]byte, ntp.PacketLen)
 
-	cTxTime := time.Now().UTC()
+	cTxTime := timebase.Now()
 
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
@@ -116,7 +117,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 	cRxTime, err := udp.TimestampFromOOBData(oob)
 	if err != nil {
 		log.Printf("%s Failed to receive packet timestamp", netClockClientLogPrefix)
-		cRxTime = time.Now().UTC()
+		cRxTime = timebase.Now()
 	}
 	pkt.Bytes = pkt.Bytes[:n]
 

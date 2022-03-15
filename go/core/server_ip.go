@@ -3,8 +3,8 @@ package core
 import (
 	"log"
 	"net"
-	"time"
 
+	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
 )
@@ -34,7 +34,7 @@ func runIPServer(conn *net.UDPConn) {
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			log.Printf("%s Failed to read packet timestamp: %v", ipServerLogPrefix, err)
-			rxt = time.Now().UTC()
+			rxt = timebase.Now()
 		}
 		buf = buf[:n]
 

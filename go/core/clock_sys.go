@@ -4,21 +4,23 @@ import (
 	"log"
 	"math"
 	"time"
+
+	"example.com/scion-time/go/core/timebase"
 )
 
 const sysClockLogPrefix = "[core/clock_sys]"
 
 type SystemClock struct{}
 
-var _ LocalClock = (*SystemClock)(nil)
+var _ timebase.LocalClock = (*SystemClock)(nil)
 
 func (c *SystemClock) Now() time.Time {
-	log.Printf("%s core.SystemClock.Now", sysClockLogPrefix)
-	return time.Now()
+	log.Printf("%s core.SystemClock.Now()", sysClockLogPrefix)
+	return time.Now().UTC()
 }
 
 func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
-	log.Printf("%s core.SystemClock.MaxDrift", sysClockLogPrefix)
+	log.Printf("%s core.SystemClock.MaxDrift(%v)", sysClockLogPrefix, duration)
 	return math.MaxInt64
 }
 

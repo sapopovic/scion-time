@@ -17,6 +17,7 @@ import (
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
 	"example.com/scion-time/go/core"
+	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/core/timemath"
 
 	mbgd "example.com/scion-time/go/driver/mbg"
@@ -87,7 +88,7 @@ func measureOffsetToRefClock(tss []core.TimeSource, timeout time.Duration) (time
 	return refcc.MeasureClockOffset(ctx, tss)
 }
 
-func syncToRefClock(lclk core.LocalClock) {
+func syncToRefClock(lclk timebase.LocalClock) {
 	for {
 		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
 		if err == nil {
@@ -100,7 +101,7 @@ func syncToRefClock(lclk core.LocalClock) {
 	}
 }
 
-func runLocalClockSync(lclk core.LocalClock) {
+func runLocalClockSync(lclk timebase.LocalClock) {
 	if refClockImpact <= 1.0 {
 		panic("invalid reference clock impact factor")
 	}
@@ -133,7 +134,7 @@ func measureOffsetToNetClock(peers []core.UDPAddr, pi core.PathInfo,
 	return netcc.MeasureClockOffset(ctx, peers, pi)
 }
 
-func runGlobalClockSync(lclk core.LocalClock) {
+func runGlobalClockSync(lclk timebase.LocalClock) {
 	if netClockImpact <= 1.0 {
 		panic("invalid network clock impact factor")
 	}
@@ -193,6 +194,8 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	go handlePathInfos(pathInfos)
 
 	lclk := &core.SystemClock{}
+	timebase.RegisterClock(lclk)
+
 	syncToRefClock(lclk)
 
 	err = core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
@@ -215,6 +218,9 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
+
+	lclk := &core.SystemClock{}
+	timebase.RegisterClock(lclk)
 
 	dc, err := daemon.NewService(daemonAddr).Connect(ctx)
 	if err != nil {
@@ -261,7 +267,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	ntpreq := ntp.Packet{}
 	buf := make([]byte, ntp.PacketLen)
 
-	cTxTime := time.Now().UTC()
+	cTxTime := timebase.Now()
 
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
@@ -316,7 +322,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	cRxTime, err := udp.TimestampFromOOBData(oob)
 	if err != nil {
 		log.Printf("Failed to receive packet timestamp")
-		cRxTime = time.Now().UTC()
+		cRxTime = timebase.Now()
 	}
 	pkt.Bytes = pkt.Bytes[:n]
 

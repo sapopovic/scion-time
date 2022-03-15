@@ -3,12 +3,12 @@ package core
 import (
 	"log"
 	"net"
-	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
+	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
 )
@@ -40,7 +40,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
-			rxt = time.Now().UTC()
+			rxt = timebase.Now()
 		}
 		pkt.Bytes = pkt.Bytes[:n]
 
