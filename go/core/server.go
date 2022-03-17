@@ -10,7 +10,7 @@ import (
 
 var errUnexpectedPacket = fmt.Errorf("failed to validate request")
 
-func validateRequest(req *ntp.Packet, srcPort int) error {
+func validateRequest(req *ntp.Packet, srcPort uint16) error {
 	li := req.LeapIndicator()
 	if li != ntp.LeapIndicatorNoWarning && li != ntp.LeapIndicatorUnknown {
 		return errUnexpectedPacket

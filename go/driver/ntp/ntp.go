@@ -54,7 +54,7 @@ func MeasureClockOffset(ctx context.Context, host string) (time.Duration, error)
 	if err != nil {
 		return 0, err
 	}
-	n, oobn, flags, srcAddr, err := udpConn.ReadMsgUDP(buf, oob)
+	n, oobn, flags, srcAddr, err := udpConn.ReadMsgUDPAddrPort(buf, oob)
 	if err != nil {
 		log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
 		return 0, err

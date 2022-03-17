@@ -308,7 +308,7 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	pkt.Prepare()
 	oob := make([]byte, udp.TimestampLen())
 
-	n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
+	n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(pkt.Bytes, oob)
 	if err != nil {
 		log.Printf("Failed to read packet: %v", err)
 		return

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"sync/atomic"
 	"time"
 
@@ -54,13 +55,11 @@ func measureClockOffsetViaPath(ctx context.Context,
 
 	localAddr.Host.Port = conn.LocalAddr().(*net.UDPAddr).Port
 
-	nextHop := p.UnderlayNextHop()
-	if nextHop == nil && peerAddr.IA.Equal(localAddr.IA) {
-		nextHop = &net.UDPAddr{
-			IP:   peerAddr.Host.IP,
-			Port: underlay.EndhostPort,
-			Zone: peerAddr.Host.Zone,
-		}
+	nextHop := p.UnderlayNextHop().AddrPort()
+	if nextHop == (netip.AddrPort{}) && peerAddr.IA.Equal(localAddr.IA) {
+		nextHop = netip.AddrPortFrom(
+			peerAddr.Host.AddrPort().Addr(),
+			underlay.EndhostPort)
 	}
 
 	ntpreq := ntp.Packet{}
@@ -97,7 +96,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 		return 0, err
 	}
 
-	_, err = conn.WriteTo(pkt.Bytes, nextHop)
+	_, err = conn.WriteToUDPAddrPort(pkt.Bytes, nextHop)
 	if err != nil {
 		return 0, err
 	}
@@ -105,7 +104,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 	pkt.Prepare()
 	oob := make([]byte, udp.TimestampLen())
 
-	n, oobn, flags, _, err := conn.ReadMsgUDP(pkt.Bytes, oob)
+	n, oobn, flags, _, err := conn.ReadMsgUDPAddrPort(pkt.Bytes, oob)
 	if err != nil {
 		return 0, err
 	}

@@ -3,6 +3,7 @@ package core
 import (
 	"log"
 	"net"
+	"net/netip"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/snet"
@@ -26,7 +27,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		pkt.Prepare()
 		oob = oob[:cap(oob)]
 
-		n, oobn, flags, lastHop, err := conn.ReadMsgUDP(pkt.Bytes, oob)
+		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(pkt.Bytes, oob)
 		if err != nil {
 			log.Printf("%s Failed to read packet: %v", scionServerLogPrefix, err)
 			continue
@@ -58,7 +59,9 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		}
 
 		if int(udppkt.DstPort) != localHostPort {
-			m, err := conn.WriteTo(pkt.Bytes, &net.UDPAddr{IP: pkt.Destination.Host.IP(), Port: int(udppkt.DstPort)})
+			dstAddr, _ := netip.AddrFromSlice(pkt.Destination.Host.IP())
+			dstAddrPort := netip.AddrPortFrom(dstAddr, udppkt.DstPort)
+			m, err := conn.WriteToUDPAddrPort(pkt.Bytes, dstAddrPort)
 			if err != nil || m != n {
 				log.Printf("%s Failed to forward packet: %v, %v\n", scionServerLogPrefix, err, m)
 				continue
@@ -73,7 +76,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 
 			log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
 
-			err = validateRequest(&ntpreq, int(udppkt.SrcPort))
+			err = validateRequest(&ntpreq, udppkt.SrcPort)
 			if err != nil {
 				log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
 				continue
@@ -105,7 +108,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				continue
 			}
 
-			n, err = conn.WriteTo(pkt.Bytes, lastHop)
+			n, err = conn.WriteToUDPAddrPort(pkt.Bytes, lastHop)
 			if err != nil {
 				log.Printf("%s Failed to write packet: %v", scionServerLogPrefix, err)
 				continue

@@ -20,7 +20,7 @@ func runIPServer(conn *net.UDPConn) {
 	for {
 		oob = oob[:cap(oob)]
 
-		n, oobn, flags, srcAddr, err := conn.ReadMsgUDP(buf, oob)
+		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
 			log.Printf("%s Failed to read packet: %v", ipServerLogPrefix, err)
 			continue
@@ -47,7 +47,7 @@ func runIPServer(conn *net.UDPConn) {
 
 		log.Printf("%s Received request at %v: %+v", ipServerLogPrefix, rxt, ntpreq)
 
-		err = validateRequest(&ntpreq, srcAddr.Port)
+		err = validateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
 			log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
 			continue
@@ -57,7 +57,7 @@ func runIPServer(conn *net.UDPConn) {
 
 		ntp.EncodePacket(&buf, &ntpresp)
 
-		n, err = conn.WriteTo(buf, srcAddr)
+		n, err = conn.WriteToUDPAddrPort(buf, srcAddr)
 		if err != nil {
 			log.Printf("%s Failed to write packet: %v", ipServerLogPrefix, err)
 			continue
