@@ -15,12 +15,10 @@ type SystemClock struct{}
 var _ timebase.LocalClock = (*SystemClock)(nil)
 
 func (c *SystemClock) Now() time.Time {
-	log.Printf("%s core.SystemClock.Now()", sysClockLogPrefix)
 	return time.Now().UTC()
 }
 
 func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
-	log.Printf("%s core.SystemClock.MaxDrift(%v)", sysClockLogPrefix, duration)
 	return math.MaxInt64
 }
 

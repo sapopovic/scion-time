@@ -8,7 +8,10 @@ import (
 	"log"
 	"net"
 	"os"
+	_ "sync"
 	"time"
+
+	_ "github.com/HdrHistogram/hdrhistogram-go"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/config"
@@ -164,41 +167,51 @@ func runGlobalClockSync(lclk timebase.LocalClock) {
 }
 
 func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
-	var cfg tsConfig
-	err := config.LoadFile(configFile, &cfg)
-	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
-	}
-	for _, s := range cfg.MBGTimeSources {
-		log.Print("mbg_time_source: ", s)
-		timeSources = append(timeSources, mbgTimeSource(s))
-	}
-	for _, s := range cfg.NTPTimeSources {
-		log.Print("ntp_time_source: ", s)
-		timeSources = append(timeSources, ntpTimeSource(s))
-	}
-
-	for _, s := range cfg.SCIONPeers {
-		log.Print("scion_peer: ", s)
-		addr, err := snet.ParseUDPAddr(s)
+	if configFile != "" {
+		var cfg tsConfig
+		err := config.LoadFile(configFile, &cfg)
 		if err != nil {
-			log.Fatalf("Failed to parse peer address \"%s\": %v", s, err)
+			log.Fatalf("Failed to load configuration: %v", err)
 		}
-		peers = append(peers, core.UDPAddr{addr.IA, addr.Host})
+		for _, s := range cfg.MBGTimeSources {
+			log.Print("mbg_time_source: ", s)
+			timeSources = append(timeSources, mbgTimeSource(s))
+		}
+		for _, s := range cfg.NTPTimeSources {
+			log.Print("ntp_time_source: ", s)
+			timeSources = append(timeSources, ntpTimeSource(s))
+		}
+		for _, s := range cfg.SCIONPeers {
+			log.Print("scion_peer: ", s)
+			addr, err := snet.ParseUDPAddr(s)
+			if err != nil {
+				log.Fatalf("Failed to parse peer address \"%s\": %v", s, err)
+			}
+			peers = append(peers, core.UDPAddr{addr.IA, addr.Host})
+		}
 	}
-
-	pathInfos, err := core.StartPather(newDaemonConnector(daemonAddr), peers)
-	if err != nil {
-		log.Fatal("Failed to start pather:", err)
-	}
-	go handlePathInfos(pathInfos)
 
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 
-	syncToRefClock(lclk)
+	if len(timeSources) != 0 {
+		syncToRefClock(lclk)
+		go runLocalClockSync(lclk)
+	}
 
-	err = core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
+	if len(peers) != 0 {
+		netcc.SetLocalHost(snet.CopyUDPAddr(localAddr.Host))
+
+		pathInfos, err := core.StartPather(newDaemonConnector(daemonAddr), peers)
+		if err != nil {
+			log.Fatal("Failed to start pather:", err)
+		}
+		go handlePathInfos(pathInfos)
+
+		go runGlobalClockSync(lclk)
+	}
+
+	err := core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
 		log.Fatalf("Failed to start IP server: %v", err)
 	}
@@ -206,11 +219,6 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	if err != nil {
 		log.Fatalf("Failed to start SCION server: %v", err)
 	}
-
-	netcc.SetLocalHost(snet.CopyUDPAddr(localAddr.Host))
-
-	go runLocalClockSync(lclk)
-	go runGlobalClockSync(lclk)
 
 	select {}
 }

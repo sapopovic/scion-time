@@ -3,9 +3,12 @@ module example.com/scion-time
 go 1.18
 
 replace github.com/scionproto/scion => github.com/netsec-ethz/scion v0.6.1-0.20220310075459-9aaced056448
+
 replace inet.af/netaddr => github.com/inetaf/netaddr v0.0.0-20211027220019-c74959edd3b6
 
 require (
+	github.com/HdrHistogram/hdrhistogram-go v1.1.2
+	github.com/facebook/time v0.0.0-20220316161424-3a8d215e68d1
 	github.com/libp2p/go-reuseport v0.1.0
 	github.com/scionproto/scion v0.0.0-00010101000000-000000000000
 	golang.org/x/sys v0.0.0-20220318055525-2edf467146b5
@@ -15,7 +18,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/dchest/cmac v0.0.0-20150527144652-62ff55a1048c // indirect
-	github.com/facebook/time v0.0.0-20220316161424-3a8d215e68d1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
