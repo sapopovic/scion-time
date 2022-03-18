@@ -1,9 +1,12 @@
 package core
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/netip"
+
+	"github.com/libp2p/go-reuseport"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/snet"
@@ -14,7 +17,12 @@ import (
 	"example.com/scion-time/go/net/udp"
 )
 
-const scionServerLogPrefix = "[core/server_scion]"
+const (
+	scionServerLogPrefix  = "[core/server_scion]"
+	scionServerLogEnabled = false
+
+	scionServerNumGoroutine = 1
+)
 
 func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	defer conn.Close()
@@ -74,7 +82,9 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				continue
 			}
 
-			log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
+			if scionServerLogEnabled {
+				log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
+			}
 
 			err = validateRequest(&ntpreq, udppkt.SrcPort)
 			if err != nil {
@@ -127,12 +137,21 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 	localHostPort := localHost.Port
 	localHost.Port = underlay.EndhostPort
 
-	conn, err := net.ListenUDP("udp", localHost)
-	if err != nil {
-		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
+	if scionServerNumGoroutine == 1 {
+		conn, err := net.ListenUDP("udp", localHost)
+		if err != nil {
+			log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
+		}
+		go runSCIONServer(conn, localHostPort)
+	} else {
+		for i := scionServerNumGoroutine; i > 0; i-- {
+			conn, err := reuseport.ListenPacket("udp", fmt.Sprintf(":%d", localHost.Port))
+			if err != nil {
+				log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
+			}
+			go runSCIONServer(conn.(*net.UDPConn), localHostPort)
+		}
 	}
-
-	go runSCIONServer(conn, localHostPort)
 
 	return nil
 }
