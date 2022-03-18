@@ -411,6 +411,8 @@ func runBenchmark(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDP
 		}
 	}
 
+	// const numClientGoroutine = 8
+	// const numRequestPerClient = 10000
 	const numClientGoroutine = 1
 	const numRequestPerClient = 10000 * 100
 	var mu sync.Mutex
