@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/netip"
@@ -21,7 +20,7 @@ const (
 	scionServerLogPrefix  = "[core/server_scion]"
 	scionServerLogEnabled = false
 
-	scionServerNumGoroutine = 1
+	scionServerNumGoroutine = 8
 )
 
 func runSCIONServer(conn *net.UDPConn, localHostPort int) {
@@ -145,7 +144,7 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 		go runSCIONServer(conn, localHostPort)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
-			conn, err := reuseport.ListenPacket("udp", fmt.Sprintf(":%d", localHost.Port))
+			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
 				log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
 			}

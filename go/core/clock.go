@@ -15,7 +15,7 @@ var errNoClockMeasurements = fmt.Errorf("failed to measure clock values")
 
 func collectMeasurements(ctx context.Context, ms chan measurement, n int) []time.Duration {
 	i := 0
-	var off []time.Duration
+	off := make([]time.Duration, n)
 loop:
 	for i != n {
 		select {
