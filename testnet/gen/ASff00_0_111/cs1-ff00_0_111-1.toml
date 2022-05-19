@@ -12,10 +12,6 @@ connection = "gen-cache/cs1-ff00_0_111-1.beacon.db"
 [path_db]
 connection = "gen-cache/cs1-ff00_0_111-1.path.db"
 
-[drkey]
-cert_file = "gen/ASff00_0_111/crypto/as/ISD1-ASff00_0_111.pem"
-key_file = "gen/ASff00_0_111/crypto/as/cp-as.key"
-
 [tracing]
 enabled = true
 debug = true
@@ -32,9 +28,11 @@ addr = "10.0.0.85:31152"
 [log.console]
 level = "debug"
 
-[drkey.drkey_db]
-connection = "gen-cache/cs1-ff00_0_111-1.drkey.db"
+[drkey.lvl1_db]
+connection = "gen-cache/cs1-ff00_0_111-1.lvl1.db"
+
+[drkey.sv_db]
+connection = "gen-cache/cs1-ff00_0_111-1.sv.db"
 
 [drkey.delegation]
-colibri = [ "10.0.0.86",]
-piskes = [ "10.0.0.86",]
+colibri = [ "10.0.0.84",]

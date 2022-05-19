@@ -9,12 +9,12 @@
       "split_cls": 7,
       "end_props": {
         "start": [
-          "L",
-          "T"
+          "T",
+          "L"
         ],
         "end": [
-          "L",
-          "T"
+          "T",
+          "L"
         ]
       },
       "required_count": 1
@@ -28,12 +28,12 @@
       "split_cls": 7,
       "end_props": {
         "start": [
-          "L",
-          "T"
+          "T",
+          "L"
         ],
         "end": [
-          "L",
-          "T"
+          "T",
+          "L"
         ]
       },
       "required_count": 1
@@ -47,12 +47,12 @@
       "split_cls": 7,
       "end_props": {
         "start": [
-          "L",
-          "T"
+          "T",
+          "L"
         ],
         "end": [
-          "L",
-          "T"
+          "T",
+          "L"
         ]
       },
       "required_count": 1
@@ -66,12 +66,12 @@
       "split_cls": 7,
       "end_props": {
         "start": [
-          "L",
-          "T"
+          "T",
+          "L"
         ],
         "end": [
-          "L",
-          "T"
+          "T",
+          "L"
         ]
       },
       "required_count": 1

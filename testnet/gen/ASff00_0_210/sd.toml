@@ -9,7 +9,7 @@ connection = "gen-cache/sd2-ff00_0_210.trust.db"
 [path_db]
 connection = "gen-cache/sd2-ff00_0_210.path.db"
 
-[drkey_db]
+[drkey_lvl2_db]
 connection = "gen-cache/sd2-ff00_0_210.drkey.db"
 
 [sd]
