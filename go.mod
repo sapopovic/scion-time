@@ -11,7 +11,7 @@ require (
 	github.com/facebook/time v0.0.0-20220316161424-3a8d215e68d1
 	github.com/libp2p/go-reuseport v0.1.0
 	github.com/scionproto/scion v0.0.0-00010101000000-000000000000
-	golang.org/x/sys v0.0.0-20220318055525-2edf467146b5
+	golang.org/x/sys v0.0.0-20220519141025-dcacdad47464
 )
 
 require (
@@ -32,9 +32,9 @@ require (
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/uber/jaeger-client-go v2.29.1+incompatible // indirect
 	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
-	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.17.0 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
+	go.uber.org/zap v1.21.0 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20211027215541-db492cf91b37 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect

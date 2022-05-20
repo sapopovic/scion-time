@@ -154,6 +154,7 @@ func main() {
 			logError(os.Stderr, "recv failed: ", err)
 			continue
 		}
+		time.Sleep(1 * time.Millisecond)
 		_, _ = oobn, flags
 		// logMsg(os.Stdout, buf[:], n, nil, oobn, flags, &raddr)
 		err = SendtoInet4(fd, buf[:n], 0, &raddr)

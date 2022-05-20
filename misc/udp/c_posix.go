@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"os"
 	"runtime"
+	"runtime/pprof"	
 	"sync"
 	"syscall"
 	"time"
@@ -23,7 +24,6 @@ func SendtoInet4(fd int, p []byte, flags int, to *syscall.SockaddrInet4) (err er
 
 var (
 	lmu sync.Mutex
-	raddr0, raddr1 syscall.SockaddrInet4
 	buf [1024]byte
 )
 
@@ -114,13 +114,24 @@ func logMemStats(f *os.File) {
 	logLn(f)
 }
 
+func logThreadProfile(f *os.File, p *pprof.Profile) {
+	lmu.Lock()
+	defer lmu.Unlock()
+	logString(f, "Thread Count: ")
+	logUint64(f, uint64(p.Count()))
+	logLn(f)
+	logLn(f)
+}
+
 func monitor() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
+	threadprofile := pprof.Lookup("threadcreate")
 	for {
 		select {
 		case <-ticker.C:
 			logMemStats(os.Stderr)
+			logThreadProfile(os.Stderr, threadprofile)
 		}
 	}
 }
@@ -131,12 +142,13 @@ func exchangeMsg(msg []byte, raddr *syscall.SockaddrInet4) {
 		logError(os.Stderr, "socket creation failed: ", err)
 		os.Exit(1)
 	}
-	defer unix.Close(fd)
-	err = SendtoInet4(fd, msg, 0, &raddr0)
+	defer unix.Close(fd) 
+	err = SendtoInet4(fd, msg, 0, raddr)
 	if err != nil {
 		logError(os.Stderr, "send failed: ", err)
 		return
 	}
+	var raddr1 syscall.SockaddrInet4
 	n, oobn, flags, err := RecvmsgInet4(fd, buf[:], nil, 0, &raddr1)
 	if err != nil {
 		logError(os.Stderr, "recv failed: ", err)
@@ -153,14 +165,23 @@ func main() {
 		logError(os.Stderr, "unexpected remote address: ", err)
 		os.Exit(1)
 	}
-	raddr0 = syscall.SockaddrInet4{
+	raddr0 := syscall.SockaddrInet4{
 		Addr: ap.Addr().As4(),
 		Port: int(ap.Port()),
 	}
 	msg := []byte(os.Args[2])
-	for i := 0; i != 1_000_000; i++ {
-		exchangeMsg(msg, &raddr0)
+	sg := make(chan struct{})
+	for i := 0; i != 1_000; i++ {
+		go func() {
+			<-sg
+			for j := 0; j != 5; j++ {
+				exchangeMsg(msg, &raddr0)
+			}
+		}()
 	}
+	time.Sleep(16 * time.Second)
+	close(sg)
+	select {}
 }
 
 // GODEBUG='allocfreetrace=1' ./c_posix 127.0.0.1:10123 xyz
