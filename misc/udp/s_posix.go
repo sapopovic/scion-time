@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"sync"
 	"syscall"
-	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -116,14 +115,16 @@ func logMemStats(f *os.File) {
 	logLn(f)
 }
 
+func sleep(sec int64) {
+	var tv unix.Timeval
+	tv.Sec = sec
+	unix.Select(0, nil, nil, nil, &tv)
+}
+
 func monitor() {
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
 	for {
-		select {
-		case <-ticker.C:
-			logMemStats(os.Stderr)
-		}
+		sleep(3)
+		logMemStats(os.Stderr)
 	}
 }
 
@@ -154,7 +155,7 @@ func main() {
 			logError(os.Stderr, "recv failed: ", err)
 			continue
 		}
-		time.Sleep(1 * time.Millisecond)
+		// time.Sleep(1 * time.Millisecond)
 		_, _ = oobn, flags
 		// logMsg(os.Stdout, buf[:], n, nil, oobn, flags, &raddr)
 		err = SendtoInet4(fd, buf[:n], 0, &raddr)

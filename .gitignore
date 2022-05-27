@@ -4,6 +4,7 @@ misc/no_dispatcher/c
 misc/no_dispatcher/s
 misc/shmc/shmc
 misc/time64/time64
+misc/udp/c_epoll
 misc/udp/c_posix
 misc/udp/s
 misc/udp/s_posix
