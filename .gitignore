@@ -3,6 +3,7 @@ bin/ts
 misc/no_dispatcher/c
 misc/no_dispatcher/s
 misc/shmc/shmc
+misc/sync/sync
 misc/time64/time64
 misc/udp/c_epoll
 misc/udp/c_posix
