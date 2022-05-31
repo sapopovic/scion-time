@@ -4,12 +4,19 @@ import (
 	"log"
 	"net"
 
+	"github.com/libp2p/go-reuseport"
+
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
 )
 
-const ipServerLogPrefix = "[core/server_ip]"
+const (
+	ipServerLogPrefix = "[core/server_ip]"
+	ipServerLogEnabled = false
+
+	ipServerNumGoroutine = 8
+)
 
 func runIPServer(conn *net.UDPConn) {
 	defer conn.Close()
@@ -45,13 +52,16 @@ func runIPServer(conn *net.UDPConn) {
 			continue
 		}
 
-		log.Printf("%s Received request at %v: %+v", ipServerLogPrefix, rxt, ntpreq)
+		if ipServerLogEnabled {
+			log.Printf("%s Received request at %v: %+v", ipServerLogPrefix, rxt, ntpreq)
+		}
 
 		err = validateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
-			log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
+			log.Printf("%s Unexpected request packet: %v", ipServerLogPrefix, err)
 			continue
 		}
+
 		var ntpresp ntp.Packet
 		handleRequest(&ntpreq, rxt, &ntpresp)
 
@@ -72,13 +82,21 @@ func runIPServer(conn *net.UDPConn) {
 func StartIPServer(localHost *net.UDPAddr) error {
 	log.Printf("%s Listening on %v:%d via IP", ipServerLogPrefix, localHost.IP, localHost.Port)
 
-	conn, err := net.ListenUDP("udp", localHost)
-	if err != nil {
-		log.Printf("%s Failed to listen for packets: %v", ipServerLogPrefix, err)
-		return err
+	if ipServerNumGoroutine == 1 {
+		conn, err := net.ListenUDP("udp", localHost)
+		if err != nil {
+			log.Fatalf("%s Failed to listen for packets: %v", ipServerLogPrefix, err)
+		}
+		go runIPServer(conn)
+	} else {
+		for i := ipServerNumGoroutine; i > 0; i-- {
+			conn, err := reuseport.ListenPacket("udp", localHost.String())
+			if err != nil {
+				log.Fatalf("%s Failed to listen for packets: %v", ipServerLogPrefix, err)
+			}
+			go runIPServer(conn.(*net.UDPConn))
+		}
 	}
-
-	go runIPServer(conn)
 
 	return nil
 }
