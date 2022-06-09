@@ -13,7 +13,7 @@ import (
 
 const (
 	ipServerLogPrefix = "[core/server_ip]"
-	ipServerLogEnabled = false
+	ipServerLogEnabled = true
 
 	ipServerNumGoroutine = 8
 )
@@ -53,7 +53,7 @@ func runIPServer(conn *net.UDPConn) {
 		}
 
 		if ipServerLogEnabled {
-			log.Printf("%s Received request at %v: %+v", ipServerLogPrefix, rxt, ntpreq)
+			log.Printf("%s Received request at %v from %v: %+v", ipServerLogPrefix, rxt, srcAddr, ntpreq)
 		}
 
 		err = validateRequest(&ntpreq, srcAddr.Port())
