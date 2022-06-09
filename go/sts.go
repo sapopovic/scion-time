@@ -1,3 +1,5 @@
+// SCION time service.
+
 package main
 
 import (
