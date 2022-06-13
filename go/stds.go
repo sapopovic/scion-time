@@ -25,30 +25,40 @@ func newSemaphore(initval uint) int {
 	return fd
 }
 
-func writeSemaphore(fd int) {
-	val := []byte{1, 0, 0, 0, 0, 0, 0, 0}
-	n, err := unix.Write(fd, val)
-	if err != nil || n != len(val) {
-		panic("writeSemaphore: unix.Write failed")
+func pollSemaphore(fd int) bool {
+	val := []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	for {
+		n, err := unix.Read(fd, val)
+		if err == unix.EINTR {
+			continue
+		}
+		if err == unix.EAGAIN || err == unix.EWOULDBLOCK {
+			return false
+		}
+		if err != nil || n != 8 ||
+			val[0] != 1 || val[1] != 0 || val[2] != 0 || val[3] != 0 ||
+			val[4] != 0 || val[5] != 0 || val[6] != 0 || val[7] != 0 {
+			panic("pollSemaphore: unix.Read failed")
+		}
+		return true
 	}
 }
 
-func readSemaphore(fd int) bool {
-	val := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	n, err := unix.Read(fd, val)
-	if err == unix.EAGAIN {
-		return false
+func signalSemaphore(fd int) {
+	val := []byte{1, 0, 0, 0, 0, 0, 0, 0}
+	for {
+		n, err := unix.Write(fd, val)
+		if err == unix.EINTR {
+			continue
+		}
+		if err != nil || n != len(val) {
+			panic("signalSemaphore: unix.Write failed")
+		}
 	}
-	if err != nil || n != 8 ||
-		val[0] != 1 || val[1] != 0 || val[2] != 0 || val[3] != 0 ||
-		val[4] != 0 || val[5] != 0 || val[6] != 0 || val[7] != 0 {
-		panic("readSemaphore: unix.Read failed")
-	}
-	return true
 }
 
 func awaitSemaphore(fd int) {
-	ok := readSemaphore(fd)
+	ok := pollSemaphore(fd)
 	for !ok {
 		events := []unix.PollFd{
 			{
@@ -66,13 +76,13 @@ func awaitSemaphore(fd int) {
 			}
 			break
 		}
-		ok = readSemaphore(fd)
+		ok = pollSemaphore(fd)
 	}
 }
 
 func logMemStats(fd, sem int) {
 	awaitSemaphore(sem)
-	defer writeSemaphore(sem)
+	defer signalSemaphore(sem)
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	log.WriteString(fd, "TotalAlloc: ")
@@ -92,7 +102,7 @@ func logMemStats(fd, sem int) {
 
 func logThreadProfile(fd, sem int, p *pprof.Profile) {
 	awaitSemaphore(sem)
-	defer writeSemaphore(sem)
+	defer signalSemaphore(sem)
 	log.WriteString(fd, "Thread Count: ")
 	log.WriteUint64(fd, uint64(p.Count()))
 	log.WriteLn(fd)
@@ -113,7 +123,7 @@ func run(id, logFd, semFd int) {
 	log.WriteString(logFd, "running: ")
 	log.WriteUint64(logFd, uint64(id))
 	log.WriteLn(logFd)
-	writeSemaphore(semFd)
+	signalSemaphore(semFd)
 
 	select {}
 }
