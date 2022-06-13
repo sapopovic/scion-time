@@ -54,20 +54,20 @@ func signalSemaphore(fd int) {
 		if err != nil || n != len(val) {
 			panic("signalSemaphore: unix.Write failed")
 		}
+		return
 	}
 }
 
 func awaitSemaphore(fd int) {
 	ok := pollSemaphore(fd)
+	var events [1]unix.PollFd
 	for !ok {
-		events := []unix.PollFd{
-			{
-				Fd:     int32(fd),
-				Events: unix.POLLIN,
-			},
+		events[0] = unix.PollFd{
+			Fd:     int32(fd),
+			Events: unix.POLLIN,
 		}
 		for {
-			n, err := unix.Poll(events, -1)
+			n, err := unix.Poll(events[:], -1)
 			if err == unix.EINTR || err == unix.EAGAIN {
 				continue
 			}
@@ -110,6 +110,7 @@ func logThreadProfile(fd, sem int, p *pprof.Profile) {
 }
 
 func monitor(logFd, logSem int, p *pprof.Profile) {
+	runtime.LockOSThread()
 	threadprofile := pprof.Lookup("threadcreate")
 	for {
 		sleep(15)
@@ -119,13 +120,25 @@ func monitor(logFd, logSem int, p *pprof.Profile) {
 }
 
 func run(id, logFd, semFd int) {
+	runtime.LockOSThread()
+
 	awaitSemaphore(semFd)
 	log.WriteString(logFd, "running: ")
 	log.WriteUint64(logFd, uint64(id))
 	log.WriteLn(logFd)
 	signalSemaphore(semFd)
 
-	select {}
+	pollFd, err := unix.EpollCreate1(0)
+	if err != nil {
+		panic("run: unix.EpollCreate1 failed")
+	}
+	var events [16]unix.EpollEvent
+	for {
+		_, err := unix.EpollWait(pollFd, events[:], -1)
+		if err == unix.EINTR {
+			continue
+		}		
+	}
 }
 
 func main() {
