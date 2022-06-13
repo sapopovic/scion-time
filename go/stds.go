@@ -5,7 +5,6 @@ package main
 import (
 	"os"
 	"runtime"
-	"runtime/debug"
 	"runtime/pprof"
 
 	"golang.org/x/sys/unix"
@@ -120,8 +119,6 @@ func run(id, logFd, semFd int) {
 }
 
 func main() {
-	debug.SetGCPercent(-1)
-
 	stdout := int(os.Stdout.Fd())
 	stderr := int(os.Stderr.Fd())
 
@@ -137,4 +134,4 @@ func main() {
 	select {}
 }
 
-// GODEBUG='allocfreetrace=1,sbrk=1' ./stds
+// GOGC=off GODEBUG='allocfreetrace=1,sbrk=1' ./stds
