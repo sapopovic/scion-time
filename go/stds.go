@@ -13,12 +13,34 @@ import (
 	"example.com/scion-time/go/realtime/sync"
 )
 
+type pool struct {
+	nonempty *sync.Semaphore
+	nonfull *sync.Semaphore
+	bufSem *sync.Semaphore
+	bufCtx sync.Context
+	buf []any
+}
+
+func newPool(cap int) *pool {
+	if cap <= 0 {
+		panic("capacity must be greater than 0")
+	}
+	p := &pool{
+		nonempty: sync.NewSemaphore(uint(cap)),
+		nonfull: sync.NewSemaphore(0),
+		bufSem: sync.NewSemaphore(1),
+		bufCtx: sync.Context{},
+		buf: make([]any, cap),
+	}
+	return p
+}
+
 func sleep(sec int64) {
 	ts := unix.Timespec{Sec: sec}
 	unix.Nanosleep(&ts, nil)
 }
 
-func awaitSemaphore(s *sync.Semaphore) {
+func await(s *sync.Semaphore) {
 	ok := s.Acquire()
 	var events [1]unix.PollFd
 	for !ok {
@@ -41,7 +63,7 @@ func awaitSemaphore(s *sync.Semaphore) {
 }
 
 func logMemStats(fd int, sem *sync.Semaphore) {
-	awaitSemaphore(sem)
+	await(sem)
 	defer sem.Release()
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
@@ -61,7 +83,7 @@ func logMemStats(fd int, sem *sync.Semaphore) {
 }
 
 func logThreadProfile(fd int, sem *sync.Semaphore, p *pprof.Profile) {
-	awaitSemaphore(sem)
+	await(sem)
 	defer sem.Release()
 	log.WriteString(fd, "Thread Count: ")
 	log.WriteUint64(fd, uint64(p.Count()))
@@ -70,6 +92,7 @@ func logThreadProfile(fd int, sem *sync.Semaphore, p *pprof.Profile) {
 }
 
 func monitor(logFd int, logSem *sync.Semaphore, p *pprof.Profile) {
+	runtime.LockOSThread()
 	threadprofile := pprof.Lookup("threadcreate")
 	for {
 		sleep(15)
@@ -78,12 +101,48 @@ func monitor(logFd int, logSem *sync.Semaphore, p *pprof.Profile) {
 	}
 }
 
-func run(id, logFd int, logSem *sync.Semaphore) {
-	awaitSemaphore(logSem)
+func run(id, logFd int, logSem *sync.Semaphore, p *pool) {
+	runtime.LockOSThread()
+
+	await(logSem)
 	log.WriteString(logFd, "running: ")
 	log.WriteUint64(logFd, uint64(id))
 	log.WriteLn(logFd)
 	logSem.Release()
+
+	for {
+		await(p.nonempty)
+		await(p.bufSem)
+		p.bufCtx.Open()
+
+		await(logSem)
+		// log.WriteString(logFd, "consuming: ")
+		// log.WriteUint64(logFd, uint64(id))
+		// log.WriteLn(logFd)
+		logSem.Release()
+
+		p.bufCtx.Close()
+		p.bufSem.Release()
+		p.nonfull.Release()
+
+		sleep(0)
+
+		await(p.nonfull)
+		await(p.bufSem)
+		p.bufCtx.Open()
+
+		await(logSem)
+		// log.WriteString(logFd, "producing: ")
+		// log.WriteUint64(logFd, uint64(id))
+		// log.WriteLn(logFd)
+		logSem.Release()
+
+		p.bufCtx.Close()
+		p.bufSem.Release()
+		p.nonempty.Release()
+
+		sleep(0)
+	}
 
 	pollFd, err := unix.EpollCreate1(0)
 	if err != nil {
@@ -94,7 +153,7 @@ func run(id, logFd int, logSem *sync.Semaphore) {
 		_, err := unix.EpollWait(pollFd, events[:], -1)
 		if err == unix.EINTR {
 			continue
-		}		
+		}
 	}
 }
 
@@ -107,12 +166,13 @@ func main() {
 	threadprof := pprof.Lookup("threadcreate")
 	go monitor(stderr, logSem, threadprof)
 
-	for i := 0; i != 8; i++ {
-		go run(i, stdout, logSem)
+	pool := newPool(4)
+
+	for i := 0; i != 64; i++ {
+		go run(i, stdout, logSem, pool)
 	}
 
-	done := sync.NewSemaphore(0)
-	awaitSemaphore(done)
+	await(sync.NewSemaphore(0))
 }
 
 // GOGC=off GODEBUG='allocfreetrace=1,sbrk=1' ./stds

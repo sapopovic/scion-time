@@ -12,7 +12,7 @@ type Semaphore struct {
 func NewSemaphore(initval uint) *Semaphore {
 	fd, err := unix.Eventfd(initval, unix.EFD_NONBLOCK|unix.EFD_SEMAPHORE)
 	if err != nil {
-		panic("NewSemaphore: unix.Eventfd failed")
+		panic("sync.Semaphore: unix.Eventfd failed")
 	}
 	return &Semaphore{
 		valid: true,
@@ -22,14 +22,14 @@ func NewSemaphore(initval uint) *Semaphore {
 
 func (s *Semaphore) Fd() int {
 	if !s.valid {
-		panic("use of uninitialized semaphore")
+		panic("sync.Semaphore: use of uninitialized semaphore")
 	}
 	return s.fd
 }
 
 func (s *Semaphore) Acquire() bool {
 	if !s.valid {
-		panic("use of uninitialized semaphore")
+		panic("sync.Semaphore: use of uninitialized semaphore")
 	}
 	val := []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	for {
@@ -43,7 +43,7 @@ func (s *Semaphore) Acquire() bool {
 		if err != nil || n != 8 ||
 			val[0] != 1 || val[1] != 0 || val[2] != 0 || val[3] != 0 ||
 			val[4] != 0 || val[5] != 0 || val[6] != 0 || val[7] != 0 {
-			panic("Semaphore.Poll: unix.Read failed")
+			panic("sync.Semaphore: unix.Read failed")
 		}
 		return true
 	}
@@ -51,7 +51,7 @@ func (s *Semaphore) Acquire() bool {
 
 func (s *Semaphore) Release() {
 	if !s.valid {
-		panic("use of uninitialized semaphore")
+		panic("sync.Semaphore: use of uninitialized semaphore")
 	}
 	val := []byte{1, 0, 0, 0, 0, 0, 0, 0}
 	for {
@@ -60,7 +60,7 @@ func (s *Semaphore) Release() {
 			continue
 		}
 		if err != nil || n != len(val) {
-			panic("Semaphore.Signal: unix.Write failed")
+			panic("sync.Semaphore: unix.Write failed")
 		}
 		return
 	}
