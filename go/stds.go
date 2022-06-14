@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"example.com/scion-time/go/realtime/log"
+	"example.com/scion-time/go/realtime/sync"
 )
 
 func sleep(sec int64) {
@@ -17,53 +18,12 @@ func sleep(sec int64) {
 	unix.Nanosleep(&ts, nil)
 }
 
-func newSemaphore(initval uint) int {
-	fd, err := unix.Eventfd(initval, unix.EFD_NONBLOCK|unix.EFD_SEMAPHORE)
-	if err != nil {
-		panic("newSemaphore: unix.Eventfd failed")
-	}
-	return fd
-}
-
-func pollSemaphore(fd int) bool {
-	val := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	for {
-		n, err := unix.Read(fd, val)
-		if err == unix.EINTR {
-			continue
-		}
-		if err == unix.EAGAIN || err == unix.EWOULDBLOCK {
-			return false
-		}
-		if err != nil || n != 8 ||
-			val[0] != 1 || val[1] != 0 || val[2] != 0 || val[3] != 0 ||
-			val[4] != 0 || val[5] != 0 || val[6] != 0 || val[7] != 0 {
-			panic("pollSemaphore: unix.Read failed")
-		}
-		return true
-	}
-}
-
-func signalSemaphore(fd int) {
-	val := []byte{1, 0, 0, 0, 0, 0, 0, 0}
-	for {
-		n, err := unix.Write(fd, val)
-		if err == unix.EINTR {
-			continue
-		}
-		if err != nil || n != len(val) {
-			panic("signalSemaphore: unix.Write failed")
-		}
-		return
-	}
-}
-
-func awaitSemaphore(fd int) {
-	ok := pollSemaphore(fd)
+func awaitSemaphore(s *sync.Semaphore) {
+	ok := s.Acquire()
 	var events [1]unix.PollFd
 	for !ok {
 		events[0] = unix.PollFd{
-			Fd:     int32(fd),
+			Fd:     int32(s.Fd()),
 			Events: unix.POLLIN,
 		}
 		for {
@@ -76,13 +36,13 @@ func awaitSemaphore(fd int) {
 			}
 			break
 		}
-		ok = pollSemaphore(fd)
+		ok = s.Acquire()
 	}
 }
 
-func logMemStats(fd, sem int) {
+func logMemStats(fd int, sem *sync.Semaphore) {
 	awaitSemaphore(sem)
-	defer signalSemaphore(sem)
+	defer sem.Release()
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	log.WriteString(fd, "TotalAlloc: ")
@@ -100,17 +60,16 @@ func logMemStats(fd, sem int) {
 	log.WriteLn(fd)
 }
 
-func logThreadProfile(fd, sem int, p *pprof.Profile) {
+func logThreadProfile(fd int, sem *sync.Semaphore, p *pprof.Profile) {
 	awaitSemaphore(sem)
-	defer signalSemaphore(sem)
+	defer sem.Release()
 	log.WriteString(fd, "Thread Count: ")
 	log.WriteUint64(fd, uint64(p.Count()))
 	log.WriteLn(fd)
 	log.WriteLn(fd)
 }
 
-func monitor(logFd, logSem int, p *pprof.Profile) {
-	runtime.LockOSThread()
+func monitor(logFd int, logSem *sync.Semaphore, p *pprof.Profile) {
 	threadprofile := pprof.Lookup("threadcreate")
 	for {
 		sleep(15)
@@ -119,14 +78,12 @@ func monitor(logFd, logSem int, p *pprof.Profile) {
 	}
 }
 
-func run(id, logFd, semFd int) {
-	runtime.LockOSThread()
-
-	awaitSemaphore(semFd)
+func run(id, logFd int, logSem *sync.Semaphore) {
+	awaitSemaphore(logSem)
 	log.WriteString(logFd, "running: ")
 	log.WriteUint64(logFd, uint64(id))
 	log.WriteLn(logFd)
-	signalSemaphore(semFd)
+	logSem.Release()
 
 	pollFd, err := unix.EpollCreate1(0)
 	if err != nil {
@@ -145,7 +102,7 @@ func main() {
 	stdout := int(os.Stdout.Fd())
 	stderr := int(os.Stderr.Fd())
 
-	logSem := newSemaphore(1)
+	logSem := sync.NewSemaphore(1)
 
 	threadprof := pprof.Lookup("threadcreate")
 	go monitor(stderr, logSem, threadprof)
@@ -154,7 +111,8 @@ func main() {
 		go run(i, stdout, logSem)
 	}
 
-	select {}
+	done := sync.NewSemaphore(0)
+	awaitSemaphore(done)
 }
 
 // GOGC=off GODEBUG='allocfreetrace=1,sbrk=1' ./stds
