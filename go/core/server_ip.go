@@ -13,7 +13,7 @@ import (
 
 const (
 	ipServerLogPrefix = "[core/server_ip]"
-	ipServerLogEnabled = true
+	ipServerLogEnabled = false
 
 	ipServerNumGoroutine = 8
 )
