@@ -35,8 +35,8 @@ func newPool(cap int) *pool {
 	return p
 }
 
-func sleep(sec int64) {
-	ts := unix.Timespec{Sec: sec}
+func sleep(sec, nsec int64) {
+	ts := unix.Timespec{Sec: sec, Nsec: nsec}
 	unix.Nanosleep(&ts, nil)
 }
 
@@ -92,57 +92,77 @@ func logThreadProfile(fd int, sem *sync.Semaphore, p *pprof.Profile) {
 }
 
 func monitor(logFd int, logSem *sync.Semaphore, p *pprof.Profile) {
-	runtime.LockOSThread()
+	await(logSem)
+	log.WriteString(logFd, "running: monitor")
+	log.WriteLn(logFd)
+	logSem.Release()
+
 	threadprofile := pprof.Lookup("threadcreate")
 	for {
-		sleep(15)
+		sleep(15, 0)
 		logMemStats(logFd, logSem)
 		logThreadProfile(logFd, logSem, threadprofile)
 	}
 }
 
 func run(id, logFd int, logSem *sync.Semaphore, p *pool) {
-	runtime.LockOSThread()
-
 	await(logSem)
 	log.WriteString(logFd, "running: ")
 	log.WriteUint64(logFd, uint64(id))
 	log.WriteLn(logFd)
 	logSem.Release()
 
-	for {
+	for i := 0; i != 5_000_000; i++ {
 		await(p.nonempty)
 		await(p.bufSem)
 		p.bufCtx.Open()
 
-		await(logSem)
-		// log.WriteString(logFd, "consuming: ")
-		// log.WriteUint64(logFd, uint64(id))
-		// log.WriteLn(logFd)
-		logSem.Release()
+		if i % 100_000 == 0 {
+			await(logSem)
+			runtime.LockOSThread()
+			log.WriteString(logFd, "consuming: ")
+			log.WriteUint64(logFd, uint64(id))
+			log.WriteString(logFd, ", ")
+			log.WriteUint64(logFd, uint64(i))
+			log.WriteLn(logFd)
+			runtime.UnlockOSThread()
+			logSem.Release()
+		}
 
 		p.bufCtx.Close()
 		p.bufSem.Release()
 		p.nonfull.Release()
 
-		sleep(0)
+		sleep(0, 0)
 
 		await(p.nonfull)
 		await(p.bufSem)
 		p.bufCtx.Open()
 
-		await(logSem)
-		// log.WriteString(logFd, "producing: ")
-		// log.WriteUint64(logFd, uint64(id))
-		// log.WriteLn(logFd)
-		logSem.Release()
+		if i % 100_000 == 0 {
+			await(logSem)
+			runtime.LockOSThread()
+			log.WriteString(logFd, "producing: ")
+			log.WriteUint64(logFd, uint64(id))
+			log.WriteString(logFd, ", ")
+			log.WriteUint64(logFd, uint64(i))
+			log.WriteLn(logFd)
+			runtime.UnlockOSThread()
+			logSem.Release()
+		}
 
 		p.bufCtx.Close()
 		p.bufSem.Release()
 		p.nonempty.Release()
 
-		sleep(0)
+		sleep(0, 0)
 	}
+
+	await(logSem)
+	log.WriteString(logFd, "done producing: ")
+	log.WriteUint64(logFd, uint64(id))
+	log.WriteLn(logFd)
+	logSem.Release()
 
 	pollFd, err := unix.EpollCreate1(0)
 	if err != nil {
