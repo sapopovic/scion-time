@@ -85,14 +85,14 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
 			}
 
-			err = validateRequest(&ntpreq, udppkt.SrcPort)
+			err = ntp.ValidateRequest(&ntpreq, udppkt.SrcPort)
 			if err != nil {
 				log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
 				continue
 			}
 
 			var ntpresp ntp.Packet
-			handleRequest(&ntpreq, rxt, &ntpresp)
+			ntp.HandleRequest(&ntpreq, rxt, &ntpresp)
 
 			ntp.EncodePacket(&udppkt.Payload, &ntpresp)
 			udppkt.DstPort, udppkt.SrcPort = udppkt.SrcPort, udppkt.DstPort

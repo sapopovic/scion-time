@@ -3,15 +3,31 @@
 package main
 
 import (
+ 	_ "unsafe"
+
+	"net/netip"
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 
+	"example.com/scion-time/go/core"
+	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/go/net/ntp"
+	"example.com/scion-time/go/net/udp"
 	"example.com/scion-time/go/realtime/log"
 	"example.com/scion-time/go/realtime/sync"
 )
+
+//go:linkname RecvmsgInet4 syscall.recvmsgInet4
+//go:noescape
+func RecvmsgInet4(fd int, p, oob []byte, flags int, from *syscall.SockaddrInet4) (n, oobn int, recvflags int, err error)
+
+//go:linkname SendtoInet4 syscall.sendtoInet4
+//go:noescape
+func SendtoInet4(fd int, p []byte, flags int, to *syscall.SockaddrInet4) (err error)
 
 type pool struct {
 	nonempty *sync.Semaphore
@@ -91,6 +107,23 @@ func logThreadProfile(fd int, sem *sync.Semaphore, p *pprof.Profile) {
 	log.WriteLn(fd)
 }
 
+func logError(fd int, sem *sync.Semaphore, msg string, err error) {
+	await(sem)
+	defer sem.Release()
+	log.WriteString(fd, msg)
+	log.WriteString(fd, err.Error())
+	log.WriteLn(fd)
+}
+
+func logRecvFlags(fd int, sem *sync.Semaphore, label string, flags int) {
+	await(sem)
+	defer sem.Release()
+	log.WriteString(fd, label)
+	log.WriteString(fd, ": ")
+	log.WriteUint64(fd, uint64(flags))
+	log.WriteLn(fd)
+}
+
 func monitor(logFd int, logSem *sync.Semaphore, p *pprof.Profile) {
 	await(logSem)
 	log.WriteString(logFd, "running: monitor")
@@ -105,7 +138,7 @@ func monitor(logFd int, logSem *sync.Semaphore, p *pprof.Profile) {
 	}
 }
 
-func run(id, logFd int, logSem *sync.Semaphore, p *pool) {
+func runPool(id, logFd int, logSem *sync.Semaphore, p *pool) {
 	await(logSem)
 	log.WriteString(logFd, "running: ")
 	log.WriteUint64(logFd, uint64(id))
@@ -177,6 +210,91 @@ func run(id, logFd int, logSem *sync.Semaphore, p *pool) {
 	}
 }
 
+func run(id, logFd int, logSem *sync.Semaphore, port uint16) {
+	await(logSem)
+	log.WriteString(logFd, "running: ")
+	log.WriteUint64(logFd, uint64(id))
+	log.WriteLn(logFd)
+	logSem.Release()
+
+	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
+	if err != nil {
+		logError(logFd, logSem, "socket creation failed: ", err)
+		os.Exit(1)
+	}
+	defer unix.Close(fd)
+	err = unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEADDR, 1)
+	if err != nil {
+		logError(logFd, logSem, "socket configuration failed (SO_REUSEADDR): ", err)
+		os.Exit(1)
+	}
+	err = unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+	if err != nil {
+		logError(logFd, logSem, "socket configuration failed (SO_REUSEPORT): ", err)
+		os.Exit(1)
+	}
+	laddr := unix.SockaddrInet4{
+		Port: int(port),
+	}
+	err = unix.Bind(fd, &laddr)
+	if err != nil {
+		logError(logFd, logSem, "bind failed: ", err)
+		os.Exit(1)
+	}
+	udp.EnableTimestampingRaw(uintptr(fd))
+
+	runtime.LockOSThread()
+
+	var raddr syscall.SockaddrInet4
+	buf := make([]byte, ntp.PacketLen)
+	oob := make([]byte, udp.TimestampLen())
+	for {
+		oob = oob[:cap(oob)]
+
+		n, oobn, flags, err := RecvmsgInet4(fd, buf, oob, 0, &raddr)
+		if err != nil {
+			logError(logFd, logSem, "recv failed: ", err)
+			continue
+		}
+		if flags != 0 {
+			logRecvFlags(logFd, logSem, "recv failed, flags: ", flags)
+			continue
+		}
+
+		oob = oob[:oobn]
+		rxt, err := udp.TimestampFromOOBData(oob)
+		if err != nil {
+			logError(logFd, logSem, "reading packet timestamp failed: ", err)
+			rxt = timebase.Now()
+		}
+		buf = buf[:n]
+
+		var ntpreq ntp.Packet
+		err = ntp.DecodePacket(&ntpreq, buf)
+		if err != nil {
+			logError(logFd, logSem, "decodeing packet payload failed: ", err)
+			continue
+		}
+
+		err = ntp.ValidateRequest(&ntpreq, uint16(raddr.Port))
+		if err != nil {
+			logError(logFd, logSem, "decodeing packet payload failed: ", err)
+			continue
+		}
+
+		var ntpresp ntp.Packet
+		ntp.HandleRequest(&ntpreq, rxt, &ntpresp)
+
+		ntp.EncodePacket(&buf, &ntpresp)
+
+		err = SendtoInet4(fd, buf, 0, &raddr)
+		if err != nil {
+			logError(logFd, logSem, "send failed: ", err)
+			continue
+		}
+	}
+}
+
 func main() {
 	stdout := int(os.Stdout.Fd())
 	stderr := int(os.Stderr.Fd())
@@ -187,9 +305,19 @@ func main() {
 	go monitor(stderr, logSem, threadprof)
 
 	pool := newPool(4)
+	_ = pool
 
-	for i := 0; i != 64; i++ {
-		go run(i, stdout, logSem, pool)
+	ap, err := netip.ParseAddrPort(os.Args[1])
+	if err != nil {
+		logError(stderr, logSem, "unexpected local address: ", err)
+		os.Exit(1)
+	}
+
+	lclk := &core.SystemClock{}
+	timebase.RegisterClock(lclk)
+
+	for i := 0; i != 8; i++ {
+		go run(i, stdout, logSem, ap.Port())
 	}
 
 	await(sync.NewSemaphore(0))

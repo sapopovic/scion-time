@@ -21,7 +21,7 @@ var (
 // - https://github.com/google/gopacket, package "github.com/google/gopacket/pcapgo"
 // - https://github.com/facebook/time, package "github.com/facebook/time/ntp/protocol/ntp"
 
-func enableTimestamping(fd uintptr) {
+func EnableTimestampingRaw(fd uintptr) {
 	if so_timestampns != 0 {
 		_ = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, so_timestampns, 1)
 	} else if so_timestamp != 0 {
@@ -34,7 +34,7 @@ func EnableTimestamping(conn *net.UDPConn) {
 	if err != nil {
 		return
 	}
-	_ = sconn.Control(enableTimestamping)
+	_ = sconn.Control(EnableTimestampingRaw)
 }
 
 func TimestampLen() int {

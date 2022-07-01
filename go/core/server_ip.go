@@ -56,14 +56,14 @@ func runIPServer(conn *net.UDPConn) {
 			log.Printf("%s Received request at %v from %v: %+v", ipServerLogPrefix, rxt, srcAddr, ntpreq)
 		}
 
-		err = validateRequest(&ntpreq, srcAddr.Port())
+		err = ntp.ValidateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
 			log.Printf("%s Unexpected request packet: %v", ipServerLogPrefix, err)
 			continue
 		}
 
 		var ntpresp ntp.Packet
-		handleRequest(&ntpreq, rxt, &ntpresp)
+		ntp.HandleRequest(&ntpreq, rxt, &ntpresp)
 
 		ntp.EncodePacket(&buf, &ntpresp)
 
