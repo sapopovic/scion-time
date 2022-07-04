@@ -1,16 +1,16 @@
 #include <assert.h>
 #include <math.h>
+#include <netdb.h>
 #include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
-
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
 #include <hdr/hdr_histogram.h>
 
@@ -146,6 +146,19 @@ TS_Nanosec(struct timestamp *storage, int64_t sec, int64_t nsec)
 	storage->sec = (uint64_t)sec;
 	storage->frac = (uint32_t)nsec * NANO_FRAC;
 	return (storage);
+}
+
+double
+TS_Diff(const struct timestamp *t1, const struct timestamp *t2)
+{
+	double d;
+
+	CHECK_OBJ_NOTNULL(t1, TIMESTAMP_MAGIC);
+	CHECK_OBJ_NOTNULL(t2, TIMESTAMP_MAGIC);
+	d = ldexp((double)t1->frac - (double)t2->frac, -64);
+	d += ((double)t1->sec - (double)t2->sec);
+
+	return (d);
 }
 
 typedef struct timestamp *tb_now_f(struct timestamp *);
@@ -522,47 +535,202 @@ Udp_Send(const struct udp_socket *usc,
 	NEEDLESS_RETURN(0);
 }
 
+void
+NTP_Tool_Client_Req(struct ntp_packet *np)
+{
+	AN(np);
+	INIT_OBJ(np, NTP_PACKET_MAGIC);
+
+	np->ntp_leap = NTP_LEAP_UNKNOWN;
+	np->ntp_version = 4;
+	np->ntp_mode = NTP_MODE_CLIENT;
+	np->ntp_stratum = 0;
+	np->ntp_poll = 4;
+	np->ntp_precision = -6;
+	INIT_OBJ(&np->ntp_delay, TIMESTAMP_MAGIC);
+	np->ntp_delay.sec = 1;
+	INIT_OBJ(&np->ntp_dispersion, TIMESTAMP_MAGIC);
+	np->ntp_dispersion.sec = 1;
+	INIT_OBJ(&np->ntp_reference, TIMESTAMP_MAGIC);
+	INIT_OBJ(&np->ntp_origin, TIMESTAMP_MAGIC);
+	INIT_OBJ(&np->ntp_receive, TIMESTAMP_MAGIC);
+}
+
+int
+SA_Equal(const void *sa1, size_t sl1, const void *sa2, size_t sl2)
+{
+	const struct sockaddr *s1, *s2;
+	const struct sockaddr_in *s41, *s42;
+	const struct sockaddr_in6 *s61, *s62;
+
+	AN(sa1);
+	AN(sa2);
+	assert(sl1 >= sizeof(struct sockaddr));
+	assert(sl2 >= sizeof(struct sockaddr));
+
+	s1 = sa1;
+	s2 = sa2;
+	if (s1->sa_family != s2->sa_family)
+		return (0);
+
+	if (s1->sa_family == AF_INET) {
+		assert(sl1 >= sizeof(struct sockaddr_in));
+		assert(sl2 >= sizeof(struct sockaddr_in));
+		s41 = sa1;
+		s42 = sa2;
+		if (s41->sin_port != s42->sin_port)
+			return (0);
+		if (memcmp(&s41->sin_addr, &s42->sin_addr,
+		      sizeof s41->sin_addr))
+			return (0);
+		return (1);
+	}
+
+	if (s1->sa_family == AF_INET6) {
+		assert(sl1 >= sizeof(struct sockaddr_in6));
+		assert(sl2 >= sizeof(struct sockaddr_in6));
+		s61 = sa1;
+		s62 = sa2;
+		if (s61->sin6_port != s62->sin6_port)
+			return (0);
+		if (s61->sin6_scope_id != s62->sin6_scope_id)
+			return (0);
+		if (memcmp(&s61->sin6_addr, &s62->sin6_addr,
+		    sizeof s61->sin6_addr))
+			return (0);
+		return (1);
+	}
+	return (0);
+}
+
+
 /**********************************************************************
  * Application logic
  */
 
-struct data_context {
+struct thread_context {
 	struct hdr_histogram *histogram;
+	char *hostname;
 	int64_t *values;
 	size_t len;
 };
 
-static void *run(void* ctx) {
-	struct data_context *data = (struct data_context *) ctx;
-	for (size_t i = 0; i != data->len; i++) {
-		hdr_record_value_atomic(data->histogram, data->values[i]);
+static void *run(void* thread_context) {
+	struct thread_context *ctx = (struct thread_context *) thread_context;
+	// for (size_t i = 0; i != ctx->len; i++) {
+	// 	hdr_record_value_atomic(ctx->histogram, ctx->values[i]);
+	// }
+
+	struct addrinfo hints, *ai;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = PF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+	int r = getaddrinfo(ctx->hostname, "ntp", &hints, &ai);
+	if (r) {
+		fprintf(stderr, "hostname '%s', port 'ntp': %s\n", ctx->hostname, gai_strerror(r));
+		exit(EXIT_FAILURE);
 	}
+
+	struct ntp_packet *tx_pkt;
+	ALLOC_OBJ(tx_pkt, NTP_PACKET_MAGIC);
+	AN(tx_pkt);
+
+	struct ntp_packet *rx_pkt;
+	ALLOC_OBJ(rx_pkt, NTP_PACKET_MAGIC);
+	AN(rx_pkt);
+
+	struct udp_socket *udps = UdpTimedSocket();
+	double tmo = 1.0;
+
+	char buf[128];
+	size_t len;
+	struct sockaddr_storage rss;
+	socklen_t rssl;
+	ssize_t l;
+	int i;
+	struct timestamp t0, t1, t2;
+	double d;
+
+	for (int n = 0; n != 8 * 1000 * 1000; n++) {
+		NTP_Tool_Client_Req(tx_pkt);
+		len = NTP_Packet_Pack(buf, sizeof buf, tx_pkt);
+
+		l = Udp_Send(udps, ai->ai_addr, ai->ai_addrlen, buf, len);
+		if (l != (ssize_t)len) {
+			break;
+		}
+
+		(void)TB_Now(&t0);
+
+		while (1) {
+			(void)TB_Now(&t1);
+			d = TS_Diff(&t1, &t0);
+
+			i = UdpTimedRx(udps, ai->ai_addr->sa_family, &rss, &rssl, &t2,
+			    buf, sizeof buf, tmo - d);
+			if (i <= 0) {
+				break;
+			}
+			if (i != 48) {
+				continue;
+			}
+
+			if (!SA_Equal(ai->ai_addr, ai->ai_addrlen, &rss, rssl)) {
+				continue;
+			}
+
+			AN(NTP_Packet_Unpack(rx_pkt, buf, i));
+			rx_pkt->ts_rx = t2;
+
+			/* Ignore packets which are not replies to our packet */
+			if (TS_Diff(&tx_pkt->ntp_transmit, &rx_pkt->ntp_origin) != 0.0) {
+				continue;
+			}
+
+			// printf("%lf, %lf\n",
+			// 	1000.0 * ((TS_Diff(&rx_pkt->ntp_receive, &rx_pkt->ntp_origin)
+			// 	+ TS_Diff(&rx_pkt->ntp_transmit, &rx_pkt->ts_rx)) / 2.0),
+			// 	1000.0 * (TS_Diff(&rx_pkt->ts_rx, &rx_pkt->ntp_origin)
+			// 	- TS_Diff(&rx_pkt->ntp_transmit, &rx_pkt->ntp_receive)));
+			hdr_record_value_atomic(ctx->histogram, (int64_t)(0.5 + 1000000.0 * (
+				TS_Diff(&rx_pkt->ts_rx, &rx_pkt->ntp_origin)
+				- TS_Diff(&rx_pkt->ntp_transmit, &rx_pkt->ntp_receive))));
+			break;
+		}
+	}
+
+	freeaddrinfo(ai);
 	pthread_exit(NULL);
 }
 
-int main(void) {
-	int64_t values[][5] = {
+#define NUM_THREADS 64
+
+int main(int argc, char *argv[]) {
+	if (argc < 2) {
+		exit(EXIT_FAILURE);
+	}
+
+	struct hdr_histogram* histogram;
+	hdr_init(1, 50000, 5, &histogram);
+
+	pthread_t threads[NUM_THREADS];
+	struct thread_context thread_ctxs[NUM_THREADS];
+
+	int64_t values[NUM_THREADS][5] = {
 		{459876, 669187, 711612, 816326, 931423},
 		{1033197, 1131895, 2477317, 3964974, 12718782}};
 
-	pthread_t threads[2];
-	struct data_context data[2];
+	for (size_t i = 0; i != NUM_THREADS; i++) {
+		thread_ctxs[i].histogram = histogram;
+		thread_ctxs[i].values = values[i];
+		thread_ctxs[i].len = sizeof values[i] / sizeof values[i][0];
+		thread_ctxs[i].hostname = strdup(argv[1]);
+		pthread_create(&threads[i], NULL, run, &thread_ctxs[i]);
+	}
 
-	struct hdr_histogram* histogram;
-	hdr_init(1, 30000000, 3, &histogram);
-
-	data[0].histogram = histogram;
-	data[0].values = values[0];
-	data[0].len = sizeof values[0] / sizeof values[0][0];
-	pthread_create(&threads[0], NULL, run, &data[0]);
-
-	data[1].histogram = histogram;
-	data[1].values = values[1];
-	data[1].len = sizeof values[1] / sizeof values[1][0];
-	pthread_create(&threads[1], NULL, run, &data[1]);
-
-	pthread_join(threads[0], NULL);
-	pthread_join(threads[1], NULL);
+	for (size_t i = 0; i != NUM_THREADS; i++) {
+		pthread_join(threads[i], NULL);
+	}
 
 	hdr_percentiles_print(histogram, stdout, 1, 1.0, CLASSIC);
 

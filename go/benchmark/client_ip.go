@@ -23,7 +23,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 	// const numClientGoroutine = 8
 	// const numRequestPerClient = 10000
 	const numClientGoroutine = 1
-	const numRequestPerClient = 10000 * 100
+	const numRequestPerClient = 1_000_000
 	var mu sync.Mutex
 	sg := make(chan struct{})
 	var wg sync.WaitGroup

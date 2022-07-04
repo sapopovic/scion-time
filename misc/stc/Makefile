@@ -10,7 +10,7 @@ all: stc
 stc: stc.c
 
 run:
-	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(HDRDIR)/src ./stc
+	LD_LIBRARY_PATH=$(HDRDIR)/src ./stc $(hostname)
 
 clean:
 	rm -f stc
