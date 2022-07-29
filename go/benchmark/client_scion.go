@@ -164,6 +164,12 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
 					return
 				}
 
+				err = ntp.ValidateResponse(&ntpresp, cTxTime)
+				if err != nil {
+					log.Printf("Unexpected packet received: %v", err)
+					return
+				}
+
 				sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
 				sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
 

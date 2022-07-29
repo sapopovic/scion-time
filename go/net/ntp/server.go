@@ -7,23 +7,23 @@ import (
 	"example.com/scion-time/go/core/timebase"
 )
 
-var errUnexpectedPacket = fmt.Errorf("failed to validate request")
+var errUnexpectedRequest = fmt.Errorf("failed to validate request")
 
 func ValidateRequest(req *Packet, srcPort uint16) error {
 	li := req.LeapIndicator()
 	if li != LeapIndicatorNoWarning && li != LeapIndicatorUnknown {
-		return errUnexpectedPacket
+		return errUnexpectedRequest
 	}
 	vn := req.Version()
 	if vn < VersionMin || VersionMax < vn {
-		return errUnexpectedPacket
+		return errUnexpectedRequest
 	}
 	mode := req.Mode()
 	if vn == 1 && mode != ModeReserved0 || vn != 1 && mode != ModeClient {
-		return errUnexpectedPacket
+		return errUnexpectedRequest
 	}
 	if vn == 1 && srcPort == ServerPort {
-		return errUnexpectedPacket
+		return errUnexpectedRequest
 	}
 	return nil
 }

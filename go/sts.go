@@ -357,6 +357,12 @@ func runClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		return
 	}
 
+	err = ntp.ValidateResponse(&ntpresp, cTxTime)
+	if err != nil {
+		log.Printf("Unexpected packet received: %v", err)
+		return
+	}
+
 	log.Printf("Received NTP packet: %+v", ntpresp)
 
 	sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)

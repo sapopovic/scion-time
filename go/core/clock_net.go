@@ -141,6 +141,11 @@ func measureClockOffsetViaPath(ctx context.Context,
 		return 0, err
 	}
 
+	err = ntp.ValidateResponse(&ntpresp, cTxTime)
+	if err != nil {
+		return 0, err
+	}
+
 	log.Printf("%s Received NTP packet: %+v", netClockClientLogPrefix, ntpresp)
 
 	sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
