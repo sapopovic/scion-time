@@ -6,7 +6,7 @@ import (
 
 type Semaphore struct {
 	valid bool
-	fd int
+	fd    int
 }
 
 func NewSemaphore(initval uint) *Semaphore {
@@ -16,7 +16,7 @@ func NewSemaphore(initval uint) *Semaphore {
 	}
 	return &Semaphore{
 		valid: true,
-		fd: fd,
+		fd:    fd,
 	}
 }
 
@@ -65,5 +65,3 @@ func (s *Semaphore) Release() {
 		return
 	}
 }
-
-

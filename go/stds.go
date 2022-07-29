@@ -3,7 +3,7 @@
 package main
 
 import (
- 	_ "unsafe"
+	_ "unsafe"
 
 	"net/netip"
 	"os"
@@ -31,10 +31,10 @@ func SendtoInet4(fd int, p []byte, flags int, to *syscall.SockaddrInet4) (err er
 
 type pool struct {
 	nonempty *sync.Semaphore
-	nonfull *sync.Semaphore
-	bufSem *sync.Semaphore
-	bufCtx sync.Context
-	buf []any
+	nonfull  *sync.Semaphore
+	bufSem   *sync.Semaphore
+	bufCtx   sync.Context
+	buf      []any
 }
 
 func newPool(cap int) *pool {
@@ -43,10 +43,10 @@ func newPool(cap int) *pool {
 	}
 	p := &pool{
 		nonempty: sync.NewSemaphore(uint(cap)),
-		nonfull: sync.NewSemaphore(0),
-		bufSem: sync.NewSemaphore(1),
-		bufCtx: sync.Context{},
-		buf: make([]any, cap),
+		nonfull:  sync.NewSemaphore(0),
+		bufSem:   sync.NewSemaphore(1),
+		bufCtx:   sync.Context{},
+		buf:      make([]any, cap),
 	}
 	return p
 }
@@ -150,7 +150,7 @@ func runPool(id, logFd int, logSem *sync.Semaphore, p *pool) {
 		await(p.bufSem)
 		p.bufCtx.Open()
 
-		if i % 100_000 == 0 {
+		if i%100_000 == 0 {
 			await(logSem)
 			runtime.LockOSThread()
 			log.WriteString(logFd, "consuming: ")
@@ -172,7 +172,7 @@ func runPool(id, logFd int, logSem *sync.Semaphore, p *pool) {
 		await(p.bufSem)
 		p.bufCtx.Open()
 
-		if i % 100_000 == 0 {
+		if i%100_000 == 0 {
 			await(logSem)
 			runtime.LockOSThread()
 			log.WriteString(logFd, "producing: ")

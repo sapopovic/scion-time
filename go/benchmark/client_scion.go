@@ -179,8 +179,8 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
 				hg.RecordValue(roundTripDelay.Microseconds())
 			}
 			mu.Lock()
-    	defer mu.Unlock()
-    	hg.PercentilesPrint(os.Stdout, 1, 1.0)
+			defer mu.Unlock()
+			hg.PercentilesPrint(os.Stdout, 1, 1.0)
 		}()
 	}
 	t0 := time.Now()
