@@ -1,4 +1,4 @@
-// SCION time service.
+// SCION time service
 
 package main
 
@@ -450,6 +450,8 @@ func main() {
 		default:
 			exitWithUsage()
 		}
+	case "x":
+		runX()
 	default:
 		exitWithUsage()
 	}

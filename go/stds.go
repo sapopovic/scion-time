@@ -1,4 +1,4 @@
-// SCION time dispatcher service.
+// SCION time dispatcher service
 
 package main
 
