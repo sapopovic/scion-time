@@ -26,6 +26,13 @@ func Sign(d time.Duration) int {
 	return 0
 }
 
+func Inv(d time.Duration) time.Duration {
+	if d == math.MinInt64 {
+		panic("unexpected duration value (math.MinInt64)")
+	}
+	return -d
+}
+
 func Median(ds []time.Duration) time.Duration {
 	n := len(ds)
 	if n == 0 {

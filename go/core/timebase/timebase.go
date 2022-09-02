@@ -27,13 +27,6 @@ func RegisterClock(c LocalClock) {
 	localClock = c
 }
 
-func Epoch() uint64 {
-	if localClock == nil {
-		panic("No local clock registered")
-	}
-	return localClock.Epoch()
-}
-
 func Now() time.Time {
 	if localClock == nil {
 		panic("No local clock registered")
