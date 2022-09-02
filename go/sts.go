@@ -125,7 +125,7 @@ func runLocalClockSync(lclk timebase.LocalClock) {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
-			lclk.Adjust(corr, refClockSyncInterval)
+			lclk.Adjust(corr, refClockSyncInterval, 0)
 		}
 		lclk.Sleep(refClockSyncInterval)
 	}
@@ -161,7 +161,7 @@ func runGlobalClockSync(lclk timebase.LocalClock) {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
-			lclk.Adjust(corr, netClockSyncInterval)
+			lclk.Adjust(corr, netClockSyncInterval, 0)
 		}
 		lclk.Sleep(netClockSyncInterval)
 	}

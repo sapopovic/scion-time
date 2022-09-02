@@ -8,7 +8,7 @@ type LocalClock interface {
 	Now() time.Time
 	MaxDrift(duration time.Duration) time.Duration
 	Step(offset time.Duration)
-	Adjust(offset, duration time.Duration) // TODO: add argument 'frequency float64'
+	Adjust(offset, duration time.Duration, frequency float64)
 	Sleep(duration time.Duration)
 }
 
