@@ -26,20 +26,19 @@ const (
 	STA_FREQHOLD = 128
 )
 
-type SystemClock struct{}
-
 type adjustment struct {
 	timer int
 	done uint32
 	afterFreq float64
 }
 
-var (
-	_ timebase.LocalClock = (*SystemClock)(nil)
-
+type SystemClock struct{
+	epoch uint64
 	mu sync.Mutex
-	curAdjustment *adjustment
-)
+	adj *adjustment
+}
+
+var _ timebase.LocalClock = (*SystemClock)(nil)
 
 func newUnixTimer(deadline time.Time) int {
 	fd, err := unix.TimerfdCreate(unix.CLOCK_REALTIME, unix.TFD_NONBLOCK)
@@ -84,6 +83,10 @@ func setClockFrequency(frequency float64) {
 	}
 }
 
+func (c *SystemClock) Epoch() uint64 {
+	return c.epoch
+}
+
 func (c *SystemClock) Now() time.Time {
 	var ts unix.Timespec
 	err := unix.ClockGettime(unix.CLOCK_REALTIME, &ts)
@@ -106,11 +109,15 @@ func (c *SystemClock) Step(offset time.Duration) {
 	if errno != 0 {
 		panic(fmt.Sprintf("%s unix.ClockSettime failed: %v", sysClockLogPrefix, errno))
 	}
+	if c.epoch == math.MaxUint64 {
+		panic(fmt.Sprintf("%s epoch overflow", sysClockLogPrefix))
+	}
+	c.epoch++
 }
 
 func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) {
-	mu.Lock()
-	mu.Unlock()
+	c.mu.Lock()
+	c.mu.Unlock()
 	if duration <= 0 {
 		panic(fmt.Sprintf("%s invalid duration value", sysClockLogPrefix))
 	}
@@ -118,12 +125,12 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 	if duration == 0 {
 		duration = time.Second
 	}
-	if curAdjustment != nil {
-		atomic.StoreUint32(&curAdjustment.done, 1)
-		_ = unix.Close(curAdjustment.timer)
+	if c.adj != nil {
+		atomic.StoreUint32(&c.adj.done, 1)
+		_ = unix.Close(c.adj.timer)
 	}
 	setClockFrequency(frequency + float64(offset) / float64(duration))
-	curAdjustment = &adjustment{
+	c.adj = &adjustment{
 		timer: newUnixTimer(c.Now().Add(duration)),
 		afterFreq: frequency,
 	}
@@ -132,7 +139,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 		if atomic.CompareAndSwapUint32(&adj.done, 0, 1) {
 			setClockFrequency(adj.afterFreq)
 		}
-	}(curAdjustment)
+	}(c.adj)
 }
 
 func (c SystemClock) Sleep(duration time.Duration) {

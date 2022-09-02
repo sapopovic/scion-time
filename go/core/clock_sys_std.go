@@ -16,6 +16,10 @@ type SystemClock struct{}
 
 var _ timebase.LocalClock = (*SystemClock)(nil)
 
+func (c *SystemClock) Epoch() uint64 {
+	return 0
+}
+
 func (c *SystemClock) Now() time.Time {
 	return time.Now().UTC()
 }
