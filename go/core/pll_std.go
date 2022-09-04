@@ -25,14 +25,6 @@ func NewStandardPLL(clk timebase.LocalClock) *StandardPLL {
 	return &StandardPLL{clk: clk}
 }
 
-func duration(seconds float64) time.Duration {
-	return time.Duration(seconds * float64(time.Second) + 0.5)
-}
-
-func seconds(duration time.Duration) float64 {
-	return float64(duration) / float64(time.Second)
-}
-
 func (l *StandardPLL) Do(offset time.Duration, weight float64) {
 	if l.epoch != l.clk.Epoch() {
 		l.epoch = l.clk.Epoch()
@@ -93,14 +85,14 @@ func (l *StandardPLL) Do(offset time.Duration, weight float64) {
 				pLimit = 3e-2
 			)
 			if mdt > captureTime && l.a > pLimit {
-				l.a *= math.Pow(stiffenRate, seconds(ldt))
-				l.b *= math.Pow(stiffenRate, seconds(ldt))
+				l.a *= math.Pow(stiffenRate, timemath.Seconds(ldt))
+				l.b *= math.Pow(stiffenRate, timemath.Seconds(ldt))
 			}
 			a = l.a
 			b = l.b
 		}
-		p := seconds(timemath.Inv(offset)) * a
-		d := math.Ceil(seconds(ldt))
+		p := timemath.Seconds(timemath.Inv(offset)) * a
+		d := math.Ceil(timemath.Seconds(ldt))
 		l.i += p * b
 		if p > d * 500e-6 {
 			p = d * 500e-6
@@ -109,7 +101,7 @@ func (l *StandardPLL) Do(offset time.Duration, weight float64) {
 			p = d * -500e-6
 		}
 		if d > 0.0 {
-			l.clk.Adjust(duration(p), duration(d), l.i)
+			l.clk.Adjust(timemath.Duration(p), timemath.Duration(d), l.i)
 		}
 	default:
 		panic(fmt.Sprintf("%s unexpected mode", stdPLLLogPrefix))
