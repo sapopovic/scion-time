@@ -32,8 +32,8 @@ func (c *SystemClock) Step(offset time.Duration) {
 	log.Printf("%s core.SystemClock.Step(%v)", sysClockLogPrefix, offset)
 }
 
-func (c *SystemClock) Adjust(offset, duration time.Duration) {
-	log.Printf("%s core.SystemClock.Adjust(%v, %v)", sysClockLogPrefix, offset, duration)
+func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) {
+	log.Printf("%s core.SystemClock.Adjust(%v, %v, %v)", sysClockLogPrefix, offset, duration, frequency)
 }
 
 func (c SystemClock) Sleep(duration time.Duration) {
