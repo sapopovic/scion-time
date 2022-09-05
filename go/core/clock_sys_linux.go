@@ -40,7 +40,7 @@ type SystemClock struct{
 
 var _ timebase.LocalClock = (*SystemClock)(nil)
 
-func newUnixTimer(deadline time.Time) int {
+func newTimer(deadline time.Time) int {
 	fd, err := unix.TimerfdCreate(unix.CLOCK_REALTIME, unix.TFD_NONBLOCK)
 	if err != nil {
 		panic(fmt.Sprintf("%s unix.TimerfdCreate failed: %v", sysClockLogPrefix, err))
@@ -56,7 +56,7 @@ func newUnixTimer(deadline time.Time) int {
 	return fd
 }
 
-func awaitUnixTimer(fd int) {
+func awaitTimer(fd int) {
 	pollFds := []unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN}}
 	for {
 		n, err := unix.Poll(pollFds, /* timeout: */ -1)
@@ -70,8 +70,7 @@ func awaitUnixTimer(fd int) {
 	}
 }
 
-func setClockFrequency(frequency float64) {
-	panic("not yet implemented")
+func setFrequency(frequency float64) {
 	tx := unix.Timex{
 		Modes: ADJ_FREQUENCY,
 		Freq: int64(math.Floor(frequency * 65536 * 1e6)),
@@ -118,7 +117,7 @@ func (c *SystemClock) Step(offset time.Duration) {
 func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) {
 	c.mu.Lock()
 	c.mu.Unlock()
-	if duration <= 0 {
+	if duration < 0 {
 		panic(fmt.Sprintf("%s invalid duration value", sysClockLogPrefix))
 	}
 	duration = duration / time.Second
@@ -129,20 +128,20 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 		atomic.StoreUint32(&c.adj.done, 1)
 		_ = unix.Close(c.adj.timer)
 	}
-	setClockFrequency(frequency + float64(offset) / float64(duration))
+	setFrequency(frequency + timemath.Seconds(offset) / timemath.Seconds(duration))
 	c.adj = &adjustment{
-		timer: newUnixTimer(c.Now().Add(duration)),
+		timer: newTimer(c.Now().Add(duration)),
 		afterFreq: frequency,
 	}
 	go func (adj *adjustment) {
-		awaitUnixTimer(adj.timer)
+		awaitTimer(adj.timer)
 		if atomic.CompareAndSwapUint32(&adj.done, 0, 1) {
-			setClockFrequency(adj.afterFreq)
+			setFrequency(adj.afterFreq)
 		}
 	}(c.adj)
 }
 
 func (c SystemClock) Sleep(duration time.Duration) {
 	deadline := c.Now().Add(duration)
-	awaitUnixTimer(newUnixTimer(deadline))
+	awaitTimer(newTimer(deadline))
 }
