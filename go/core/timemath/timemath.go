@@ -7,7 +7,7 @@ import (
 )
 
 func Duration(seconds float64) time.Duration {
-	return time.Duration(seconds * float64(time.Second) + 0.5)
+	return time.Duration(seconds*float64(time.Second) + 0.5)
 }
 
 func Seconds(duration time.Duration) float64 {

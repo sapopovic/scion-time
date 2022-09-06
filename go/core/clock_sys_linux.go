@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"fmt"
+	"log"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -14,28 +15,28 @@ import (
 	"golang.org/x/sys/unix"
 
 	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/go/core/timemath"
 )
-
 
 const (
 	sysClockLogPrefix = "[core/clock_sys_linux]"
 
 	ADJ_FREQUENCY = 2
 
-	STA_PLL = 1
+	STA_PLL      = 1
 	STA_FREQHOLD = 128
 )
 
 type adjustment struct {
-	timer int
-	done uint32
+	timer     int
+	done      uint32
 	afterFreq float64
 }
 
-type SystemClock struct{
+type SystemClock struct {
 	epoch uint64
-	mu sync.Mutex
-	adj *adjustment
+	mu    sync.Mutex
+	adj   *adjustment
 }
 
 var _ timebase.LocalClock = (*SystemClock)(nil)
@@ -49,7 +50,7 @@ func newTimer(deadline time.Time) int {
 	if err != nil {
 		panic(fmt.Sprintf("%s unix.TimeToTimespec failed: %v", sysClockLogPrefix, err))
 	}
-	err = unix.TimerfdSettime(fd, unix.TFD_TIMER_ABSTIME, &unix.ItimerSpec{Value: ts}, /* oldValue: */ nil)
+	err = unix.TimerfdSettime(fd, unix.TFD_TIMER_ABSTIME, &unix.ItimerSpec{Value: ts}, nil /* oldValue */)
 	if err != nil {
 		panic(fmt.Sprintf("%s unix.TimerfdSettime failed: %v", sysClockLogPrefix, err))
 	}
@@ -59,7 +60,7 @@ func newTimer(deadline time.Time) int {
 func awaitTimer(fd int) {
 	pollFds := []unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN}}
 	for {
-		n, err := unix.Poll(pollFds, /* timeout: */ -1)
+		n, err := unix.Poll(pollFds, -1 /* timeout */)
 		if err == unix.EINTR {
 			continue
 		}
@@ -71,9 +72,10 @@ func awaitTimer(fd int) {
 }
 
 func setFrequency(frequency float64) {
+	log.Printf("%s set frequency: %v", sysClockLogPrefix, frequency)
 	tx := unix.Timex{
-		Modes: ADJ_FREQUENCY,
-		Freq: int64(math.Floor(frequency * 65536 * 1e6)),
+		Modes:  ADJ_FREQUENCY,
+		Freq:   int64(math.Floor(frequency * 65536 * 1e6)),
 		Status: STA_PLL | STA_FREQHOLD,
 	}
 	_, err := unix.Adjtimex(&tx)
@@ -100,6 +102,7 @@ func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
 }
 
 func (c *SystemClock) Step(offset time.Duration) {
+	log.Printf("%s set time: %v", sysClockLogPrefix, offset)
 	ts, err := unix.TimeToTimespec(c.Now().Add(offset))
 	if err != nil {
 		panic(fmt.Sprintf("%s unix.TimeToTimespec failed: %v", sysClockLogPrefix, err))
@@ -120,7 +123,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 	if duration < 0 {
 		panic(fmt.Sprintf("%s invalid duration value", sysClockLogPrefix))
 	}
-	duration = duration / time.Second
+	duration = duration / time.Second * time.Second
 	if duration == 0 {
 		duration = time.Second
 	}
@@ -128,12 +131,12 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 		atomic.StoreUint32(&c.adj.done, 1)
 		_ = unix.Close(c.adj.timer)
 	}
-	setFrequency(frequency + timemath.Seconds(offset) / timemath.Seconds(duration))
+	setFrequency(frequency + timemath.Seconds(offset)/timemath.Seconds(duration))
 	c.adj = &adjustment{
-		timer: newTimer(c.Now().Add(duration)),
+		timer:     newTimer(c.Now().Add(duration)),
 		afterFreq: frequency,
 	}
-	go func (adj *adjustment) {
+	go func(adj *adjustment) {
 		awaitTimer(adj.timer)
 		if atomic.CompareAndSwapUint32(&adj.done, 0, 1) {
 			setFrequency(adj.afterFreq)
@@ -142,6 +145,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 }
 
 func (c SystemClock) Sleep(duration time.Duration) {
+	log.Printf("%s sleep: %v", sysClockLogPrefix, duration)
 	deadline := c.Now().Add(duration)
 	awaitTimer(newTimer(deadline))
 }

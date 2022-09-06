@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"os"
 	"time"
@@ -66,7 +67,8 @@ func (s mbgTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, e
 }
 
 func (s ntpTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	return ntpd.MeasureClockOffset(ctx, string(s))
+	offset, _, err := ntpd.MeasureClockOffset(ctx, string(s))
+	return offset, err
 }
 
 func newDaemonConnector(daemonAddr string) daemon.Connector {
@@ -93,6 +95,32 @@ func measureOffsetToRefClock(tss []core.TimeSource, timeout time.Duration) (time
 }
 
 func syncToRefClock(lclk timebase.LocalClock) {
+	const (
+		initDuration = 64.0
+		initPackets  = 6.0
+		pollPeriod   = 64.0
+	)
+	pll := core.NewStandardPLL(lclk)
+	ref := fmt.Sprintf("%v", timeSources[0])
+	numRefs := 1.0
+	t0 := 1.0
+	for {
+		offset, weight, err := ntpd.MeasureClockOffset(context.Background(), ref)
+		if err != nil {
+			log.Printf("Failed to measure clock offset to %v: %v", ref, err)
+		} else {
+			pll.Do(offset, weight)
+		}
+		d := pollPeriod / numRefs
+		if t0 < initDuration {
+			dt := math.Exp(math.Log(initDuration) / (initPackets * numRefs))
+			if t0*dt < initDuration {
+				d = t0*dt - t0
+			}
+		}
+		t0 += d
+		lclk.Sleep(timemath.Duration(d))
+	}
 	for {
 		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
 		if err == nil {

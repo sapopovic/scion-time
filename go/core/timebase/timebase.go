@@ -14,22 +14,29 @@ type LocalClock interface {
 }
 
 var (
-	localClock LocalClock
+	lclk LocalClock
 )
 
 func RegisterClock(c LocalClock) {
 	if c == nil {
-		panic("Local clock must not be nil")
+		panic("local clock must not be nil")
 	}
-	if localClock != nil {
-		panic("Local clock already registered")
+	if lclk != nil {
+		panic("local clock already registered")
 	}
-	localClock = c
+	lclk = c
 }
 
 func Now() time.Time {
-	if localClock == nil {
-		panic("No local clock registered")
+	if lclk == nil {
+		panic("no local clock registered")
 	}
-	return localClock.Now()
+	return lclk.Now()
+}
+
+func Epoch() uint64 {
+	if lclk == nil {
+		panic("no local clock registered")
+	}
+	return lclk.Epoch()
 }

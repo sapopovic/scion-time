@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"time"
 
@@ -11,11 +12,11 @@ import (
 
 const stdPLLLogPrefix = "[core/pll_std]"
 
-type StandardPLL struct{
-	clk timebase.LocalClock
-	epoch uint64
-	mode uint64
-	t0, t time.Time
+type StandardPLL struct {
+	clk     timebase.LocalClock
+	epoch   uint64
+	mode    uint64
+	t0, t   time.Time
 	a, b, i float64
 }
 
@@ -30,6 +31,7 @@ func (l *StandardPLL) Do(offset time.Duration, weight float64) {
 		l.epoch = l.clk.Epoch()
 		l.mode = 0
 	}
+	var dt, p, d, a, b float64
 	now := l.clk.Now()
 	switch l.mode {
 	case 0: // startup
@@ -40,8 +42,8 @@ func (l *StandardPLL) Do(offset time.Duration, weight float64) {
 		if mdt < 0 {
 			panic(fmt.Sprintf("%s unexpected clock behavior", stdPLLLogPrefix))
 		}
-		if mdt > 2 * time.Second && weight > 3 {
-			if timemath.Abs(offset) > 1 * time.Millisecond {
+		if mdt > 2*time.Second && weight > 3 {
+			if timemath.Abs(offset) > 1*time.Millisecond {
 				l.clk.Step(timemath.Inv(offset))
 			}
 			l.t0 = now
@@ -52,10 +54,10 @@ func (l *StandardPLL) Do(offset time.Duration, weight float64) {
 		if mdt < 0 {
 			panic(fmt.Sprintf("%s unexpected clock behavior", stdPLLLogPrefix))
 		}
-		if mdt > 6 * time.Second {
+		if mdt > 6*time.Second {
 			const (
 				pInit = 0.33 // initial proportional term
-				iInit = 60 // initial p/i ratio
+				iInit = 60   // initial p/i ratio
 			)
 			l.a = pInit
 			l.b = l.a / iInit
@@ -67,11 +69,10 @@ func (l *StandardPLL) Do(offset time.Duration, weight float64) {
 		if mdt < 0 {
 			panic(fmt.Sprintf("%s unexpected clock behavior", stdPLLLogPrefix))
 		}
-		ldt := now.Sub(l.t)
-		if ldt < 0 {
+		dt := timemath.Seconds(now.Sub(l.t))
+		if dt < 0.0 {
 			panic(fmt.Sprintf("%s unexpected clock behavior", stdPLLLogPrefix))
 		}
-		var a, b float64
 		if weight < 50 {
 			a = 3e-2
 			b = 5e-4
@@ -82,29 +83,31 @@ func (l *StandardPLL) Do(offset time.Duration, weight float64) {
 			const (
 				captureTime = 300 * time.Second
 				stiffenRate = 0.999
-				pLimit = 3e-2
+				pLimit      = 0.03
 			)
 			if mdt > captureTime && l.a > pLimit {
-				l.a *= math.Pow(stiffenRate, timemath.Seconds(ldt))
-				l.b *= math.Pow(stiffenRate, timemath.Seconds(ldt))
+				l.a *= math.Pow(stiffenRate, dt)
+				l.b *= math.Pow(stiffenRate, dt)
 			}
 			a = l.a
 			b = l.b
 		}
-		p := timemath.Seconds(timemath.Inv(offset)) * a
-		d := math.Ceil(timemath.Seconds(ldt))
+		p = timemath.Seconds(timemath.Inv(offset)) * a
+		d = math.Ceil(dt)
 		l.i += p * b
-		if p > d * 500e-6 {
+		if p > d*500e-6 {
 			p = d * 500e-6
 		}
-		if p < d * -500e-6 {
+		if p < d*-500e-6 {
 			p = d * -500e-6
-		}
-		if d > 0.0 {
-			l.clk.Adjust(timemath.Duration(p), timemath.Duration(d), l.i)
 		}
 	default:
 		panic(fmt.Sprintf("%s unexpected mode", stdPLLLogPrefix))
 	}
 	l.t = now
+	log.Printf("%s mode=%v, dt=%v, offset=%v, weight=%v -> p=%v, d=%v, l.i=%v, a=%v, b=%v",
+		stdPLLLogPrefix, l.mode, dt, timemath.Seconds(offset), weight, p, d, l.i, a, b)
+	if d > 0.0 {
+		l.clk.Adjust(timemath.Duration(p), timemath.Duration(d), l.i)
+	}
 }

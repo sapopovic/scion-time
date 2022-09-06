@@ -41,12 +41,12 @@ func initSHM() error {
 		if int(id) != -1 {
 			panic(fmt.Sprintf("syscall shmget returned invalid value: %v", id))
 		}
-		log.Printf("%s Syscall shmget failed: %d", shmLogPrefix, errno)
+		log.Printf("%s syscall shmget failed: %d", shmLogPrefix, errno)
 		return errno
 	}
 	addr, _, errno := unix.Syscall(unix.SYS_SHMAT, id, uintptr(0), uintptr(0))
 	if int(addr) == -1 {
-		log.Printf("%s Syscall shmat failed: %d", shmLogPrefix, errno)
+		log.Printf("%s syscall shmat failed: %d", shmLogPrefix, errno)
 		return errno
 	}
 
