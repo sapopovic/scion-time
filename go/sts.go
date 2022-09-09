@@ -11,6 +11,8 @@ import (
 	"math"
 	"net"
 	"os"
+	"runtime"
+	"runtime/pprof"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
@@ -61,6 +63,17 @@ var (
 	refcc core.ReferenceClockClient
 	netcc core.NetworkClockClient
 )
+
+func runMonitor() {
+	p := pprof.Lookup("threadcreate")
+	for {
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		log.Printf("[monitor] TotalAlloc: %v, Mallocs: %v, Frees: %v, NumGC: %v, Thread Count: %v",
+			m.TotalAlloc, m.Mallocs, m.Frees, m.NumGC, p.Count())
+		time.Sleep(15 * time.Second)
+	}
+}
 
 func (s mbgTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	return mbgd.MeasureClockOffset(ctx, string(s))
@@ -421,6 +434,8 @@ func exitWithUsage() {
 }
 
 func main() {
+	go runMonitor()
+
 	var configFile string
 	var daemonAddr string
 	var localAddr snet.UDPAddr
