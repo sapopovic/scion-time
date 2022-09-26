@@ -440,7 +440,7 @@ func main() {
 	var daemonAddr string
 	var localAddr snet.UDPAddr
 	var remoteAddr snet.UDPAddr
-	var benchmarkMode string
+	var benchmarkMode bool
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	relayFlags := flag.NewFlagSet("relay", flag.ExitOnError)
@@ -453,7 +453,7 @@ func main() {
 	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	clientFlags.Var(&localAddr, "local", "Local address")
 	clientFlags.Var(&remoteAddr, "remote", "Remote address")
-	clientFlags.StringVar(&benchmarkMode, "benchmark", "", "Benchmark mode: 'ip' or 'scion'")
+	clientFlags.BoolVar(&benchmarkMode, "benchmark", false, "Benchmark")
 
 	if len(os.Args) < 2 {
 		exitWithUsage()
@@ -483,15 +483,16 @@ func main() {
 		log.Print("localAddr:", localAddr)
 		log.Print("remoteAddr:", remoteAddr)
 		log.Print("benchmarkMode:", benchmarkMode)
-		switch benchmarkMode {
-		case "":
+		if !benchmarkMode {
 			runClient(daemonAddr, localAddr, remoteAddr)
-		case "ip":
-			runIPBenchmark(daemonAddr, localAddr, remoteAddr)
-		case "scion":
-			runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
-		default:
-			exitWithUsage()
+		} else {
+			if localAddr.IA.IsZero() && remoteAddr.IA.IsZero() {
+				runIPBenchmark(daemonAddr, localAddr, remoteAddr)
+			} else if !localAddr.IA.IsZero() && !remoteAddr.IA.IsZero() {
+				runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+			} else {
+				exitWithUsage()
+			}
 		}
 	case "x":
 		runX()
