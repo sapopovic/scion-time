@@ -27,7 +27,7 @@ const (
 )
 
 type adjustment struct {
-	clock			*SystemClock
+	clock     *SystemClock
 	duration  time.Duration
 	afterFreq float64
 }
