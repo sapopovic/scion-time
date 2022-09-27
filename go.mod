@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/beevik/ntp v0.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/dchest/cmac v0.0.0-20150527144652-62ff55a1048c // indirect
