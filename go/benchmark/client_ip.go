@@ -9,7 +9,6 @@ import (
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 
-	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/net/ntp"
@@ -17,9 +16,6 @@ import (
 )
 
 func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
-	lclk := &core.SystemClock{}
-	timebase.RegisterClock(lclk)
-
 	// const numClientGoroutine = 8
 	// const numRequestPerClient = 10000
 	const numClientGoroutine = 1

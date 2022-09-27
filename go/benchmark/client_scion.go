@@ -15,7 +15,6 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology/underlay"
 
-	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/net/ntp"
@@ -24,9 +23,6 @@ import (
 
 func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
 	ctx := context.Background()
-
-	lclk := &core.SystemClock{}
-	timebase.RegisterClock(lclk)
 
 	dc, err := daemon.NewService(daemonAddr).Connect(ctx)
 	if err != nil {
