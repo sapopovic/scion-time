@@ -1,9 +1,9 @@
 CFLAGS += -std=gnu99 -pedantic -pedantic-errors -Werror -Wall -Wextra -fsanitize=undefined
 LDLIBS += -lm
 
-all: ntp-tool
+all: ntimed-tool
 
-ntp-tool: ntp-tool.c
+ntimed-tool: ntimed-tool.c
 
 clean:
-	rm -f ntp-tool
+	rm -f ntimed-tool
