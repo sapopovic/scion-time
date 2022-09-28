@@ -1,4 +1,4 @@
-package core
+package tool
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	"example.com/scion-time/go/net/udp"
 )
 
-func RunSCIONClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
+func RunSCIONClient(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 

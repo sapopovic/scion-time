@@ -25,6 +25,7 @@ import (
 	ntpd "example.com/scion-time/go/driver/ntp"
 
 	"example.com/scion-time/go/benchmark"
+	"example.com/scion-time/go/tool"
 )
 
 const (
@@ -75,6 +76,32 @@ func (s mbgTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, e
 func (s ntpTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	offset, _, err := ntpd.MeasureClockOffset(ctx, string(s))
 	return offset, err
+}
+
+func loadConfig(configFile string) {
+	if configFile != "" {
+		var cfg tsConfig
+		err := config.LoadFile(configFile, &cfg)
+		if err != nil {
+			log.Fatalf("Failed to load configuration: %v", err)
+		}
+		for _, s := range cfg.MBGTimeSources {
+			log.Print("mbg_time_source: ", s)
+			timeSources = append(timeSources, mbgTimeSource(s))
+		}
+		for _, s := range cfg.NTPTimeSources {
+			log.Print("ntp_time_source: ", s)
+			timeSources = append(timeSources, ntpTimeSource(s))
+		}
+		for _, s := range cfg.SCIONPeers {
+			log.Print("scion_peer: ", s)
+			addr, err := snet.ParseUDPAddr(s)
+			if err != nil {
+				log.Fatalf("Failed to parse peer address \"%s\": %v", s, err)
+			}
+			peers = append(peers, core.UDPAddr{addr.IA, addr.Host})
+		}
+	}
 }
 
 func newDaemonConnector(daemonAddr string) daemon.Connector {
@@ -202,29 +229,7 @@ func runGlobalClockSync(lclk timebase.LocalClock) {
 }
 
 func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
-	if configFile != "" {
-		var cfg tsConfig
-		err := config.LoadFile(configFile, &cfg)
-		if err != nil {
-			log.Fatalf("Failed to load configuration: %v", err)
-		}
-		for _, s := range cfg.MBGTimeSources {
-			log.Print("mbg_time_source: ", s)
-			timeSources = append(timeSources, mbgTimeSource(s))
-		}
-		for _, s := range cfg.NTPTimeSources {
-			log.Print("ntp_time_source: ", s)
-			timeSources = append(timeSources, ntpTimeSource(s))
-		}
-		for _, s := range cfg.SCIONPeers {
-			log.Print("scion_peer: ", s)
-			addr, err := snet.ParseUDPAddr(s)
-			if err != nil {
-				log.Fatalf("Failed to parse peer address \"%s\": %v", s, err)
-			}
-			peers = append(peers, core.UDPAddr{addr.IA, addr.Host})
-		}
-	}
+	loadConfig(configFile)
 
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
@@ -258,19 +263,64 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	select {}
 }
 
-func runIPClient(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
+func runRelay(configFile string, localAddr snet.UDPAddr) {
+	loadConfig(configFile)
+
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
-	core.RunIPClient(localAddr.Host, remoteAddr.Host)
+
+	if len(timeSources) != 0 {
+		syncToRefClock(lclk)
+		go runLocalClockSync(lclk)
+	}
+
+	if len(peers) != 0 {
+		log.Fatalf("Unexpected configuration: scion_peers=%v", peers)
+	}
+
+	err := core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
+	if err != nil {
+		log.Fatalf("Failed to start IP server: %v", err)
+	}
+	err = core.StartSCIONServer(localAddr.IA, snet.CopyUDPAddr(localAddr.Host))
+	if err != nil {
+		log.Fatalf("Failed to start SCION server: %v", err)
+	}
+
+	select {}
 }
 
-func runSCIONClient(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
+func runClient(configFile string) {
+	loadConfig(configFile)
+
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
-	core.RunSCIONClient(daemonAddr, localAddr, remoteAddr)
+
+	if len(timeSources) != 0 {
+		syncToRefClock(lclk)
+		go runLocalClockSync(lclk)
+	}
+
+	if len(peers) != 0 {
+		log.Fatalf("Unexpected configuration: scion_peers=%v", peers)
+	}
+
+	select {}
 }
 
-func runIPBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
+func runIPTool(localAddr, remoteAddr snet.UDPAddr) {
+	lclk := &core.SystemClock{}
+	timebase.RegisterClock(lclk)
+	tool.RunIPClient(localAddr.Host, remoteAddr.Host)
+}
+
+func runSCIONTool(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
+	lclk := &core.SystemClock{}
+	timebase.RegisterClock(lclk)
+	tool.RunSCIONClient(daemonAddr, localAddr, remoteAddr)
+}
+
+func runIPBenchmark(localAddr, remoteAddr snet.UDPAddr) {
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host)
@@ -294,27 +344,37 @@ func main() {
 	var daemonAddr string
 	var localAddr snet.UDPAddr
 	var remoteAddr snet.UDPAddr
-	var benchmarkMode bool
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	relayFlags := flag.NewFlagSet("relay", flag.ExitOnError)
 	clientFlags := flag.NewFlagSet("client", flag.ExitOnError)
+	toolFlags := flag.NewFlagSet("tool", flag.ExitOnError)
+	benchmarkFlags := flag.NewFlagSet("benchmark", flag.ExitOnError)
 
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
 	serverFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	serverFlags.Var(&localAddr, "local", "Local address")
 
-	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	relayFlags.StringVar(&configFile, "config", "", "Config file")
+	relayFlags.Var(&localAddr, "local", "Local address")
+
+	clientFlags.StringVar(&configFile, "config", "", "Config file")
 	clientFlags.Var(&localAddr, "local", "Local address")
-	clientFlags.Var(&remoteAddr, "remote", "Remote address")
-	clientFlags.BoolVar(&benchmarkMode, "benchmark", false, "Benchmark")
+
+	toolFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	toolFlags.Var(&localAddr, "local", "Local address")
+	toolFlags.Var(&remoteAddr, "remote", "Remote address")
+
+	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	benchmarkFlags.Var(&localAddr, "local", "Local address")
+	benchmarkFlags.Var(&remoteAddr, "remote", "Remote address")
 
 	if len(os.Args) < 2 {
 		exitWithUsage()
 	}
 
 	switch os.Args[1] {
-	case "server":
+	case serverFlags.Name():
 		err := serverFlags.Parse(os.Args[2:])
 		if err != nil || serverFlags.NArg() != 0 {
 			exitWithUsage()
@@ -323,36 +383,56 @@ func main() {
 		log.Print("daemonAddr:", daemonAddr)
 		log.Print("localAddr:", localAddr)
 		runServer(configFile, daemonAddr, localAddr)
-	case "relay":
+	case relayFlags.Name():
 		err := relayFlags.Parse(os.Args[2:])
 		if err != nil || relayFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-	case "client":
+		log.Print("configFile:", configFile)
+		log.Print("localAddr:", localAddr)
+		runRelay(configFile, localAddr)
+	case clientFlags.Name():
 		err := clientFlags.Parse(os.Args[2:])
 		if err != nil || clientFlags.NArg() != 0 {
+			exitWithUsage()
+		}
+		log.Print("configFile:", configFile)
+		runClient(configFile)
+	case toolFlags.Name():
+		err := toolFlags.Parse(os.Args[2:])
+		if err != nil || toolFlags.NArg() != 0 {
 			exitWithUsage()
 		}
 		log.Print("daemonAddr:", daemonAddr)
 		log.Print("localAddr:", localAddr)
 		log.Print("remoteAddr:", remoteAddr)
-		log.Print("benchmarkMode:", benchmarkMode)
-		if !benchmarkMode {
-			if !localAddr.IA.IsZero() && !remoteAddr.IA.IsZero() {
-				runSCIONClient(daemonAddr, localAddr, remoteAddr)
-			} else if localAddr.IA.IsZero() && remoteAddr.IA.IsZero() {
-				runIPClient(daemonAddr, localAddr, remoteAddr)
-			} else {
+		if !localAddr.IA.IsZero() && !remoteAddr.IA.IsZero() {
+			runSCIONTool(daemonAddr, localAddr, remoteAddr)
+		} else if localAddr.IA.IsZero() && remoteAddr.IA.IsZero() {
+			if daemonAddr != "" {
 				exitWithUsage()
 			}
+			runIPTool(localAddr, remoteAddr)
 		} else {
-			if !localAddr.IA.IsZero() && !remoteAddr.IA.IsZero() {
-				runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
-			} else if localAddr.IA.IsZero() && remoteAddr.IA.IsZero() {
-				runIPBenchmark(daemonAddr, localAddr, remoteAddr)
-			} else {
+			exitWithUsage()
+		}
+	case benchmarkFlags.Name():
+		err := benchmarkFlags.Parse(os.Args[2:])
+		if err != nil || benchmarkFlags.NArg() != 0 {
+			exitWithUsage()
+		}
+		log.Print("daemonAddr:", daemonAddr)
+		log.Print("localAddr:", localAddr)
+		log.Print("remoteAddr:", remoteAddr)
+		if !localAddr.IA.IsZero() && !remoteAddr.IA.IsZero() {
+			runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+		} else if localAddr.IA.IsZero() && remoteAddr.IA.IsZero() {
+			if daemonAddr != "" {
 				exitWithUsage()
 			}
+			runIPBenchmark(localAddr, remoteAddr)
+		} else {
+			exitWithUsage()
 		}
 	case "x":
 		runX()
