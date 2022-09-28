@@ -20,7 +20,7 @@ type ReferenceClockClient struct {
 }
 
 func (rcc *ReferenceClockClient) MeasureClockOffset(ctx context.Context,
-	tss []TimeSource) (time.Duration, error) {
+	tss []TimeSource) time.Duration {
 	swapped := atomic.CompareAndSwapUint32(&rcc.numOpsInProgress, 0, 1)
 	if !swapped {
 		panic("too many reference clock offset measurements in progress")
@@ -31,6 +31,8 @@ func (rcc *ReferenceClockClient) MeasureClockOffset(ctx context.Context,
 			panic("inconsistent count of reference clock offset measurements")
 		}
 	}(&rcc.numOpsInProgress)
+
+	off := make([]time.Duration, len(tss))
 
 	ms := make(chan measurement)
 	for _, ts := range tss {
@@ -43,9 +45,6 @@ func (rcc *ReferenceClockClient) MeasureClockOffset(ctx context.Context,
 			ms <- measurement{off, err}
 		}(ctx, ts)
 	}
-	off := collectMeasurements(ctx, ms, len(tss))
-	if len(off) == 0 {
-		return 0, errNoClockMeasurements
-	}
-	return timemath.Median(off), nil
+	collectMeasurements(ctx, off, ms, len(tss))
+	return timemath.Median(off)
 }

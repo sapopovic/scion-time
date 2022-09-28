@@ -121,7 +121,7 @@ func handlePathInfos(pis <-chan core.PathInfo) {
 	}
 }
 
-func measureOffsetToRefClock(tss []core.TimeSource, timeout time.Duration) (time.Duration, error) {
+func measureOffsetToRefClock(tss []core.TimeSource, timeout time.Duration) time.Duration {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return refcc.MeasureClockOffset(ctx, tss)
@@ -154,15 +154,9 @@ func syncToRefClock(lclk timebase.LocalClock) {
 		t0 += d
 		lclk.Sleep(timemath.Duration(d))
 	}
-	for {
-		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
-		if err == nil {
-			if corr != 0 {
-				lclk.Step(corr)
-			}
-			return
-		}
-		lclk.Sleep(time.Second)
+	corr := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
+	if corr != 0 {
+		lclk.Step(corr)
 	}
 }
 
@@ -181,8 +175,8 @@ func runLocalClockSync(lclk timebase.LocalClock) {
 		panic("invalid reference clock max correction")
 	}
 	for {
-		corr, err := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
-		if err == nil && timemath.Abs(corr) > refClockCutoff {
+		corr := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
+		if timemath.Abs(corr) > refClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
@@ -193,7 +187,7 @@ func runLocalClockSync(lclk timebase.LocalClock) {
 }
 
 func measureOffsetToNetClock(peers []core.UDPAddr, pi core.PathInfo,
-	timeout time.Duration) (time.Duration, error) {
+	timeout time.Duration) time.Duration {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return netcc.MeasureClockOffset(ctx, peers, pi)
@@ -217,8 +211,8 @@ func runGlobalClockSync(lclk timebase.LocalClock) {
 		panic("invalid network clock max correction")
 	}
 	for {
-		corr, err := measureOffsetToNetClock(peers, pathInfo, netClockSyncTimeout)
-		if err == nil && timemath.Abs(corr) > netClockCutoff {
+		corr := measureOffsetToNetClock(peers, pathInfo, netClockSyncTimeout)
+		if timemath.Abs(corr) > netClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}

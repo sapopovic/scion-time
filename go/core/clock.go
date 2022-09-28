@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -11,17 +10,18 @@ type measurement struct {
 	err error
 }
 
-var errNoClockMeasurements = fmt.Errorf("failed to measure clock values")
-
-func collectMeasurements(ctx context.Context, ms chan measurement, n int) []time.Duration {
+func collectMeasurements(ctx context.Context, off []time.Duration, ms chan measurement, n int) int {
 	i := 0
-	off := make([]time.Duration, n)
+	j := 0
 loop:
 	for i != n {
 		select {
 		case m := <-ms:
 			if m.err == nil {
-				off = append(off, m.off)
+				if j != len(off) {
+					off[j] = m.off
+					j++
+				}
 			}
 			i++
 		case <-ctx.Done():
@@ -34,5 +34,5 @@ loop:
 			n--
 		}
 	}(n - i)
-	return off
+	return j
 }

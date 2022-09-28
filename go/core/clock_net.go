@@ -180,6 +180,7 @@ func measureClockOffsetToPeer(ctx context.Context,
 	for _, p := range sps {
 		log.Printf("%s Selected path to %v: %v", netClockClientLogPrefix, peerAddr.IA, p)
 	}
+	off := make([]time.Duration, len(sps))
 
 	ms := make(chan measurement)
 	for _, p := range sps {
@@ -192,15 +193,12 @@ func measureClockOffsetToPeer(ctx context.Context,
 			ms <- measurement{off, err}
 		}(ctx, localAddr, peerAddr, p)
 	}
-	off := collectMeasurements(ctx, ms, len(sps))
-	if len(off) == 0 {
-		return 0, errNoClockMeasurements
-	}
+	collectMeasurements(ctx, off, ms, len(sps))
 	return timemath.Median(off), nil
 }
 
 func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context,
-	peers []UDPAddr, pi PathInfo) (time.Duration, error) {
+	peers []UDPAddr, pi PathInfo) time.Duration {
 	swapped := atomic.CompareAndSwapUint32(&ncc.numOpsInProgress, 0, 1)
 	if !swapped {
 		panic("too many network clock offset measurements in progress")
@@ -211,6 +209,8 @@ func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context,
 			panic("inconsistent count of network clock offset measurements")
 		}
 	}(&ncc.numOpsInProgress)
+
+	off := make([]time.Duration, 1 + len(peers))
 
 	ms := make(chan measurement)
 	for _, p := range peers {
@@ -223,9 +223,6 @@ func (ncc *NetworkClockClient) MeasureClockOffset(ctx context.Context,
 			ms <- measurement{off, err}
 		}(ctx, UDPAddr{pi.LocalIA, ncc.localHost}, p, pi.Paths[p.IA])
 	}
-	off := collectMeasurements(ctx, ms, len(peers))
-	if len(off) == 0 {
-		return 0, errNoClockMeasurements
-	}
-	return timemath.FaultTolerantMidpoint(off), nil
+	collectMeasurements(ctx, off[1:], ms, len(peers))
+	return timemath.FaultTolerantMidpoint(off)
 }
