@@ -1,8 +1,7 @@
 .DS_Store
 bin/timeservice
-bin/timeservice-dispatcher
-misc/no_dispatcher/c
-misc/no_dispatcher/s
+misc/endhostport/c
+misc/endhostport/s
 misc/ntimed-tool/ntimed-tool
 misc/shmc/shmc
 misc/sync/sync
