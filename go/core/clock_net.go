@@ -61,7 +61,7 @@ func measureClockOffsetViaPath(ctx context.Context,
 			netip.AddrFrom4(nextHop.Addr().As4()),
 			nextHop.Port())
 	}
-	if nextHop == (netip.AddrPort{}) && peerAddr.IA.Equal(localAddr.IA) {
+	if nextHop == netip.AddrPort{} && peerAddr.IA.Equal(localAddr.IA) {
 		nextHop = netip.AddrPortFrom(
 			peerAddr.Host.AddrPort().Addr(),
 			underlay.EndhostPort)
