@@ -92,6 +92,12 @@ func MeasureClockOffset(ctx context.Context, host string) (time.Duration, float6
 		return 0, 0.0, err
 	}
 
+	err = ntp.ValidateResponse(&pkt, cTxTime)
+	if err != nil {
+		log.Printf("%s %s, failed to validate packet payload: %v", ntpLogPrefix, host, err)
+		return 0, 0.0, err
+	}
+
 	log.Printf("%s %s, received packet at %v from srcAddr %v: %+v", ntpLogPrefix, host, cRxTime, srcAddr, pkt)
 
 	sRxTime := ntp.TimeFromTime64(pkt.ReceiveTime)
