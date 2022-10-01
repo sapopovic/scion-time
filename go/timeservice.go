@@ -7,12 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math"
+	"net"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"time"
 
+	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/config"
 	"github.com/scionproto/scion/go/lib/daemon"
 	"github.com/scionproto/scion/go/lib/snet"
@@ -21,11 +22,12 @@ import (
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/core/timemath"
 
+	"example.com/scion-time/go/net/udp"
+
 	mbgd "example.com/scion-time/go/driver/mbg"
 	ntpd "example.com/scion-time/go/driver/ntp"
 
 	"example.com/scion-time/go/benchmark"
-	"example.com/scion-time/go/tool"
 )
 
 const (
@@ -39,23 +41,34 @@ const (
 	netClockSyncInterval = 60 * time.Second
 )
 
-type tsConfig struct {
-	MBGTimeSources []string `toml:"mbg_time_sources,omitempty"`
-	NTPTimeSources []string `toml:"ntp_time_sources,omitempty"`
-	SCIONPeers     []string `toml:"scion_peers,omitempty"`
+type svcConfig struct {
+	MBGReferenceClocks []string `toml:"mbg_reference_clocks,omitempty"`
+	NTPReferenceClocks []string `toml:"ntp_reference_clocks,omitempty"`
+	SCIONPeers         []string `toml:"scion_peers,omitempty"`
 }
 
-type mbgTimeSource string
-type ntpTimeSource string
+type mbgReferenceClock struct {
+	dev string
+}
+
+type ntpReferenceClockIP struct {
+	localAddr, remoteAddr *net.UDPAddr
+}
+
+type ntpReferenceClockSCION struct {
+	localAddr, remoteAddr udp.UDPAddr
+	pather                *core.Pather
+}
+
+type localReferenceClock struct {}
 
 var (
-	timeSources []core.TimeSource
-
-	peers    []core.UDPAddr
-	pathInfo core.PathInfo
-
-	refcc core.ReferenceClockClient
-	netcc core.NetworkClockClient
+	refClocks       []core.ReferenceClock
+	refClockClient  core.ReferenceClockClient
+	refClockOffsets []time.Duration
+	netClocks       []core.ReferenceClock
+	netClockClient  core.ReferenceClockClient
+	netClockOffsets []time.Duration
 )
 
 func runMonitor() {
@@ -69,92 +82,116 @@ func runMonitor() {
 	}
 }
 
-func (s mbgTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	return mbgd.MeasureClockOffset(ctx, string(s))
+func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+	return mbgd.MeasureClockOffset(ctx, c.dev)
 }
 
-func (s ntpTimeSource) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	offset, _, err := ntpd.MeasureClockOffset(ctx, string(s))
+func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+	offset, _, err := ntpd.MeasureClockOffsetIP(ctx, c.localAddr, c.remoteAddr)
 	return offset, err
 }
 
-func loadConfig(configFile string) {
-	if configFile != "" {
-		var cfg tsConfig
-		err := config.LoadFile(configFile, &cfg)
-		if err != nil {
-			log.Fatalf("Failed to load configuration: %v", err)
-		}
-		for _, s := range cfg.MBGTimeSources {
-			log.Print("mbg_time_source: ", s)
-			timeSources = append(timeSources, mbgTimeSource(s))
-		}
-		for _, s := range cfg.NTPTimeSources {
-			log.Print("ntp_time_source: ", s)
-			timeSources = append(timeSources, ntpTimeSource(s))
-		}
-		for _, s := range cfg.SCIONPeers {
-			log.Print("scion_peer: ", s)
-			addr, err := snet.ParseUDPAddr(s)
-			if err != nil {
-				log.Fatalf("Failed to parse peer address \"%s\": %v", s, err)
-			}
-			peers = append(peers, core.UDPAddr{addr.IA, addr.Host})
-		}
-	}
+func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+	paths := c.pather.Paths(c.remoteAddr.IA)
+	offset, err := core.MeasureClockOffsetSCION(ctx, c.localAddr, c.remoteAddr, paths)
+	return offset, err
 }
 
-func newDaemonConnector(daemonAddr string) daemon.Connector {
+func (c *localReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+	return 0, nil
+}
+
+func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
 	s := &daemon.Service{
 		Address: daemonAddr,
 	}
-	c, err := s.Connect(context.Background())
+	c, err := s.Connect(ctx)
 	if err != nil {
 		log.Fatal("Failed to create SCION Daemon connector:", err)
 	}
 	return c
 }
 
-func handlePathInfos(pis <-chan core.PathInfo) {
-	for {
-		pathInfo = <-pis
-	}
-}
-
-func measureOffsetToRefClock(tss []core.TimeSource, timeout time.Duration) time.Duration {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	return refcc.MeasureClockOffset(ctx, tss)
-}
-
-func syncToRefClock(lclk timebase.LocalClock) {
-	const (
-		initDuration = 64.0
-		initPackets  = 6.0
-		pollPeriod   = 64.0
-	)
-	pll := core.NewStandardPLL(lclk)
-	ref := fmt.Sprintf("%v", timeSources[0])
-	numRefs := 1.0
-	t0 := 1.0
-	for {
-		offset, weight, err := ntpd.MeasureClockOffset(context.Background(), ref)
+func loadConfig(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+	if configFile != "" {
+		var cfg svcConfig
+		err := config.LoadFile(configFile, &cfg)
 		if err != nil {
-			log.Printf("Failed to measure clock offset to %v: %v", ref, err)
-		} else {
-			pll.Do(offset, weight)
+			log.Fatalf("Failed to load configuration: %v", err)
 		}
-		d := pollPeriod / numRefs
-		if t0 < initDuration {
-			dt := math.Exp(math.Log(initDuration) / (initPackets * numRefs))
-			if t0*dt < initDuration {
-				d = t0*dt - t0
+		for _, s := range cfg.MBGReferenceClocks {
+			log.Print("mbg_refernce_clock: ", s)
+			refClocks = append(refClocks, &mbgReferenceClock{
+				dev: s,
+			})
+		}
+		var dstIAs []addr.IA
+		for _, s := range cfg.NTPReferenceClocks {
+			log.Print("ntp_reference_clock: ", s)
+			remoteAddr, err := snet.ParseUDPAddr(s)
+			if err != nil {
+				log.Fatalf("Failed to parse reference clock address: %v", err)
+			}
+			if !remoteAddr.IA.IsZero() {
+				refClocks = append(refClocks, &ntpReferenceClockSCION{
+					localAddr:  udp.UDPAddrFromSnet(localAddr),
+					remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
+				})
+				dstIAs = append(dstIAs, remoteAddr.IA)
+			} else {
+				refClocks = append(refClocks, &ntpReferenceClockIP{
+					localAddr:  localAddr.Host,
+					remoteAddr: remoteAddr.Host,
+				})
 			}
 		}
-		t0 += d
-		lclk.Sleep(timemath.Duration(d))
+		for _, s := range cfg.SCIONPeers {
+			log.Print("scion_peer: ", s)
+			remoteAddr, err := snet.ParseUDPAddr(s)
+			if err != nil {
+				log.Fatalf("Failed to parse peer address %v", err)
+			}
+			if remoteAddr.IA.IsZero() {
+				log.Fatalf("Unexpected SCION address \"%s\"", s)
+			}
+			netClocks = append(netClocks, &ntpReferenceClockSCION{
+				localAddr:  udp.UDPAddrFromSnet(localAddr),
+				remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
+			})
+			dstIAs = append(dstIAs, remoteAddr.IA)
+		}
+		if len(netClocks) != 0 {
+			netClocks = append(netClocks, &localReferenceClock{})
+		}
+		if daemonAddr != "" {
+			pather := core.StartPather(newDaemonConnector(context.Background(), daemonAddr), dstIAs)
+			for _, c := range refClocks {
+				scionclk, ok := c.(*ntpReferenceClockSCION)
+				if ok {
+					scionclk.pather = pather
+				}
+			}
+			for _, c := range netClocks {
+				scionclk, ok := c.(*ntpReferenceClockSCION)
+				if ok {
+					scionclk.pather = pather
+				}
+			}
+		}
+		refClockOffsets = make([]time.Duration, len(refClocks))
+		netClockOffsets = make([]time.Duration, len(netClocks))
 	}
-	corr := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
+}
+
+func measureOffsetToRefClocks(timeout time.Duration) time.Duration {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	refClockClient.MeasureClockOffsets(ctx, refClocks, refClockOffsets)
+	return timemath.Median(refClockOffsets)
+}
+
+func syncToRefClocks(lclk timebase.LocalClock) {
+	corr := measureOffsetToRefClocks(refClockSyncTimeout)
 	if corr != 0 {
 		lclk.Step(corr)
 	}
@@ -175,7 +212,7 @@ func runLocalClockSync(lclk timebase.LocalClock) {
 		panic("invalid reference clock max correction")
 	}
 	for {
-		corr := measureOffsetToRefClock(timeSources, refClockSyncTimeout)
+		corr := measureOffsetToRefClocks(refClockSyncTimeout)
 		if timemath.Abs(corr) > refClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
@@ -186,11 +223,11 @@ func runLocalClockSync(lclk timebase.LocalClock) {
 	}
 }
 
-func measureOffsetToNetClock(peers []core.UDPAddr, pi core.PathInfo,
-	timeout time.Duration) time.Duration {
+func measureOffsetToNetClocks(timeout time.Duration) time.Duration {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	return netcc.MeasureClockOffset(ctx, peers, pi)
+	netClockClient.MeasureClockOffsets(ctx, netClocks, netClockOffsets)
+	return timemath.FaultTolerantMidpoint(netClockOffsets)
 }
 
 func runGlobalClockSync(lclk timebase.LocalClock) {
@@ -211,7 +248,7 @@ func runGlobalClockSync(lclk timebase.LocalClock) {
 		panic("invalid network clock max correction")
 	}
 	for {
-		corr := measureOffsetToNetClock(peers, pathInfo, netClockSyncTimeout)
+		corr := measureOffsetToNetClocks(netClockSyncTimeout)
 		if timemath.Abs(corr) > netClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
@@ -222,26 +259,18 @@ func runGlobalClockSync(lclk timebase.LocalClock) {
 	}
 }
 
-func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
-	loadConfig(configFile)
+func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+	loadConfig(configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 
-	if len(timeSources) != 0 {
-		syncToRefClock(lclk)
+	if len(refClocks) != 0 {
+		syncToRefClocks(lclk)
 		go runLocalClockSync(lclk)
 	}
 
-	if len(peers) != 0 {
-		netcc.SetLocalHost(snet.CopyUDPAddr(localAddr.Host))
-
-		pathInfos, err := core.StartPather(newDaemonConnector(daemonAddr), peers)
-		if err != nil {
-			log.Fatal("Failed to start pather:", err)
-		}
-		go handlePathInfos(pathInfos)
-
+	if len(netClocks) != 0 {
 		go runGlobalClockSync(lclk)
 	}
 
@@ -257,19 +286,19 @@ func runServer(configFile, daemonAddr string, localAddr snet.UDPAddr) {
 	select {}
 }
 
-func runRelay(configFile string, localAddr snet.UDPAddr) {
-	loadConfig(configFile)
+func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+	loadConfig(configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 
-	if len(timeSources) != 0 {
-		syncToRefClock(lclk)
+	if len(refClocks) != 0 {
+		syncToRefClocks(lclk)
 		go runLocalClockSync(lclk)
 	}
 
-	if len(peers) != 0 {
-		log.Fatalf("Unexpected configuration: scion_peers=%v", peers)
+	if len(netClocks) != 0 {
+		log.Fatalf("Unexpected configuration: scion_peers=%v", netClocks)
 	}
 
 	err := core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
@@ -284,34 +313,64 @@ func runRelay(configFile string, localAddr snet.UDPAddr) {
 	select {}
 }
 
-func runClient(configFile string) {
-	loadConfig(configFile)
+func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+	loadConfig(configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 
-	if len(timeSources) != 0 {
-		syncToRefClock(lclk)
+	if len(refClocks) != 0 {
+		syncToRefClocks(lclk)
 		go runLocalClockSync(lclk)
 	}
 
-	if len(peers) != 0 {
-		log.Fatalf("Unexpected configuration: scion_peers=%v", peers)
+	if len(netClocks) != 0 {
+		log.Fatalf("Unexpected configuration: scion_peers=%v", netClocks)
 	}
 
 	select {}
 }
 
 func runIPTool(localAddr, remoteAddr snet.UDPAddr) {
+	var err error
+	ctx := context.Background()
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
-	tool.RunIPClient(localAddr.Host, remoteAddr.Host)
+	_, _, err = ntpd.MeasureClockOffsetIP(ctx, localAddr.Host, remoteAddr.Host)
+	if err != nil {
+		log.Fatalf("Failed to measure clock offset to %s: %v", remoteAddr.Host, err)
+	}
 }
 
-func runSCIONTool(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
+func runSCIONTool(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
+	var err error
+	ctx := context.Background()
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
-	tool.RunSCIONClient(daemonAddr, localAddr, remoteAddr)
+	dc := newDaemonConnector(ctx, daemonAddr)
+	if err != nil {
+		log.Fatalf("Failed to create SCION daemon connector: %v", err)
+	}
+	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
+	if err != nil {
+		log.Fatalf("Failed to lookup paths: %v:", err)
+	}
+	if len(ps) == 0 {
+		log.Fatalf("No paths to %v available", remoteAddr.IA)
+	}
+	log.Printf("Available paths to %v:", remoteAddr.IA)
+	for _, p := range ps {
+		log.Printf("\t%v", p)
+	}
+	sp := ps[0]
+	log.Printf("Selected path to %v:", remoteAddr.IA)
+	log.Printf("\t%v", sp)
+	laddr := udp.UDPAddrFromSnet(localAddr)
+	raddr := udp.UDPAddrFromSnet(remoteAddr)
+	_, _, err = ntpd.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
+	if err != nil {
+		log.Fatalf("Failed to measure clock offset to %s,%s: %v", raddr.IA, raddr.Host, err)
+	}
 }
 
 func runIPBenchmark(localAddr, remoteAddr snet.UDPAddr) {
@@ -350,9 +409,11 @@ func main() {
 	serverFlags.Var(&localAddr, "local", "Local address")
 
 	relayFlags.StringVar(&configFile, "config", "", "Config file")
+	relayFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	relayFlags.Var(&localAddr, "local", "Local address")
 
 	clientFlags.StringVar(&configFile, "config", "", "Config file")
+	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	clientFlags.Var(&localAddr, "local", "Local address")
 
 	toolFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -376,22 +437,25 @@ func main() {
 		log.Print("configFile:", configFile)
 		log.Print("daemonAddr:", daemonAddr)
 		log.Print("localAddr:", localAddr)
-		runServer(configFile, daemonAddr, localAddr)
+		runServer(configFile, daemonAddr, &localAddr)
 	case relayFlags.Name():
 		err := relayFlags.Parse(os.Args[2:])
 		if err != nil || relayFlags.NArg() != 0 {
 			exitWithUsage()
 		}
 		log.Print("configFile:", configFile)
+		log.Print("daemonAddr:", daemonAddr)
 		log.Print("localAddr:", localAddr)
-		runRelay(configFile, localAddr)
+		runRelay(configFile, daemonAddr, &localAddr)
 	case clientFlags.Name():
 		err := clientFlags.Parse(os.Args[2:])
 		if err != nil || clientFlags.NArg() != 0 {
 			exitWithUsage()
 		}
 		log.Print("configFile:", configFile)
-		runClient(configFile)
+		log.Print("daemonAddr:", daemonAddr)
+		log.Print("localAddr:", localAddr)
+		runClient(configFile, daemonAddr, &localAddr)
 	case toolFlags.Name():
 		err := toolFlags.Parse(os.Args[2:])
 		if err != nil || toolFlags.NArg() != 0 {
@@ -400,15 +464,13 @@ func main() {
 		log.Print("daemonAddr:", daemonAddr)
 		log.Print("localAddr:", localAddr)
 		log.Print("remoteAddr:", remoteAddr)
-		if !localAddr.IA.IsZero() && !remoteAddr.IA.IsZero() {
-			runSCIONTool(daemonAddr, localAddr, remoteAddr)
-		} else if localAddr.IA.IsZero() && remoteAddr.IA.IsZero() {
+		if !remoteAddr.IA.IsZero() {
+			runSCIONTool(daemonAddr, &localAddr, &remoteAddr)
+		} else {
 			if daemonAddr != "" {
 				exitWithUsage()
 			}
 			runIPTool(localAddr, remoteAddr)
-		} else {
-			exitWithUsage()
 		}
 	case benchmarkFlags.Name():
 		err := benchmarkFlags.Parse(os.Args[2:])
@@ -418,15 +480,13 @@ func main() {
 		log.Print("daemonAddr:", daemonAddr)
 		log.Print("localAddr:", localAddr)
 		log.Print("remoteAddr:", remoteAddr)
-		if !localAddr.IA.IsZero() && !remoteAddr.IA.IsZero() {
+		if !remoteAddr.IA.IsZero() {
 			runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
-		} else if localAddr.IA.IsZero() && remoteAddr.IA.IsZero() {
+		} else {
 			if daemonAddr != "" {
 				exitWithUsage()
 			}
 			runIPBenchmark(localAddr, remoteAddr)
-		} else {
-			exitWithUsage()
 		}
 	case "x":
 		runX()

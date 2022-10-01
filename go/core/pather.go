@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
@@ -14,54 +15,70 @@ const patherLogPrefix = "[core/pather]"
 
 const pathRefreshPeriod = 15 * time.Second
 
-func StartPather(c daemon.Connector, peers []UDPAddr) (<-chan PathInfo, error) {
-	pathInfos := make(chan PathInfo)
+type Pather struct {
+	mu      sync.Mutex
+	localIA addr.IA
+	paths   map[addr.IA][]snet.Path
+}
 
-	go func() {
+func (p *Pather) LocalIA() addr.IA {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.localIA
+}
+
+func (p *Pather) Paths(ia addr.IA) []snet.Path {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	paths, ok := p.paths[ia]
+	if !ok {
+		return nil
+	}
+	return append(make([]snet.Path, 0, len(paths)), paths...)
+}
+
+func update(ctx context.Context, p *Pather, c daemon.Connector, dstIAs []addr.IA) {
+	log.Printf("%s Looking up peer paths", patherLogPrefix)
+
+	localIA, err := c.LocalIA(ctx)
+	if err != nil {
+		log.Printf("%s Failed to look up local IA: %v", patherLogPrefix, err)
+	}
+
+	paths := map[addr.IA][]snet.Path{}
+	for _, dstIA := range dstIAs {
+		if dstIA.IsWildcard() {
+			panic("unexpected destination IA: wildcard.")
+		}
+		ps, err := c.Paths(ctx, dstIA, localIA, daemon.PathReqFlags{Refresh: true})
+		if err != nil {
+			log.Printf("%s Failed to look up peer paths: %v", patherLogPrefix, err)
+		}
+		paths[dstIA] = append(paths[dstIA], ps...)
+	}
+	for peerIA := range paths {
+		for _, p := range paths[peerIA] {
+			log.Printf("%s %v:%v", peerIA, patherLogPrefix, p)
+		}
+	}
+
+	p.mu.Lock()
+	p.localIA = localIA
+	p.paths = paths
+	p.mu.Unlock()
+}
+
+func StartPather(c daemon.Connector, dstIAs []addr.IA) *Pather {
+	p := &Pather{}
+	go func(p *Pather, c daemon.Connector, dstIAs []addr.IA) {
 		ctx := context.Background()
 		ticker := time.NewTicker(pathRefreshPeriod)
 		for {
 			select {
 			case <-ticker.C:
-				log.Printf("%s Looking up peer paths", patherLogPrefix)
-
-				localIA, err := c.LocalIA(ctx)
-				if err != nil {
-					log.Printf("%s Failed to look up local IA: %v", patherLogPrefix, err)
-				}
-
-				paths := map[addr.IA][]snet.Path{}
-				if peers == nil {
-					//TODO: Implement peer lookup based on TRCs
-					panic("not yet implemented: peer lookup based on TRCs")
-				}
-				for _, peer := range peers {
-					if peer.IA.IsWildcard() {
-						panic("unexpected peer IA: wildcard.")
-					}
-					ps, err := c.Paths(ctx, peer.IA, localIA, daemon.PathReqFlags{Refresh: true})
-					if err != nil {
-						log.Printf("%s Failed to look up peer paths: %v", patherLogPrefix, err)
-					}
-					for _, p := range ps {
-						paths[p.Destination()] = append(paths[p.Destination()], p)
-					}
-				}
-				log.Printf("%s Reachable peer ASes:", patherLogPrefix)
-				for peerIA := range paths {
-					log.Printf("%s %v", patherLogPrefix, peerIA)
-					for _, p := range paths[peerIA] {
-						log.Printf("%s \t%v", patherLogPrefix, p)
-					}
-				}
-
-				pathInfos <- PathInfo{
-					LocalIA: localIA,
-					Paths:   paths,
-				}
+				update(ctx, p, c, dstIAs)
 			}
 		}
-	}()
-
-	return pathInfos, nil
+	}(p, c, dstIAs)
+	return p
 }

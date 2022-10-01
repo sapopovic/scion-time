@@ -7,6 +7,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/scionproto/scion/go/lib/addr"
+	"github.com/scionproto/scion/go/lib/snet"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -14,6 +17,15 @@ var (
 	errTimestampNotFound = fmt.Errorf("failed to read timestamp from out of band data")
 	errUnexpectedData    = fmt.Errorf("failed to read out of band data")
 )
+
+type UDPAddr struct {
+	IA   addr.IA
+	Host *net.UDPAddr
+}
+
+func UDPAddrFromSnet(a *snet.UDPAddr) UDPAddr {
+	return UDPAddr{a.IA, snet.CopyUDPAddr(a.Host)}
+}
 
 // Timestamp handling based on studying code from the following projects:
 // - https://github.com/bsdphk/Ntimed, file udp.c
