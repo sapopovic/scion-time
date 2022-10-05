@@ -211,13 +211,15 @@ func runLocalClockSync(lclk timebase.LocalClock) {
 	if maxCorr <= 0 {
 		panic("invalid reference clock max correction")
 	}
+	pll := core.NewPLL(lclk)
 	for {
 		corr := measureOffsetToRefClocks(refClockSyncTimeout)
 		if timemath.Abs(corr) > refClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
-			lclk.Adjust(corr, refClockSyncInterval, 0)
+			// lclk.Adjust(corr, refClockSyncInterval, 0)
+			pll.Do(corr, 1000.0 /* weight */)
 		}
 		lclk.Sleep(refClockSyncInterval)
 	}
@@ -247,13 +249,15 @@ func runGlobalClockSync(lclk timebase.LocalClock) {
 	if maxCorr <= 0 {
 		panic("invalid network clock max correction")
 	}
+	pll := core.NewPLL(lclk)
 	for {
 		corr := measureOffsetToNetClocks(netClockSyncTimeout)
 		if timemath.Abs(corr) > netClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
-			lclk.Adjust(corr, netClockSyncInterval, 0)
+			// lclk.Adjust(corr, netClockSyncInterval, 0)
+			pll.Do(corr, 1000.0 /* weight */)
 		}
 		lclk.Sleep(netClockSyncInterval)
 	}

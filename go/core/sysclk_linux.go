@@ -2,6 +2,8 @@
 
 package core
 
+// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
+
 import (
 	"unsafe"
 

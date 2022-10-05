@@ -1,17 +1,17 @@
 package crypto
 
+// Random numbers with a given upper bound and reservoir sampling using a
+// cryptographically secure random number generator based on
+// Daniel Lemire, Fast Random Integer Generation in an Interval
+// ACM Transactions on Modeling and Computer Simulation 29 (1), 2019
+// https://lemire.me/en/publication/arxiv1805/
+
 import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"math"
 )
-
-// Random numbers with a given upper bound and reservoir sampling using
-// a cryptographically secure random number generator based on
-// Daniel Lemire, Fast Random Integer Generation in an Interval
-// ACM Transactions on Modeling and Computer Simulation 29 (1), 2019
-// https://lemire.me/en/publication/arxiv1805/
 
 func randInt31(ctx context.Context, n int) (int, error) {
 	if n < 2 {

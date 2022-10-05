@@ -140,7 +140,10 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 		float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()),
 		float64(rtd.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
 
-	offset = off
-	weight = 1000.0
+	// offset, weight = off, 1000.0
+
+	reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
+	offset, weight = filter(reference, cTxTime, sRxTime, sTxTime, cRxTime)
+
 	return offset, weight, nil
 }
