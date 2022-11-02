@@ -4,17 +4,17 @@
   "mtu": 1450,
   "control_service": {
     "cs1-ff00_0_112-1": {
-      "addr": "10.0.0.100:31038"
+      "addr": "10.0.0.83:31030"
     }
   },
   "discovery_service": {
     "cs1-ff00_0_112-1": {
-      "addr": "10.0.0.100:31038"
+      "addr": "10.0.0.83:31030"
     }
   },
   "border_routers": {
     "br1-ff00_0_112-1": {
-      "internal_addr": "10.0.0.97:31042",
+      "internal_addr": "10.0.0.81:31032",
       "interfaces": {
         "495": {
           "underlay": {
@@ -22,13 +22,13 @@
             "remote": "10.0.0.19:50000"
           },
           "isd_as": "1-ff00:0:130",
-          "link_to": "PARENT",
+          "link_to": "parent",
           "mtu": 1472
         }
       }
     },
     "br1-ff00_0_112-2": {
-      "internal_addr": "10.0.0.98:31044",
+      "internal_addr": "10.0.0.82:31034",
       "interfaces": {
         "494": {
           "underlay": {
@@ -36,15 +36,11 @@
             "remote": "10.0.0.10:50000"
           },
           "isd_as": "1-ff00:0:111",
-          "link_to": "PARENT",
+          "link_to": "parent",
           "mtu": 1472
         }
       }
     }
   },
-  "colibri_service": {
-    "co1-ff00_0_112-1": {
-      "addr": "10.0.0.99:31040"
-    }
-  }
+  "colibri_service": {}
 }

@@ -9,15 +9,11 @@ connection = "gen-cache/sd1-ff00_0_112-eh.trust.db"
 [path_db]
 connection = "gen-cache/sd1-ff00_0_112-eh.path.db"
 
-[drkey_lvl2_db]
-connection = "gen-cache/sd1-ff00_0_112-eh.drkey.db"
-
 [sd]
 address = "10.1.1.12:30255"
-bind_dialer_to_address = true
 
 [tracing]
-enabled = false
+enabled = true
 debug = true
 agent = "0.0.0.0:6831"
 
@@ -28,6 +24,9 @@ prometheus = "10.1.1.12:30455"
 
 [api]
 addr = "10.1.1.12:30955"
+
+[drkey_level2_db]
+connection = "gen-cache/sd1-ff00_0_112-eh.drkey_level2.db"
 
 [log.console]
 level = "debug"

@@ -9,12 +9,8 @@ connection = "gen-cache/sd2-ff00_0_221.trust.db"
 [path_db]
 connection = "gen-cache/sd2-ff00_0_221.path.db"
 
-[drkey_lvl2_db]
-connection = "gen-cache/sd2-ff00_0_221.drkey.db"
-
 [sd]
-address = "10.0.0.246:30255"
-bind_dialer_to_address = true
+address = "10.0.0.189:30255"
 
 [tracing]
 enabled = true
@@ -22,12 +18,15 @@ debug = true
 agent = "0.0.0.0:6831"
 
 [metrics]
-prometheus = "10.0.0.246:30455"
+prometheus = "10.0.0.189:30455"
 
 [features]
 
 [api]
-addr = "10.0.0.246:30955"
+addr = "10.0.0.189:30955"
+
+[drkey_level2_db]
+connection = "gen-cache/sd2-ff00_0_221.drkey_level2.db"
 
 [log.console]
 level = "debug"

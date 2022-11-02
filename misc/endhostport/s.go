@@ -5,9 +5,9 @@ import (
 	"log"
 	"net"
 
-	"github.com/scionproto/scion/go/lib/addr"
-	"github.com/scionproto/scion/go/lib/snet"
-	"github.com/scionproto/scion/go/lib/topology/underlay"
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/snet"
+	"github.com/scionproto/scion/private/topology/underlay"
 )
 
 func runServer(localAddr snet.UDPAddr) {

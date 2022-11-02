@@ -9,17 +9,17 @@
   "mtu": 1280,
   "control_service": {
     "cs2-ff00_0_210-1": {
-      "addr": "10.0.0.198:31092"
+      "addr": "10.0.0.165:31072"
     }
   },
   "discovery_service": {
     "cs2-ff00_0_210-1": {
-      "addr": "10.0.0.198:31092"
+      "addr": "10.0.0.165:31072"
     }
   },
   "border_routers": {
     "br2-ff00_0_210-1": {
-      "internal_addr": "10.0.0.193:31096",
+      "internal_addr": "10.0.0.161:31074",
       "interfaces": {
         "453": {
           "underlay": {
@@ -27,13 +27,13 @@
             "remote": "10.0.0.4:50000"
           },
           "isd_as": "1-ff00:0:110",
-          "link_to": "CORE",
+          "link_to": "core",
           "mtu": 1472
         }
       }
     },
     "br2-ff00_0_210-2": {
-      "internal_addr": "10.0.0.194:31098",
+      "internal_addr": "10.0.0.162:31076",
       "interfaces": {
         "450": {
           "underlay": {
@@ -41,13 +41,13 @@
             "remote": "10.0.0.41:50000"
           },
           "isd_as": "2-ff00:0:220",
-          "link_to": "CORE",
+          "link_to": "core",
           "mtu": 1472
         }
       }
     },
     "br2-ff00_0_210-3": {
-      "internal_addr": "10.0.0.195:31100",
+      "internal_addr": "10.0.0.163:31078",
       "interfaces": {
         "451": {
           "underlay": {
@@ -55,13 +55,13 @@
             "remote": "10.0.0.43:50000"
           },
           "isd_as": "2-ff00:0:211",
-          "link_to": "CHILD",
+          "link_to": "child",
           "mtu": 1472
         }
       }
     },
     "br2-ff00_0_210-4": {
-      "internal_addr": "10.0.0.196:31102",
+      "internal_addr": "10.0.0.164:31080",
       "interfaces": {
         "452": {
           "underlay": {
@@ -69,15 +69,11 @@
             "remote": "10.0.0.45:50000"
           },
           "isd_as": "2-ff00:0:211",
-          "link_to": "CHILD",
+          "link_to": "child",
           "mtu": 1472
         }
       }
     }
   },
-  "colibri_service": {
-    "co2-ff00_0_210-1": {
-      "addr": "10.0.0.197:31094"
-    }
-  }
+  "colibri_service": {}
 }

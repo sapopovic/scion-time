@@ -3,12 +3,12 @@ id = "br1-ff00_0_131-1"
 config_dir = "gen/ASff00_0_131"
 
 [metrics]
-prometheus = "10.0.0.161:30442"
+prometheus = "10.0.0.129:30442"
 
 [features]
 
 [api]
-addr = "10.0.0.161:31142"
+addr = "10.0.0.129:31142"
 
 [log.console]
 level = "debug"

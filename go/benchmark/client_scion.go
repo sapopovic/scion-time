@@ -10,10 +10,10 @@ import (
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 
-	"github.com/scionproto/scion/go/lib/addr"
-	"github.com/scionproto/scion/go/lib/daemon"
-	"github.com/scionproto/scion/go/lib/snet"
-	"github.com/scionproto/scion/go/lib/topology/underlay"
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/daemon"
+	"github.com/scionproto/scion/pkg/snet"
+	"github.com/scionproto/scion/private/topology/underlay"
 
 	"example.com/scion-time/go/core/timebase"
 

@@ -4,17 +4,17 @@
   "mtu": 1472,
   "control_service": {
     "cs2-ff00_0_211-1": {
-      "addr": "10.0.0.187:31116"
+      "addr": "10.0.0.154:31092"
     }
   },
   "discovery_service": {
     "cs2-ff00_0_211-1": {
-      "addr": "10.0.0.187:31116"
+      "addr": "10.0.0.154:31092"
     }
   },
   "border_routers": {
     "br2-ff00_0_211-1": {
-      "internal_addr": "10.0.0.185:31120",
+      "internal_addr": "10.0.0.153:31094",
       "interfaces": {
         "5": {
           "underlay": {
@@ -22,7 +22,7 @@
             "remote": "10.0.0.8:50000"
           },
           "isd_as": "1-ff00:0:111",
-          "link_to": "PEER",
+          "link_to": "peer",
           "mtu": 1472
         },
         "6": {
@@ -31,7 +31,7 @@
             "remote": "10.0.0.16:50000"
           },
           "isd_as": "1-ff00:0:111",
-          "link_to": "PEER",
+          "link_to": "peer",
           "mtu": 1472
         },
         "7": {
@@ -40,7 +40,7 @@
             "remote": "10.0.0.42:50000"
           },
           "isd_as": "2-ff00:0:210",
-          "link_to": "PARENT",
+          "link_to": "parent",
           "mtu": 1472
         },
         "8": {
@@ -49,7 +49,7 @@
             "remote": "10.0.0.44:50000"
           },
           "isd_as": "2-ff00:0:210",
-          "link_to": "PARENT",
+          "link_to": "parent",
           "mtu": 1472
         },
         "1": {
@@ -58,7 +58,7 @@
             "remote": "10.0.0.51:50000"
           },
           "isd_as": "2-ff00:0:221",
-          "link_to": "PEER",
+          "link_to": "peer",
           "mtu": 1472
         },
         "2": {
@@ -67,7 +67,7 @@
             "remote": "10.0.0.47:50000"
           },
           "isd_as": "2-ff00:0:212",
-          "link_to": "CHILD",
+          "link_to": "child",
           "mtu": 1472
         },
         "3": {
@@ -76,7 +76,7 @@
             "remote": "10.0.0.49:50000"
           },
           "isd_as": "2-ff00:0:212",
-          "link_to": "CHILD",
+          "link_to": "child",
           "mtu": 1472
         },
         "4": {
@@ -85,15 +85,11 @@
             "remote": "10.0.0.53:50000"
           },
           "isd_as": "2-ff00:0:222",
-          "link_to": "CHILD",
+          "link_to": "child",
           "mtu": 1472
         }
       }
     }
   },
-  "colibri_service": {
-    "co2-ff00_0_211-1": {
-      "addr": "10.0.0.186:31118"
-    }
-  }
+  "colibri_service": {}
 }

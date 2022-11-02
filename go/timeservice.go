@@ -13,10 +13,10 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/scionproto/scion/go/lib/addr"
-	"github.com/scionproto/scion/go/lib/config"
-	"github.com/scionproto/scion/go/lib/daemon"
-	"github.com/scionproto/scion/go/lib/snet"
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/private/config"
+	"github.com/scionproto/scion/pkg/daemon"
+	"github.com/scionproto/scion/pkg/snet"
 
 	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"

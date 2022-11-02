@@ -9,17 +9,17 @@
   "mtu": 1472,
   "control_service": {
     "cs1-ff00_0_130-1": {
-      "addr": "10.0.0.148:31020"
+      "addr": "10.0.0.123:31016"
     }
   },
   "discovery_service": {
     "cs1-ff00_0_130-1": {
-      "addr": "10.0.0.148:31020"
+      "addr": "10.0.0.123:31016"
     }
   },
   "border_routers": {
     "br1-ff00_0_130-1": {
-      "internal_addr": "10.0.0.145:31024",
+      "internal_addr": "10.0.0.121:31018",
       "interfaces": {
         "104": {
           "underlay": {
@@ -27,7 +27,7 @@
             "remote": "10.0.0.2:50000"
           },
           "isd_as": "1-ff00:0:110",
-          "link_to": "CORE",
+          "link_to": "core",
           "mtu": 1472
         },
         "111": {
@@ -36,7 +36,7 @@
             "remote": "10.0.0.35:50000"
           },
           "isd_as": "1-ff00:0:131",
-          "link_to": "CHILD",
+          "link_to": "child",
           "mtu": 1472
         },
         "113": {
@@ -45,13 +45,13 @@
             "remote": "10.0.0.18:50000"
           },
           "isd_as": "1-ff00:0:112",
-          "link_to": "CHILD",
+          "link_to": "child",
           "mtu": 1472
         }
       }
     },
     "br1-ff00_0_130-2": {
-      "internal_addr": "10.0.0.146:31026",
+      "internal_addr": "10.0.0.122:31020",
       "interfaces": {
         "105": {
           "underlay": {
@@ -59,7 +59,7 @@
             "remote": "10.0.0.20:50000"
           },
           "isd_as": "1-ff00:0:120",
-          "link_to": "CORE",
+          "link_to": "core",
           "mtu": 1472
         },
         "112": {
@@ -68,15 +68,11 @@
             "remote": "10.0.0.12:50000"
           },
           "isd_as": "1-ff00:0:111",
-          "link_to": "CHILD",
+          "link_to": "child",
           "mtu": 1472
         }
       }
     }
   },
-  "colibri_service": {
-    "co1-ff00_0_130-1": {
-      "addr": "10.0.0.147:31022"
-    }
-  }
+  "colibri_service": {}
 }

@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/scionproto/scion/go/lib/snet"
+	"github.com/scionproto/scion/pkg/snet"
 
 	"example.com/scion-time/go/core/crypto"
 	"example.com/scion-time/go/core/timemath"
