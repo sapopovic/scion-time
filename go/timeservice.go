@@ -28,6 +28,7 @@ import (
 	ntpd "example.com/scion-time/go/driver/ntp"
 
 	"example.com/scion-time/go/benchmark"
+	"example.com/scion-time/go/drkey"
 )
 
 const (
@@ -397,16 +398,20 @@ func exitWithUsage() {
 func main() {
 	go runMonitor()
 
-	var configFile string
-	var daemonAddr string
-	var localAddr snet.UDPAddr
-	var remoteAddr snet.UDPAddr
+	var configFile      string
+	var daemonAddr      string
+	var localAddr       snet.UDPAddr
+	var remoteAddr      snet.UDPAddr
+	var drkeyMode       string
+	var drkeyServerAddr snet.UDPAddr
+	var drkeyClientAddr snet.UDPAddr
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	relayFlags := flag.NewFlagSet("relay", flag.ExitOnError)
 	clientFlags := flag.NewFlagSet("client", flag.ExitOnError)
 	toolFlags := flag.NewFlagSet("tool", flag.ExitOnError)
 	benchmarkFlags := flag.NewFlagSet("benchmark", flag.ExitOnError)
+	drkeyFlags := flag.NewFlagSet("drkey", flag.ExitOnError)
 
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
 	serverFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -427,6 +432,11 @@ func main() {
 	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	benchmarkFlags.Var(&localAddr, "local", "Local address")
 	benchmarkFlags.Var(&remoteAddr, "remote", "Remote address")
+
+	drkeyFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	drkeyFlags.StringVar(&drkeyMode, "mode", "", "Mode")
+	drkeyFlags.Var(&drkeyServerAddr, "server", "Server address")
+	drkeyFlags.Var(&drkeyClientAddr, "client", "Client address")
 
 	if len(os.Args) < 2 {
 		exitWithUsage()
@@ -492,6 +502,16 @@ func main() {
 			}
 			runIPBenchmark(localAddr, remoteAddr)
 		}
+	case drkeyFlags.Name():
+		err := drkeyFlags.Parse(os.Args[2:])
+		if err != nil || drkeyFlags.NArg() != 0 {
+			exitWithUsage()
+		}
+		if drkeyMode != "server" && drkeyMode != "client" {
+			exitWithUsage()
+		}
+		serverMode := drkeyMode == "server"
+		drkey.RunDemo(daemonAddr, serverMode, drkeyServerAddr, drkeyClientAddr)
 	case "x":
 		runX()
 	default:
