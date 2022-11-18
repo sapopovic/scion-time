@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
@@ -14,13 +15,16 @@ import (
 	"time"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/private/config"
 	"github.com/scionproto/scion/pkg/daemon"
+	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/snet"
+	"github.com/scionproto/scion/private/config"
 
 	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/core/timemath"
+
+	"example.com/scion-time/go/drkeyutil"
 
 	"example.com/scion-time/go/net/udp"
 
@@ -28,7 +32,6 @@ import (
 	ntpd "example.com/scion-time/go/driver/ntp"
 
 	"example.com/scion-time/go/benchmark"
-	"example.com/scion-time/go/drkey"
 )
 
 const (
@@ -390,6 +393,62 @@ func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
 	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
 }
 
+func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr snet.UDPAddr) {
+	var err error
+	ctx := context.Background()
+	dc := newDaemonConnector(ctx, daemonAddr)
+	if err != nil {
+		log.Fatalf("Failed to create SCION daemon connector: %v", err)
+	}
+
+	meta := drkey.HostHostMeta{
+		ProtoId: drkey.SCMP,
+		Validity: time.Now(),
+		SrcIA: serverAddr.IA,
+		DstIA:   clientAddr.IA,
+		SrcHost: serverAddr.Host.IP.String(),
+		DstHost: clientAddr.Host.IP.String(),
+	}
+
+	if serverMode {
+		sv, err := drkeyutil.FetchSecretValue(ctx, dc, drkey.SecretValueMeta{
+			Validity: meta.Validity,
+			ProtoId:  meta.ProtoId,
+		})
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error fetching secret value:", err)
+			return
+		}
+		t0 := time.Now()
+		serverKey, err := drkeyutil.DeriveHostHostKey(sv, meta)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error deriving key:", err)
+			return
+		}
+		durationServer := time.Since(t0)
+
+		fmt.Printf(
+			"Server,\thost key = %s\tduration = %s\n",
+			hex.EncodeToString(serverKey.Key[:]),
+			durationServer,
+		)
+	} else {
+		t0 := time.Now()
+		clientKey, err := dc.DRKeyGetHostHostKey(ctx, meta)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error fetching key:", err)
+			return
+		}
+		durationClient := time.Since(t0)
+
+		fmt.Printf(
+			"Client,\thost key = %s\tduration = %s\n",
+			hex.EncodeToString(clientKey.Key[:]),
+			durationClient,
+		)
+	}
+}
+
 func exitWithUsage() {
 	fmt.Println("<usage>")
 	os.Exit(1)
@@ -511,7 +570,7 @@ func main() {
 			exitWithUsage()
 		}
 		serverMode := drkeyMode == "server"
-		drkey.RunDemo(daemonAddr, serverMode, drkeyServerAddr, drkeyClientAddr)
+		runDRKeyDemo(daemonAddr, serverMode, drkeyServerAddr, drkeyClientAddr)
 	case "x":
 		runX()
 	default:
