@@ -54,8 +54,8 @@ func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAdd
 	oob = oob[:oobn]
 	cRxTime, err := udp.TimestampFromOOBData(oob)
 	if err != nil {
-		log.Printf("%s Failed to receive packet timestamp: %v", ntpLogPrefix, err)
 		cRxTime = timebase.Now()
+		log.Printf("%s Failed to receive packet timestamp: %v", ntpLogPrefix, err)
 	}
 	buf = buf[:n]
 

@@ -47,8 +47,8 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		oob = oob[:oobn]
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
-			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
 			rxt = timebase.Now()
+			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
 		}
 		pkt.Bytes = pkt.Bytes[:n]
 

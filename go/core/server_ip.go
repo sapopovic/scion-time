@@ -40,8 +40,8 @@ func runIPServer(conn *net.UDPConn) {
 		oob = oob[:oobn]
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
-			log.Printf("%s Failed to read packet timestamp: %v", ipServerLogPrefix, err)
 			rxt = timebase.Now()
+			log.Printf("%s Failed to read packet timestamp: %v", ipServerLogPrefix, err)
 		}
 		buf = buf[:n]
 

@@ -70,8 +70,8 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 				oob = oob[:oobn]
 				cRxTime, err := udp.TimestampFromOOBData(oob)
 				if err != nil {
-					log.Printf("Failed to read packet timestamp")
 					cRxTime = timebase.Now()
+					log.Printf("Failed to read packet timestamp")
 				}
 				buf = buf[:n]
 

@@ -25,8 +25,9 @@ type filterContext struct {
 }
 
 var (
-	errUnexpectedPacketFlags   = fmt.Errorf("failed to read packet: unexpected flags")
-	errUnexpectedPacketPayload = fmt.Errorf("failed to read packet: unexpected payload")
+	errUnexpectedPacketFlags     = fmt.Errorf("failed to read packet: unexpected flags")
+	errUnexpectedPacketStructure = fmt.Errorf("failed to read packet: unexpected structure")
+	errUnexpectedPacketPayload   = fmt.Errorf("failed to read packet: unexpected payload")
 
 	filters = make(map[string]filterContext)
 )
