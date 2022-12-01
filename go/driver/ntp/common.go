@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sync"
 	"time"
 
 	"example.com/scion-time/go/core/timebase"
@@ -30,6 +31,7 @@ var (
 	errUnexpectedPacketPayload   = fmt.Errorf("failed to read packet: unexpected payload")
 
 	filters = make(map[string]filterContext)
+	filtersMu = sync.RWMutex{}
 )
 
 func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, weight float64) {
@@ -46,7 +48,9 @@ func filter(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
+	filtersMu.RLock()
 	f := filters[reference]
+	filtersMu.RUnlock()
 
 	lo := timemath.Seconds(cTxTime.Sub(sRxTime))
 	hi := timemath.Seconds(cRxTime.Sub(sTxTime))
@@ -106,7 +110,9 @@ func filter(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	f.alolo += (lo*lo - f.alolo) / r
 	f.ahihi += (hi*hi - f.ahihi) / r
 
+	filtersMu.Lock()
 	filters[reference] = f
+	filtersMu.Unlock()
 
 	trust := 1.0
 
