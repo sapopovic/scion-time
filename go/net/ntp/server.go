@@ -1,13 +1,13 @@
 package ntp
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	"example.com/scion-time/go/core/timebase"
 )
 
-var errUnexpectedRequest = fmt.Errorf("failed to validate request")
+var errUnexpectedRequest = errors.New("failed to validate request")
 
 func ValidateRequest(req *Packet, srcPort uint16) error {
 	li := req.LeapIndicator()

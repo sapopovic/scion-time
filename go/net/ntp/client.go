@@ -1,11 +1,11 @@
 package ntp
 
 import (
-	"fmt"
+	"errors"
 	"time"
 )
 
-var errUnexpectedResponse = fmt.Errorf("failed to validate response")
+var errUnexpectedResponse = errors.New("failed to validate response")
 
 func ValidateResponse(resp *Packet, reqTransmitTime time.Time) error {
 	respOriginTime := TimeFromTime64(resp.OriginTime)

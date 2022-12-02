@@ -3,7 +3,7 @@ package udp
 import (
 	"unsafe"
 
-	"fmt"
+	"errors"
 	"net"
 	"time"
 
@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	errTimestampNotFound = fmt.Errorf("failed to read timestamp from out of band data")
-	errUnexpectedData    = fmt.Errorf("failed to read out of band data")
+	errTimestampNotFound = errors.New("failed to read timestamp from out of band data")
+	errUnexpectedData    = errors.New("failed to read out of band data")
 )
 
 type UDPAddr struct {

@@ -2,7 +2,9 @@ package ntp
 
 import (
 	"context"
+	"errors"
 	"log"
+	"math"
 	"net"
 	"net/netip"
 	"time"
@@ -18,6 +20,14 @@ import (
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
+)
+
+const (
+	udpHdrLen = 8
+)
+
+var (
+	errPayloadTooLarge = errors.New("payload too large")
 )
 
 func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPAddr,
@@ -78,7 +88,10 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 		panic(err)
 	}
 	scionLayer.NextHdr = slayers.L4UDP
-	scionLayer.PayloadLen = uint16(8 /* udpHdrLen */ + len(buf))
+	if udpHdrLen > math.MaxUint16 || len(buf) > math.MaxUint16 - udpHdrLen {
+		panic(errPayloadTooLarge)
+	}
+	scionLayer.PayloadLen = uint16(udpHdrLen + len(buf))
 	layers = append(layers, &scionLayer)
 
 	var udpLayer slayers.UDP

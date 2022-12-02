@@ -1,7 +1,7 @@
 package ntp
 
 import (
-	"fmt"
+	"errors"
 	"log"
 	"math"
 	"sync"
@@ -26,9 +26,9 @@ type filterContext struct {
 }
 
 var (
-	errUnexpectedPacketFlags     = fmt.Errorf("failed to read packet: unexpected flags")
-	errUnexpectedPacketStructure = fmt.Errorf("failed to read packet: unexpected structure")
-	errUnexpectedPacketPayload   = fmt.Errorf("failed to read packet: unexpected payload")
+	errUnexpectedPacketFlags     = errors.New("failed to read packet: unexpected flags")
+	errUnexpectedPacketStructure = errors.New("failed to read packet: unexpected structure")
+	errUnexpectedPacketPayload   = errors.New("failed to read packet: unexpected payload")
 
 	filters = make(map[string]filterContext)
 	filtersMu = sync.RWMutex{}

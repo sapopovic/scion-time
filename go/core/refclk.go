@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"sync/atomic"
 	"time"
@@ -32,7 +32,7 @@ type ReferenceClockClient struct {
 }
 
 var (
-	errNoPaths = fmt.Errorf("failed to measure clock offset: no paths")
+	errNoPaths = errors.New("failed to measure clock offset: no paths")
 )
 
 func collectMeasurements(ctx context.Context, off []time.Duration, ms chan measurement, n int) int {
