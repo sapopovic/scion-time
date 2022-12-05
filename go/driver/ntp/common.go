@@ -29,7 +29,7 @@ var (
 	errUnexpectedPacketFlags = errors.New("failed to read packet: unexpected flags")
 	errUnexpectedPacket      = errors.New("failed to read packet: unexpected type or structure")
 
-	filters = make(map[string]filterContext)
+	filters   = make(map[string]filterContext)
 	filtersMu = sync.RWMutex{}
 )
 

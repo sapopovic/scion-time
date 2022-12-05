@@ -64,7 +64,7 @@ type ntpReferenceClockSCION struct {
 	pather                *core.Pather
 }
 
-type localReferenceClock struct {}
+type localReferenceClock struct{}
 
 var (
 	refClocks       []core.ReferenceClock
@@ -402,12 +402,12 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr sne
 	}
 
 	meta := drkey.HostHostMeta{
-		ProtoId: drkey.SCMP,
+		ProtoId:  drkey.SCMP,
 		Validity: time.Now(),
-		SrcIA: serverAddr.IA,
-		DstIA:   clientAddr.IA,
-		SrcHost: serverAddr.Host.IP.String(),
-		DstHost: clientAddr.Host.IP.String(),
+		SrcIA:    serverAddr.IA,
+		DstIA:    clientAddr.IA,
+		SrcHost:  serverAddr.Host.IP.String(),
+		DstHost:  clientAddr.Host.IP.String(),
 	}
 
 	if serverMode {
@@ -457,11 +457,11 @@ func exitWithUsage() {
 func main() {
 	go runMonitor()
 
-	var configFile      string
-	var daemonAddr      string
-	var localAddr       snet.UDPAddr
-	var remoteAddr      snet.UDPAddr
-	var drkeyMode       string
+	var configFile string
+	var daemonAddr string
+	var localAddr snet.UDPAddr
+	var remoteAddr snet.UDPAddr
+	var drkeyMode string
 	var drkeyServerAddr snet.UDPAddr
 	var drkeyClientAddr snet.UDPAddr
 

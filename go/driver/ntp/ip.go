@@ -133,7 +133,7 @@ func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAdd
 
 		reference := remoteAddr.String()
 		offset, weight = filter(reference, cTxTime, sRxTime, sTxTime, cRxTime)
-		break;
+		break
 	}
 
 	return offset, weight, nil

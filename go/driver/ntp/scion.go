@@ -10,8 +10,8 @@ import (
 
 	"github.com/google/gopacket"
 
-	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/slayers"
+	"github.com/scionproto/scion/pkg/snet"
 
 	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/private/topology/underlay"
@@ -99,7 +99,7 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 		panic(err)
 	}
 	scionLayer.NextHdr = slayers.L4UDP
-	if len(buf) > math.MaxUint16 - udpHdrLen {
+	if len(buf) > math.MaxUint16-udpHdrLen {
 		panic("payload too large")
 	}
 	scionLayer.PayloadLen = uint16(udpHdrLen + len(buf))
@@ -241,7 +241,7 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 
 		reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
 		offset, weight = filter(reference, cTxTime, sRxTime, sTxTime, cRxTime)
-		break;
+		break
 	}
 
 	return offset, weight, nil
