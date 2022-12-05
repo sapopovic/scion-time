@@ -26,9 +26,8 @@ type filterContext struct {
 }
 
 var (
-	errUnexpectedPacketFlags     = errors.New("failed to read packet: unexpected flags")
-	errUnexpectedPacketStructure = errors.New("failed to read packet: unexpected structure")
-	errUnexpectedPacketPayload   = errors.New("failed to read packet: unexpected payload")
+	errUnexpectedPacketFlags = errors.New("failed to read packet: unexpected flags")
+	errUnexpectedPacket      = errors.New("failed to read packet: unexpected type or structure")
 
 	filters = make(map[string]filterContext)
 	filtersMu = sync.RWMutex{}

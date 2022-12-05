@@ -2,7 +2,6 @@ package ntp
 
 import (
 	"context"
-	"errors"
 	"log"
 	"math"
 	"net"
@@ -26,9 +25,20 @@ const (
 	udpHdrLen = 8
 )
 
-var (
-	errPayloadTooLarge = errors.New("payload too large")
-)
+func compareIPs(x, y []byte) int {
+	addrX, okX := netip.AddrFromSlice(x)
+	addrY, okY := netip.AddrFromSlice(y)
+	if !okX || !okY {
+		panic("unexpected IP address byte slice")
+	}
+	if addrX.Is4In6() {
+		addrX = netip.AddrFrom4(addrX.As4())
+	}
+	if addrY.Is4In6() {
+		addrY = netip.AddrFrom4(addrY.As4())
+	}
+	return addrX.Compare(addrY)
+}
 
 func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPAddr,
 	path snet.Path) (offset time.Duration, weight float64, err error) {
@@ -37,8 +47,8 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 		return offset, weight, err
 	}
 	defer conn.Close()
-	deadline, ok := ctx.Deadline()
-	if ok {
+	deadline, deadlineIsSet := ctx.Deadline()
+	if deadlineIsSet {
 		err = conn.SetDeadline(deadline)
 		if err != nil {
 			return offset, weight, err
@@ -49,9 +59,10 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 	localPort := conn.LocalAddr().(*net.UDPAddr).Port
 
 	nextHop := path.UnderlayNextHop().AddrPort()
-	if nextHop.Addr().Is4In6() {
+	nextHopAddr := nextHop.Addr()
+	if nextHopAddr.Is4In6() {
 		nextHop = netip.AddrPortFrom(
-			netip.AddrFrom4(nextHop.Addr().As4()),
+			netip.AddrFrom4(nextHopAddr.As4()),
 			nextHop.Port())
 	}
 	if nextHop == (netip.AddrPort{}) && remoteAddr.IA.Equal(localAddr.IA) {
@@ -88,8 +99,8 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 		panic(err)
 	}
 	scionLayer.NextHdr = slayers.L4UDP
-	if udpHdrLen > math.MaxUint16 || len(buf) > math.MaxUint16 - udpHdrLen {
-		panic(errPayloadTooLarge)
+	if len(buf) > math.MaxUint16 - udpHdrLen {
+		panic("payload too large")
 	}
 	scionLayer.PayloadLen = uint16(udpHdrLen + len(buf))
 	layers = append(layers, &scionLayer)
@@ -118,96 +129,120 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 		return offset, weight, err
 	}
 
-	buf = buf[:cap(buf)]
 	oob := make([]byte, udp.TimestampLen())
-	n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
-	if err != nil {
-		return offset, weight, err
-	}
-	if flags != 0 {
-		return offset, weight, errUnexpectedPacketFlags
-	}
-	oob = oob[:oobn]
-	cRxTime, err := udp.TimestampFromOOBData(oob)
-	if err != nil {
-		cRxTime = timebase.Now()
-		log.Printf("%s Failed to receive packet timestamp: %v", ntpLogPrefix, err)
-	}
-	buf = buf[:n]
-
-	var (
-		hbhLayer  slayers.HopByHopExtnSkipper
-		e2eLayer  slayers.EndToEndExtnSkipper
-		scmpLayer slayers.SCMP
-	)
-	parser := gopacket.NewDecodingLayerParser(
-		slayers.LayerTypeSCION, &scionLayer, &hbhLayer, &e2eLayer, &udpLayer, &scmpLayer,
-	)
-	parser.IgnoreUnsupported = true
-	decoded := make([]gopacket.LayerType, 4)
-	err = parser.DecodeLayers(buf, &decoded)
-	if err != nil {
-		return offset, weight, err
-	}
-	if len(decoded) < 2 {
-		return offset, weight, errUnexpectedPacketStructure
-	}
-	if decoded[len(decoded)-1] != slayers.LayerTypeSCIONUDP {
-		return offset, weight, errUnexpectedPacketStructure
-	}
-	_ = scionLayer.SrcIA
-	_, err = scionLayer.SrcAddr()
-	if err != nil {
-		return offset, weight, errUnexpectedPacketStructure
-	}
-	_ = udpLayer.SrcPort
-	_ = scionLayer.DstIA
-	_, err = scionLayer.DstAddr()
-	if err != nil {
-		return offset, weight, errUnexpectedPacketStructure
-	}
-	_ = udpLayer.DstPort
-	rpath := snet.RawPath{
-		PathType: scionLayer.Path.Type(),
-	}
-	if l := scionLayer.Path.Len(); l != 0 {
-		rpath.Raw = make([]byte, l)
-		err := scionLayer.Path.SerializeTo(rpath.Raw)
-			if err != nil {
-				return offset, weight, errUnexpectedPacketStructure
+	for {
+		buf = buf[:cap(buf)]
+		oob = oob[:cap(oob)]
+		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
+		if err != nil {
+			if deadlineIsSet && timebase.Now().Before(deadline) {
+				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
+				continue
+			}
+			return offset, weight, err
 		}
+		if flags != 0 {
+			err = errUnexpectedPacketFlags
+			if deadlineIsSet && timebase.Now().Before(deadline) {
+				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
+				continue
+			}
+			return offset, weight, err
+		}
+		oob = oob[:oobn]
+		cRxTime, err := udp.TimestampFromOOBData(oob)
+		if err != nil {
+			cRxTime = timebase.Now()
+			log.Printf("%s Failed to receive packet timestamp: %v", ntpLogPrefix, err)
+		}
+		buf = buf[:n]
+
+		var (
+			hbhLayer  slayers.HopByHopExtnSkipper
+			e2eLayer  slayers.EndToEndExtnSkipper
+			scmpLayer slayers.SCMP
+		)
+		parser := gopacket.NewDecodingLayerParser(
+			slayers.LayerTypeSCION, &scionLayer, &hbhLayer, &e2eLayer, &udpLayer, &scmpLayer,
+		)
+		parser.IgnoreUnsupported = true
+		decoded := make([]gopacket.LayerType, 4)
+		err = parser.DecodeLayers(buf, &decoded)
+		if err != nil {
+			if deadlineIsSet && timebase.Now().Before(deadline) {
+				log.Printf("%s Failed to decode packet: %v", ntpLogPrefix, err)
+				continue
+			}
+			return offset, weight, err
+		}
+		validType := len(decoded) >= 2 &&
+			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
+		if !validType {
+			err = errUnexpectedPacket
+			if deadlineIsSet && timebase.Now().Before(deadline) {
+				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
+				continue
+			}
+			return offset, weight, err
+		}
+		validSrc := scionLayer.SrcIA.Equal(remoteAddr.IA) &&
+			compareIPs(scionLayer.RawSrcAddr, remoteAddr.Host.IP) == 0
+		validDst := scionLayer.DstIA.Equal(localAddr.IA) &&
+			compareIPs(scionLayer.RawDstAddr, localAddr.Host.IP) == 0
+		if !validSrc || !validDst {
+			err = errUnexpectedPacket
+			if deadlineIsSet && timebase.Now().Before(deadline) {
+				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
+				continue
+			}
+			return offset, weight, err
+		}
+
+		var ntpresp ntp.Packet
+		err = ntp.DecodePacket(&ntpresp, udpLayer.Payload)
+		if err != nil {
+			if deadlineIsSet && timebase.Now().Before(deadline) {
+				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
+				continue
+			}
+			return offset, weight, err
+		}
+
+		if ntpresp.OriginTime != ntp.Time64FromTime(cTxTime) {
+			err = errUnexpectedPacket
+			if deadlineIsSet && timebase.Now().Before(deadline) {
+				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
+				continue
+			}
+			return offset, weight, err
+		}
+
+		err = ntp.ValidateResponse(&ntpresp)
+		if err != nil {
+			return offset, weight, err
+		}
+
+		log.Printf("%s Received packet at %v from %v: %+v", ntpLogPrefix, cRxTime, srcAddr, ntpresp)
+
+		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
+		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
+
+		off := ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
+		rtd := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)
+
+		log.Printf("%s %s,%s, clock offset: %fs (%fms), round trip delay: %fs (%fms)",
+			ntpLogPrefix, remoteAddr.IA, remoteAddr.Host,
+			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()),
+			float64(off.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
+			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()),
+			float64(rtd.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
+
+		// offset, weight = off, 1000.0
+
+		reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
+		offset, weight = filter(reference, cTxTime, sRxTime, sTxTime, cRxTime)
+		break;
 	}
-
-	var ntpresp ntp.Packet
-	err = ntp.DecodePacket(&ntpresp, udpLayer.Payload)
-	if err != nil {
-		return offset, weight, err
-	}
-
-	err = ntp.ValidateResponse(&ntpresp, cTxTime)
-	if err != nil {
-		return offset, weight, err
-	}
-
-	log.Printf("%s Received packet at %v from %v: %+v", ntpLogPrefix, cRxTime, srcAddr, ntpresp)
-
-	sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
-	sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
-
-	off := ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
-	rtd := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)
-
-	log.Printf("%s %s,%s clock offset: %fs (%fms), round trip delay: %fs (%fms)",
-		ntpLogPrefix, remoteAddr.IA, remoteAddr.Host,
-		float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()),
-		float64(off.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
-		float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()),
-		float64(rtd.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
-
-	// offset, weight = off, 1000.0
-
-	reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
-	offset, weight = filter(reference, cTxTime, sRxTime, sTxTime, cRxTime)
 
 	return offset, weight, nil
 }

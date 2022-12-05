@@ -82,7 +82,12 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 					return
 				}
 
-				err = ntp.ValidateResponse(&ntpresp, cTxTime)
+				if ntpresp.OriginTime != ntp.Time64FromTime(cTxTime) {
+					log.Printf("Unrelated packet received")
+					return
+				}
+
+				err = ntp.ValidateResponse(&ntpresp)
 				if err != nil {
 					log.Printf("Unexpected packet received: %v", err)
 					return
