@@ -5,10 +5,14 @@ import (
 	"net"
 	"net/netip"
 
+	"github.com/google/gopacket"
+
 	"github.com/libp2p/go-reuseport"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/snet"
+	"github.com/scionproto/scion/pkg/slayers"
+
+	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/private/topology/underlay"
 
 	"example.com/scion-time/go/core/timebase"
@@ -18,7 +22,7 @@ import (
 
 const (
 	scionServerLogPrefix  = "[core/server_scion]"
-	scionServerLogEnabled = false
+	scionServerLogEnabled = true
 
 	scionServerNumGoroutine = 8
 )
@@ -27,55 +31,72 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	defer conn.Close()
 	udp.EnableTimestamping(conn)
 
-	var pkt snet.Packet
-	var udppkt snet.UDPPayload
+	buf := make([]byte, common.SupportedMTU)
+	dbuf := make([]byte, common.SupportedMTU)
 	oob := make([]byte, udp.TimestampLen())
+	buffer := gopacket.NewSerializeBuffer()
 	for {
-		pkt.Prepare()
+		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
-
-		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(pkt.Bytes, oob)
+		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
-			log.Printf("%s Failed to read packet: %v", scionServerLogPrefix, err)
+			log.Printf("%s Failed to receive packet: %v", scionServerLogPrefix, err)
 			continue
 		}
 		if flags != 0 {
-			log.Printf("%s Failed to read packet, flags: %v", scionServerLogPrefix, flags)
+			log.Printf("%s Failed to receive packet, flags: %v", scionServerLogPrefix, flags)
 			continue
 		}
-
 		oob = oob[:oobn]
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			rxt = timebase.Now()
-			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
+			log.Printf("%s Failed to receive packet timestamp: %v", scionServerLogPrefix, err)
 		}
-		pkt.Bytes = pkt.Bytes[:n]
+		buf = buf[:n]
+		m := copy(dbuf[:n], buf)
+		if m != n {
+			panic("inconsistent number of elements copied")
+		}
 
-		err = pkt.Decode()
+		var (
+			scionLayer slayers.SCION
+			hbhLayer   slayers.HopByHopExtnSkipper
+			e2eLayer   slayers.EndToEndExtnSkipper
+			udpLayer   slayers.UDP
+			scmpLayer  slayers.SCMP
+		)
+		parser := gopacket.NewDecodingLayerParser(
+			slayers.LayerTypeSCION, &scionLayer, &hbhLayer, &e2eLayer, &udpLayer, &scmpLayer,
+		)
+		parser.IgnoreUnsupported = true
+		decoded := make([]gopacket.LayerType, 4)
+		err = parser.DecodeLayers(dbuf, &decoded)
 		if err != nil {
-			log.Printf("%s Failed to decode packet: %v", err, scionServerLogPrefix)
+			log.Printf("%s Failed to decode packet: %v", scionServerLogPrefix, err)
+			continue
+		}
+		validType := len(decoded) >= 2 &&
+			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
+		if !validType {
+			log.Printf("%s Failed to receive packet: unexpected type or structure", scionServerLogPrefix, err)
 			continue
 		}
 
-		var ok bool
-		udppkt, ok = pkt.Payload.(snet.UDPPayload)
-		if !ok {
-			log.Printf("%s Packet payload is not a UDP packet", scionServerLogPrefix)
-			continue
-		}
-
-		if int(udppkt.DstPort) != localHostPort {
-			dstAddr, _ := netip.AddrFromSlice(pkt.Destination.Host.IP())
-			dstAddrPort := netip.AddrPortFrom(dstAddr, udppkt.DstPort)
-			m, err := conn.WriteToUDPAddrPort(pkt.Bytes, dstAddrPort)
+		if int(udpLayer.DstPort) != localHostPort {
+			dstAddr, ok := netip.AddrFromSlice(scionLayer.RawDstAddr)
+			if !ok {
+				panic("unexpected IP address byte slice")
+			}
+			dstAddrPort := netip.AddrPortFrom(dstAddr, udpLayer.DstPort)
+			m, err := conn.WriteToUDPAddrPort(buf, dstAddrPort)
 			if err != nil || m != n {
 				log.Printf("%s Failed to forward packet: %v, %v\n", scionServerLogPrefix, err, m)
 				continue
 			}
 		} else {
 			var ntpreq ntp.Packet
-			err = ntp.DecodePacket(&ntpreq, udppkt.Payload)
+			err = ntp.DecodePacket(&ntpreq, udpLayer.Payload)
 			if err != nil {
 				log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
 				continue
@@ -85,7 +106,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
 			}
 
-			err = ntp.ValidateRequest(&ntpreq, udppkt.SrcPort)
+			err = ntp.ValidateRequest(&ntpreq, udpLayer.SrcPort)
 			if err != nil {
 				log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
 				continue
@@ -94,36 +115,50 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			var ntpresp ntp.Packet
 			ntp.HandleRequest(&ntpreq, rxt, &ntpresp)
 
-			ntp.EncodePacket(&udppkt.Payload, &ntpresp)
-			udppkt.DstPort, udppkt.SrcPort = udppkt.SrcPort, udppkt.DstPort
-
-			pkt.Destination, pkt.Source = pkt.Source, pkt.Destination
-			rpath, ok := pkt.Path.(snet.RawPath)
-			if !ok {
-				log.Printf("%s Failed to reverse path, unecpected path type: %v", scionServerLogPrefix, pkt.Path)
-				continue
-			}
-			replypather := snet.DefaultReplyPather{}
-			replyPath, err := replypather.ReplyPath(rpath)
-			if err != nil {
-				log.Printf("%s Failed to reverse path: %v", scionServerLogPrefix, err)
-				continue
-			}
-			pkt.Path = replyPath
-			pkt.Payload = &udppkt
-			err = pkt.Serialize()
-			if err != nil {
-				log.Printf("%s Failed to serialize packet: %v", scionServerLogPrefix, err)
-				continue
+			if len(decoded) != 2 {
+				panic("not yet implemented")
 			}
 
-			n, err = conn.WriteToUDPAddrPort(pkt.Bytes, lastHop)
+			var layers []gopacket.SerializableLayer
+
+			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA
+			scionLayer.DstAddrType, scionLayer.SrcAddrType = scionLayer.SrcAddrType, scionLayer.DstAddrType
+			scionLayer.RawDstAddr, scionLayer.RawSrcAddr = scionLayer.RawSrcAddr, scionLayer.RawDstAddr
+			scionLayer.RecyclePaths()
+			scionLayer.Path, err = scionLayer.Path.Reverse()
 			if err != nil {
-				log.Printf("%s Failed to write packet: %v", scionServerLogPrefix, err)
+				panic(err)
+			}
+			layers = append(layers, &scionLayer)
+
+			ntp.EncodePacket(&udpLayer.Payload, &ntpresp)
+			udpLayer.DstPort, udpLayer.SrcPort = udpLayer.SrcPort, udpLayer.DstPort
+			err = udpLayer.SetNetworkLayerForChecksum(&scionLayer)
+			if err != nil {
+				panic(err)
+			}
+			layers = append(layers, &udpLayer, gopacket.Payload(udpLayer.Payload))
+
+			err = buffer.Clear()
+			if err != nil {
+				panic(err)
+			}
+			options := gopacket.SerializeOptions{
+				ComputeChecksums: true,
+				FixLengths:       true,
+			}
+			err = gopacket.SerializeLayers(buffer, options, layers...)
+			if err != nil {
+				panic(err)
+			}
+
+			n, err = conn.WriteToUDPAddrPort(buffer.Bytes(), lastHop)
+			if err != nil {
+				log.Printf("%s Failed to send packet: %v", scionServerLogPrefix, err)
 				continue
 			}
-			if n != len(pkt.Bytes) {
-				log.Printf("%s Failed to write entire packet: %v/%v", scionServerLogPrefix, n, len(pkt.Bytes))
+			if n != len(buffer.Bytes()) {
+				log.Printf("%s Failed to send entire packet: %v/%v", scionServerLogPrefix, n, len(buffer.Bytes()))
 				continue
 			}
 		}
