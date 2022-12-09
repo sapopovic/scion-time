@@ -144,7 +144,7 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 		if flags != 0 {
 			err = errUnexpectedPacketFlags
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
+				log.Printf("%s Failed to receive packet, flags: %v", ntpLogPrefix, flags)
 				continue
 			}
 			return offset, weight, err
