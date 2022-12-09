@@ -133,7 +133,7 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 	for {
 		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
-		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
+		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
 			if deadlineIsSet && timebase.Now().Before(deadline) {
 				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
@@ -222,7 +222,7 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 			return offset, weight, err
 		}
 
-		log.Printf("%s Received packet at %v from %v: %+v", ntpLogPrefix, cRxTime, srcAddr, ntpresp)
+		log.Printf("%s Received packet at %v from %v: %+v", ntpLogPrefix, cRxTime, lastHop, ntpresp)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
 		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
