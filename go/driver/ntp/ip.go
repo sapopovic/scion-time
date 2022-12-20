@@ -12,6 +12,17 @@ import (
 	"example.com/scion-time/go/net/udp"
 )
 
+type IPClient struct{
+	Interleaved bool
+	prev struct {
+		cTxTime time.Time
+		cRxTime time.Time
+		sRxTime time.Time
+	}
+}
+
+var DefaultIPClient = &IPClient{}
+
 func compareAddrs(x, y netip.Addr) int {
 	if x.Is4In6() {
 		x = netip.AddrFrom4(x.As4())
@@ -22,7 +33,7 @@ func compareAddrs(x, y netip.Addr) int {
 	return x.Compare(y)
 }
 
-func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAddr) (
+func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAddr) (
 	offset time.Duration, weight float64, err error) {
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.IP})
 	if err != nil {
@@ -40,18 +51,25 @@ func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAdd
 
 	buf := make([]byte, ntp.PacketLen)
 
-	cTxTime := timebase.Now()
+	cTxTime0 := timebase.Now()
 
 	ntpreq := ntp.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
-	ntpreq.TransmitTime = ntp.Time64FromTime(cTxTime)
+	if c.Interleaved {
+		ntpreq.OriginTime = ntp.Time64FromTime(c.prev.sRxTime)
+		ntpreq.ReceiveTime = ntp.Time64FromTime(c.prev.cRxTime)
+		ntpreq.TransmitTime = ntp.Time64FromTime(c.prev.cTxTime)
+	} else {
+		ntpreq.TransmitTime = ntp.Time64FromTime(cTxTime0)
+	}
 	ntp.EncodePacket(&buf, &ntpreq)
 
 	_, err = conn.WriteToUDPAddrPort(buf, remoteAddr.AddrPort())
 	if err != nil {
 		return offset, weight, err
 	}
+	cTxTime1 := timebase.Now()
 
 	oob := make([]byte, udp.TimestampLen())
 	for {
@@ -100,7 +118,10 @@ func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAdd
 			return offset, weight, err
 		}
 
-		if ntpresp.OriginTime != ntp.Time64FromTime(cTxTime) {
+		interleaved := false
+		if c.Interleaved && ntpresp.OriginTime == ntp.Time64FromTime(c.prev.cRxTime) {
+			interleaved = true
+		} else if ntpresp.OriginTime != ntp.Time64FromTime(cTxTime0) {
 			err = errUnexpectedPacket
 			if deadlineIsSet && timebase.Now().Before(deadline) {
 				log.Printf("%s Failed to receive packet: %v", ntpLogPrefix, err)
@@ -109,7 +130,7 @@ func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAdd
 			return offset, weight, err
 		}
 
-		err = ntp.ValidateResponse(&ntpresp)
+		err = ntp.ValidateMetadata(&ntpresp)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -119,8 +140,26 @@ func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAdd
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
 		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
 
-		off := ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
-		rtd := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)
+		var t0, t1, t2, t3 time.Time
+		if interleaved {
+			t0 = c.prev.cTxTime
+			t1 = c.prev.sRxTime
+			t2 = sTxTime
+			t3 = c.prev.cRxTime
+		} else {
+			t0 = cTxTime1
+			t1 = sRxTime
+			t2 = sTxTime
+			t3 = cRxTime
+		}
+
+		err = ntp.ValidateTimestamps(t0, t1, t1, t3)
+		if err != nil {
+			return offset, weight, err
+		}
+
+		off := ntp.ClockOffset(t0, t1, t2, t3)
+		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
 		log.Printf("%s %s, clock offset: %fs (%fms), round trip delay: %fs (%fms)",
 			ntpLogPrefix, remoteAddr,
@@ -129,12 +168,22 @@ func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAdd
 			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()),
 			float64(rtd.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
 
+		c.prev.cTxTime = cTxTime1
+		c.prev.cRxTime = cRxTime
+		c.prev.sRxTime = sRxTime
+
 		// offset, weight = off, 1000.0
 
 		reference := remoteAddr.String()
-		offset, weight = filter(reference, cTxTime, sRxTime, sTxTime, cRxTime)
+		offset, weight = filter(reference, t0, t1, t2, t3)
+
 		break
 	}
 
 	return offset, weight, nil
+}
+
+func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAddr) (
+	offset time.Duration, weight float64, err error) {
+	return DefaultIPClient.MeasureClockOffsetIP(ctx, localAddr, remoteAddr)
 }

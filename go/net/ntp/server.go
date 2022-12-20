@@ -7,7 +7,7 @@ import (
 	"example.com/scion-time/go/core/timebase"
 )
 
-var errUnexpectedRequest = errors.New("failed to validate request")
+var errUnexpectedRequest = errors.New("unexpected request structure")
 
 func ValidateRequest(req *Packet, srcPort uint16) error {
 	li := req.LeapIndicator()

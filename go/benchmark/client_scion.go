@@ -165,7 +165,7 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
 					return
 				}
 
-				err = ntp.ValidateResponse(&ntpresp)
+				err = ntp.ValidateMetadata(&ntpresp)
 				if err != nil {
 					log.Printf("Unexpected packet received: %v", err)
 					return
@@ -173,6 +173,12 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
 
 				sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
 				sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
+
+				err = ntp.ValidateTimestamps(cTxTime, sRxTime, sTxTime, cRxTime)
+				if err != nil {
+					log.Printf("Unexpected packet received: %v", err)
+					return
+				}
 
 				_ = ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
 				roundTripDelay := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)

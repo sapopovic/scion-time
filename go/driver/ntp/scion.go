@@ -217,7 +217,7 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 			return offset, weight, err
 		}
 
-		err = ntp.ValidateResponse(&ntpresp)
+		err = ntp.ValidateMetadata(&ntpresp)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -226,6 +226,11 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
 		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
+
+		err = ntp.ValidateTimestamps(cTxTime, sRxTime, sTxTime, cRxTime)
+		if err != nil {
+			return offset, weight, err
+		}
 
 		off := ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
 		rtd := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)
