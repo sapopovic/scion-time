@@ -33,7 +33,7 @@ func UDPAddrFromSnet(a *snet.UDPAddr) UDPAddr {
 // - https://github.com/google/gopacket, package "github.com/google/gopacket/pcapgo"
 // - https://github.com/facebook/time, package "github.com/facebook/time/ntp/protocol/ntp"
 
-func EnableTimestampingRaw(fd uintptr) {
+func enableRxTimestampsRaw(fd uintptr) {
 	if so_timestampns != 0 {
 		_ = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, so_timestampns, 1)
 	} else if so_timestamp != 0 {
@@ -41,16 +41,16 @@ func EnableTimestampingRaw(fd uintptr) {
 	}
 }
 
-func EnableTimestamping(conn *net.UDPConn) {
+func EnableRxTimestamps(conn *net.UDPConn) {
 	sconn, err := conn.SyscallConn()
 	if err != nil {
 		return
 	}
-	_ = sconn.Control(EnableTimestampingRaw)
+	_ = sconn.Control(enableRxTimestampsRaw)
 }
 
 func TimestampLen() int {
-	return unix.CmsgSpace(int(unsafe.Sizeof(unix.Timespec{})))
+	return unix.CmsgSpace(3*16)
 }
 
 func TimestampFromOOBData(oob []byte) (time.Time, error) {
@@ -60,7 +60,14 @@ func TimestampFromOOBData(oob []byte) (time.Time, error) {
 			return time.Time{}, errUnexpectedData
 		}
 		if h.Level == unix.SOL_SOCKET {
-			if scm_timestampns != 0 && h.Type == scm_timestampns {
+			if h.Type == unix.SO_TIMESTAMPING || h.Type == unix.SO_TIMESTAMPING_NEW {
+				if unix.CmsgSpace(3*16) != int(h.Len) {
+					return time.Time{}, errUnexpectedData
+				}
+				sec := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
+				nsec := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(8)]))
+				return time.Unix(sec, nsec), nil
+			} else if scm_timestampns != 0 && h.Type == scm_timestampns {
 				if unix.CmsgSpace(int(unsafe.Sizeof(unix.Timespec{}))) != int(h.Len) {
 					return time.Time{}, errUnexpectedData
 				}

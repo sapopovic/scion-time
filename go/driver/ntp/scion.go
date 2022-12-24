@@ -54,7 +54,7 @@ func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPA
 			return offset, weight, err
 		}
 	}
-	udp.EnableTimestamping(conn)
+	udp.EnableRxTimestamps(conn)
 
 	localPort := conn.LocalAddr().(*net.UDPAddr).Port
 
