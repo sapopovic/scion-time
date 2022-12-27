@@ -74,7 +74,7 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
 				return
 			}
 			defer conn.Close()
-			udp.EnableRxTimestamps(conn)
+			_ = udp.EnableRxTimestamps(conn)
 
 			defer wg.Done()
 			<-sg

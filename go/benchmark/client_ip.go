@@ -34,7 +34,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 				return
 			}
 			defer conn.Close()
-			udp.EnableRxTimestamps(conn)
+			_ = udp.EnableRxTimestamps(conn)
 
 			defer wg.Done()
 			<-sg

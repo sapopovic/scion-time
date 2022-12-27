@@ -34,4 +34,3 @@ func ValidateTimestamps(t0, t1, t2, t3 time.Time) error {
 	}
 	return nil
 }
-

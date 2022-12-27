@@ -345,7 +345,7 @@ func runIPTool(localAddr, remoteAddr snet.UDPAddr) {
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 	c := &ntpd.IPClient{Interleaved: true}
-	for n:= 7; n != 0; n-- {
+	for n := 7; n != 0; n-- {
 		_, _, err = c.MeasureClockOffsetIP(ctx, localAddr.Host, remoteAddr.Host)
 		if err != nil {
 			log.Fatalf("Failed to measure clock offset to %s: %v", remoteAddr.Host, err)

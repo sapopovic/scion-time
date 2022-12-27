@@ -12,13 +12,13 @@ import (
 	"example.com/scion-time/go/net/udp"
 )
 
-type IPClient struct{
+type IPClient struct {
 	Interleaved bool
-	prev struct {
+	prev        struct {
 		reference string
-		cTxTime ntp.Time64
-		cRxTime ntp.Time64
-		sRxTime ntp.Time64
+		cTxTime   ntp.Time64
+		cRxTime   ntp.Time64
+		sRxTime   ntp.Time64
 	}
 }
 
@@ -48,7 +48,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 			return offset, weight, err
 		}
 	}
-	udp.EnableTimestamping(conn)
+	_ = udp.EnableTimestamping(conn)
 
 	buf := make([]byte, ntp.PacketLen)
 
@@ -72,13 +72,12 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 	if err != nil {
 		return offset, weight, err
 	}
-	cTxTime1, id, err := udp.ReceiveTXTimestamp(conn)
-	if err != nil {
+	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
+	if err != nil || id != 0 {
 		cTxTime1 = timebase.Now()
-		log.Printf("%s Failed to receive packet timestamp: %v", ntpLogPrefix, err)
+		log.Printf("%s Failed to receive packet timestamp: id = %v, err = %v", ntpLogPrefix, id, err)
 	}
-	_ = id
-	
+
 	oob := make([]byte, udp.TimestampLen())
 	for {
 		buf = buf[:cap(buf)]
@@ -180,10 +179,10 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 			float64(rtd.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
 
 		c.prev.reference = reference
-		c.prev.cTxTime   = ntp.Time64FromTime(cTxTime1)
-		c.prev.cTxTime   = ntp.Time64FromTime(cTxTime0)
-		c.prev.cRxTime   = ntp.Time64FromTime(cRxTime)
-		c.prev.sRxTime   = ntpresp.ReceiveTime
+		c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
+		c.prev.cTxTime = ntp.Time64FromTime(cTxTime0)
+		c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
+		c.prev.sRxTime = ntpresp.ReceiveTime
 
 		// offset, weight = off, 1000.0
 

@@ -20,7 +20,7 @@ const (
 
 func runIPServer(conn *net.UDPConn) {
 	defer conn.Close()
-	udp.EnableRxTimestamps(conn)
+	_ = udp.EnableRxTimestamps(conn)
 
 	buf := make([]byte, ntp.PacketLen)
 	oob := make([]byte, udp.TimestampLen())

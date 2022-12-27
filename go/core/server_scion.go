@@ -31,7 +31,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	var err error
 
 	defer conn.Close()
-	udp.EnableRxTimestamps(conn)
+	_ = udp.EnableRxTimestamps(conn)
 
 	buf := make([]byte, common.SupportedMTU)
 	oob := make([]byte, udp.TimestampLen())
