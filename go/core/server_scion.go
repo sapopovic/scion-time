@@ -127,8 +127,10 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
 			}
 
+			txt := timebase.Now()
+
 			var ntpresp ntp.Packet
-			ntp.HandleRequest(&ntpreq, rxt, &ntpresp)
+			ntp.HandleRequest(&ntpreq, rxt, txt, &ntpresp)
 
 			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA
 			scionLayer.DstAddrType, scionLayer.SrcAddrType = scionLayer.SrcAddrType, scionLayer.DstAddrType

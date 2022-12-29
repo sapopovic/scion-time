@@ -20,8 +20,9 @@ const (
 
 func runIPServer(conn *net.UDPConn) {
 	defer conn.Close()
-	_ = udp.EnableRxTimestamps(conn)
+	_ = udp.EnableTimestamping(conn)
 
+	var txId uint32
 	buf := make([]byte, ntp.PacketLen)
 	oob := make([]byte, udp.TimestampLen())
 	for {
@@ -36,7 +37,6 @@ func runIPServer(conn *net.UDPConn) {
 			log.Printf("%s Failed to read packet, flags: %v", ipServerLogPrefix, flags)
 			continue
 		}
-
 		oob = oob[:oobn]
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
@@ -62,9 +62,12 @@ func runIPServer(conn *net.UDPConn) {
 			continue
 		}
 
-		var ntpresp ntp.Packet
-		ntp.HandleRequest(&ntpreq, rxt, &ntpresp)
+		ntp.EnsureStrictRxOrder(&rxt)
+		txt0 := timebase.Now()
+		ntp.EnsureOrder(rxt, &txt0)
 
+		var ntpresp ntp.Packet
+		ntp.HandleRequest(&ntpreq, rxt, txt0, &ntpresp)
 		ntp.EncodePacket(&buf, &ntpresp)
 
 		n, err = conn.WriteToUDPAddrPort(buf, srcAddr)
@@ -76,6 +79,14 @@ func runIPServer(conn *net.UDPConn) {
 			log.Printf("%s Failed to write entire packet: %v/%v", ipServerLogPrefix, n, len(buf))
 			continue
 		}
+		txt1, id, err := udp.ReadTXTimestamp(conn)
+		if err != nil || id != txId {
+			txt1 = txt0
+			log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", ipServerLogPrefix, id, txId, err)
+		}
+		txId++
+		ntp.EnsureOrder(txt0, &txt1)
+		ntp.StoreTimestamps(rxt, txt1)
 	}
 }
 

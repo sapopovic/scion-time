@@ -2,12 +2,43 @@ package ntp
 
 import (
 	"errors"
+	"sync"
 	"time"
-
-	"example.com/scion-time/go/core/timebase"
 )
 
-var errUnexpectedRequest = errors.New("unexpected request structure")
+var (
+	errUnexpectedRequest = errors.New("unexpected request structure")
+
+	tss = make(map[Time64]Time64)
+	tssMu sync.Mutex
+)
+
+func EnsureStrictRxOrder(rxt *time.Time) {
+	tssMu.Lock()
+	defer tssMu.Unlock()
+	_, ok := tss[Time64FromTime(*rxt)]
+	for ok {
+		(*rxt).Add(1)
+		_, ok = tss[Time64FromTime(*rxt)]
+	}
+	tss[Time64FromTime(*rxt)] = Time64{}
+}
+
+func EnsureOrder(t0 time.Time, t1 *time.Time) {
+	if (*t1).Sub(t0) < 0 {
+		*t1 = t0
+	}
+}
+
+func StoreTimestamps(rxt, txt time.Time) {
+	tssMu.Lock()
+	defer tssMu.Unlock()
+	t, ok := tss[Time64FromTime(rxt)]
+	if !ok || t != (Time64{}) {
+		panic("inconsistent timestamps")
+	}
+	tss[Time64FromTime(rxt)] = Time64FromTime(txt)
+}
 
 func ValidateRequest(req *Packet, srcPort uint16) error {
 	li := req.LeapIndicator()
@@ -28,9 +59,7 @@ func ValidateRequest(req *Packet, srcPort uint16) error {
 	return nil
 }
 
-func HandleRequest(req *Packet, rxt time.Time, resp *Packet) {
-	txt := timebase.Now()
-
+func HandleRequest(req *Packet, rxt, txt time.Time, resp *Packet) {
 	resp.SetVersion(VersionMax)
 	resp.SetMode(ModeServer)
 	resp.Stratum = 1
@@ -39,8 +68,29 @@ func HandleRequest(req *Packet, rxt time.Time, resp *Packet) {
 	resp.RootDispersion = Time32{Seconds: 0, Fraction: 10}
 	resp.ReferenceID = ServerRefID
 
+	interleaved := false
+	var prevtxt Time64
+	if req.ReceiveTime != req.TransmitTime {
+		tssMu.Lock()
+		var ok bool
+		prevtxt, ok = tss[req.OriginTime]
+		if ok {
+			if prevtxt == (Time64{}) {
+				panic("inconsistent timestamps")
+			}
+			delete(tss, req.OriginTime)
+			interleaved = true
+		}
+		tssMu.Unlock()
+	}
+
 	resp.ReferenceTime = Time64FromTime(txt)
-	resp.OriginTime = req.TransmitTime
 	resp.ReceiveTime = Time64FromTime(rxt)
-	resp.TransmitTime = Time64FromTime(txt)
+	if interleaved {
+		resp.OriginTime = req.ReceiveTime
+		resp.TransmitTime = prevtxt
+	} else {
+		resp.OriginTime = req.TransmitTime
+		resp.TransmitTime = Time64FromTime(txt)
+	}
 }
