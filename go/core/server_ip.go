@@ -26,8 +26,8 @@ func runIPServer(conn *net.UDPConn) {
 	buf := make([]byte, ntp.PacketLen)
 	oob := make([]byte, udp.TimestampLen())
 	for {
+		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
-
 		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
 			log.Printf("%s Failed to read packet: %v", ipServerLogPrefix, err)
@@ -68,6 +68,7 @@ func runIPServer(conn *net.UDPConn) {
 
 		var ntpresp ntp.Packet
 		ntp.HandleRequest(&ntpreq, rxt, txt0, &ntpresp)
+
 		ntp.EncodePacket(&buf, &ntpresp)
 
 		n, err = conn.WriteToUDPAddrPort(buf, srcAddr)

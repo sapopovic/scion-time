@@ -33,6 +33,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	defer conn.Close()
 	_ = udp.EnableRxTimestamps(conn)
 
+	var txId uint32
 	buf := make([]byte, common.SupportedMTU)
 	oob := make([]byte, udp.TimestampLen())
 
@@ -68,18 +69,18 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		oob = oob[:cap(oob)]
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
-			log.Printf("%s Failed to receive packet: %v", scionServerLogPrefix, err)
+			log.Printf("%s Failed to read packet: %v", scionServerLogPrefix, err)
 			continue
 		}
 		if flags != 0 {
-			log.Printf("%s Failed to receive packet, flags: %v", scionServerLogPrefix, flags)
+			log.Printf("%s Failed to read packet, flags: %v", scionServerLogPrefix, flags)
 			continue
 		}
 		oob = oob[:oobn]
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			rxt = timebase.Now()
-			log.Printf("%s Failed to receive packet timestamp: %v", scionServerLogPrefix, err)
+			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
 		}
 		buf = buf[:n]
 
@@ -91,7 +92,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		validType := len(decoded) >= 2 &&
 			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
 		if !validType {
-			log.Printf("%s Failed to receive packet: unexpected type or structure", scionServerLogPrefix, err)
+			log.Printf("%s Failed to read packet: unexpected type or structure", scionServerLogPrefix, err)
 			continue
 		}
 
@@ -117,20 +118,23 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
 				continue
 			}
+
+			if scionServerLogEnabled {
+				log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
+			}
+
 			err = ntp.ValidateRequest(&ntpreq, udpLayer.SrcPort)
 			if err != nil {
 				log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
 				continue
 			}
 
-			if scionServerLogEnabled {
-				log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
-			}
-
-			txt := timebase.Now()
+			ntp.EnsureStrictRxOrder(&rxt)
+			txt0 := timebase.Now()
+			ntp.EnsureOrder(rxt, &txt0)
 
 			var ntpresp ntp.Packet
-			ntp.HandleRequest(&ntpreq, rxt, txt, &ntpresp)
+			ntp.HandleRequest(&ntpreq, rxt, txt0, &ntpresp)
 
 			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA
 			scionLayer.DstAddrType, scionLayer.SrcAddrType = scionLayer.SrcAddrType, scionLayer.DstAddrType
@@ -150,13 +154,21 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 
 			n, err = conn.WriteToUDPAddrPort(buffer.Bytes(), lastHop)
 			if err != nil {
-				log.Printf("%s Failed to send packet: %v", scionServerLogPrefix, err)
+				log.Printf("%s Failed to write packet: %v", scionServerLogPrefix, err)
 				continue
 			}
 			if n != len(buffer.Bytes()) {
-				log.Printf("%s Failed to send entire packet: %v/%v", scionServerLogPrefix, n, len(buffer.Bytes()))
+				log.Printf("%s Failed to write entire packet: %v/%v", scionServerLogPrefix, n, len(buffer.Bytes()))
 				continue
 			}
+			txt1, id, err := udp.ReadTXTimestamp(conn)
+			if err != nil || id != txId {
+				txt1 = txt0
+				log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", ipServerLogPrefix, id, txId, err)
+			}
+			txId++
+			ntp.EnsureOrder(txt0, &txt1)
+			ntp.StoreTimestamps(rxt, txt1)
 		}
 	}
 }

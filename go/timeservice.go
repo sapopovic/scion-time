@@ -379,9 +379,13 @@ func runSCIONTool(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 	log.Printf("\t%v", sp)
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
-	_, _, err = ntpd.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
-	if err != nil {
-		log.Fatalf("Failed to measure clock offset to %s,%s: %v", raddr.IA, raddr.Host, err)
+	c := &ntpd.SCIONClient{Interleaved: true}
+	for n := 7; n != 0; n-- {
+		_, _, err = c.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
+		if err != nil {
+			log.Fatalf("Failed to measure clock offset to %s,%s: %v", raddr.IA, raddr.Host, err)
+		}
+		lclk.Sleep(125 * time.Microsecond)
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 var (
 	errUnexpectedRequest = errors.New("unexpected request structure")
 
-	tss = make(map[Time64]Time64)
+	tss   = make(map[Time64]Time64)
 	tssMu sync.Mutex
 )
 

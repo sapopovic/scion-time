@@ -22,7 +22,7 @@ type IPClient struct {
 	}
 }
 
-var DefaultIPClient = &IPClient{}
+var defaultIPClient = &IPClient{}
 
 func compareAddrs(x, y netip.Addr) int {
 	if x.Is4In6() {
@@ -196,5 +196,5 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 
 func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAddr) (
 	offset time.Duration, weight float64, err error) {
-	return DefaultIPClient.MeasureClockOffsetIP(ctx, localAddr, remoteAddr)
+	return defaultIPClient.MeasureClockOffsetIP(ctx, localAddr, remoteAddr)
 }
