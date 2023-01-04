@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"net/netip"
+	"time"
 
 	"github.com/google/gopacket"
 
@@ -129,12 +130,15 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				continue
 			}
 
-			ntp.EnsureStrictRxOrder(&rxt)
-			txt0 := timebase.Now()
-			ntp.EnsureOrder(rxt, &txt0)
+			srcAddr, ok := netip.AddrFromSlice(scionLayer.RawSrcAddr)
+			if !ok {
+				panic("unexpected IP address byte slice")
+			}
+			clientID := scionLayer.SrcIA.String() + "," + srcAddr.String()
 
+			var txt0 time.Time
 			var ntpresp ntp.Packet
-			ntp.HandleRequest(&ntpreq, rxt, txt0, &ntpresp)
+			ntp.HandleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
 			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA
 			scionLayer.DstAddrType, scionLayer.SrcAddrType = scionLayer.SrcAddrType, scionLayer.DstAddrType
@@ -162,13 +166,15 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				continue
 			}
 			txt1, id, err := udp.ReadTXTimestamp(conn)
-			if err != nil || id != txId {
-				txt1 = txt0
-				log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", ipServerLogPrefix, id, txId, err)
+			if err != nil {
+				log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", scionServerLogPrefix, id, txId, err)
+			} else if id != txId {
+				log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", scionServerLogPrefix, id, txId, err)
+				txId = id + 1
+			} else {
+				ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
+				txId++
 			}
-			txId++
-			ntp.EnsureOrder(txt0, &txt1)
-			ntp.StoreTimestamps(rxt, txt1)
 		}
 	}
 }

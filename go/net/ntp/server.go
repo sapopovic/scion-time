@@ -1,43 +1,62 @@
 package ntp
 
 import (
+	"container/heap"
 	"errors"
 	"sync"
 	"time"
+
+	"example.com/scion-time/go/core/timebase"
 )
+
+const tssCap = 2 ^ 20
+
+type tssItem struct {
+	key string
+	buf [8]struct {
+		rxt, txt Time64
+	}
+	len  int
+	qval Time64
+	qidx int
+}
+
+type tssMap map[string]*tssItem
+
+type tssQueue []*tssItem
 
 var (
 	errUnexpectedRequest = errors.New("unexpected request structure")
 
-	tss   = make(map[Time64]Time64)
+	tss   = make(tssMap)
+	tssQ  = make(tssQueue, tssCap)
 	tssMu sync.Mutex
 )
 
-func EnsureStrictRxOrder(rxt *time.Time) {
-	tssMu.Lock()
-	defer tssMu.Unlock()
-	_, ok := tss[Time64FromTime(*rxt)]
-	for ok {
-		(*rxt).Add(1)
-		_, ok = tss[Time64FromTime(*rxt)]
-	}
-	tss[Time64FromTime(*rxt)] = Time64{}
+func (q tssQueue) Len() int { return len(q) }
+
+func (q tssQueue) Less(i, j int) bool {
+	return q[i].qval.Before(q[j].qval)
 }
 
-func EnsureOrder(t0 time.Time, t1 *time.Time) {
-	if (*t1).Sub(t0) < 0 {
-		*t1 = t0
-	}
+func (q tssQueue) Swap(i, j int) {
+	q[i], q[j] = q[j], q[i]
+	q[i].qidx = i
+	q[j].qidx = j
 }
 
-func StoreTimestamps(rxt, txt time.Time) {
-	tssMu.Lock()
-	defer tssMu.Unlock()
-	t, ok := tss[Time64FromTime(rxt)]
-	if !ok || t != (Time64{}) {
-		panic("inconsistent timestamps")
-	}
-	tss[Time64FromTime(rxt)] = Time64FromTime(txt)
+func (q *tssQueue) Push(x any) {
+	tssi := x.(*tssItem)
+	tssi.qidx = len(*q)
+	*q = append(*q, tssi)
+}
+
+func (q *tssQueue) Pop() any {
+	n := len(*q)
+	tssi := (*q)[n-1]
+	(*q)[n-1] = nil
+	*q = (*q)[0 : n-1]
+	return tssi
 }
 
 func ValidateRequest(req *Packet, srcPort uint16) error {
@@ -59,7 +78,7 @@ func ValidateRequest(req *Packet, srcPort uint16) error {
 	return nil
 }
 
-func HandleRequest(req *Packet, rxt, txt time.Time, resp *Packet) {
+func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Packet) {
 	resp.SetVersion(VersionMax)
 	resp.SetMode(ModeServer)
 	resp.Stratum = 1
@@ -68,29 +87,103 @@ func HandleRequest(req *Packet, rxt, txt time.Time, resp *Packet) {
 	resp.RootDispersion = Time32{Seconds: 0, Fraction: 10}
 	resp.ReferenceID = ServerRefID
 
-	interleaved := false
-	var prevtxt Time64
-	if req.ReceiveTime != req.TransmitTime {
-		tssMu.Lock()
-		var ok bool
-		prevtxt, ok = tss[req.OriginTime]
-		if ok {
-			if prevtxt == (Time64{}) {
-				panic("inconsistent timestamps")
+	*txt = timebase.Now()
+
+	rxt64 := Time64FromTime(*rxt)
+	txt64 := Time64FromTime(*txt)
+
+	tssMu.Lock()
+	defer tssMu.Unlock()
+
+	var o, min, max int
+	tssi, ok := tss[clientID]
+	if ok {
+		for {
+			var i int
+			for i, o, min, max = 0, -1, -1, -1; i != tssi.len; i++ {
+				if tssi.buf[i].rxt == rxt64 {
+					break
+				}
+				if tssi.buf[i].rxt == req.OriginTime {
+					o = i
+				}
+				if min == -1 || tssi.buf[i].rxt.Before(tssi.buf[min].rxt) {
+					min = i
+				}
+				if max == -1 || !tssi.buf[i].rxt.Before(tssi.buf[max].rxt) {
+					max = i
+				}
 			}
-			delete(tss, req.OriginTime)
-			interleaved = true
+			if i != tssi.len {
+				(*rxt).Add(1)
+				rxt64 = Time64FromTime(*rxt)
+				if !(*rxt).Before(*txt) {
+					*txt = *rxt
+					(*txt).Add(1)
+					txt64 = Time64FromTime(*txt)
+				}
+				continue
+			}
+			break
 		}
-		tssMu.Unlock()
+	} else {
+		if len(tss) == tssCap {
+			tssi = heap.Pop(&tssQ).(*tssItem)
+			delete(tss, tssi.key)
+		}
+		tssi = &tssItem{key: clientID}
+		tss[tssi.key] = tssi
+		tssi.qval = rxt64
+		heap.Push(&tssQ, tssi)
+		o, min, max = -1, -1, -1
 	}
 
-	resp.ReferenceTime = Time64FromTime(txt)
-	resp.ReceiveTime = Time64FromTime(rxt)
-	if interleaved {
+	resp.ReferenceTime = txt64
+	resp.ReceiveTime = rxt64
+	if req.ReceiveTime != req.TransmitTime && o != -1 {
+		// interleaved mode
 		resp.OriginTime = req.ReceiveTime
-		resp.TransmitTime = prevtxt
+		resp.TransmitTime = tssi.buf[o].txt
 	} else {
 		resp.OriginTime = req.TransmitTime
-		resp.TransmitTime = Time64FromTime(txt)
+		resp.TransmitTime = txt64
+	}
+
+	if max != -1 && rxt64.After(tssi.buf[max].rxt) {
+		tssi.qval = rxt64
+		heap.Fix(&tssQ, tssi.qidx)
+	}
+
+	if o != -1 {
+		tssi.buf[o].rxt = rxt64
+		tssi.buf[o].txt = txt64
+	} else if tssi.len == cap(tssi.buf) {
+		tssi.buf[min].rxt = rxt64
+		tssi.buf[min].txt = txt64
+	} else {
+		tssi.buf[tssi.len].rxt = rxt64
+		tssi.buf[tssi.len].txt = txt64
+		tssi.len++
+	}
+}
+
+func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
+	if !rxt.Before(*txt) {
+		*txt = rxt
+		(*txt).Add(1)
+	}
+
+	tssMu.Lock()
+	defer tssMu.Unlock()
+
+	tssi, ok := tss[clientID]
+	if ok {
+		rxt64 := Time64FromTime(rxt)
+		for i := 0; i != tssi.len; i++ {
+			if tssi.buf[i].rxt == rxt64 {
+				tssi.buf[i].txt = Time64FromTime(*txt)
+				break
+			}
+		}
 	}
 }

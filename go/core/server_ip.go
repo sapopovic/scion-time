@@ -3,6 +3,7 @@ package core
 import (
 	"log"
 	"net"
+	"time"
 
 	"github.com/libp2p/go-reuseport"
 
@@ -62,12 +63,11 @@ func runIPServer(conn *net.UDPConn) {
 			continue
 		}
 
-		ntp.EnsureStrictRxOrder(&rxt)
-		txt0 := timebase.Now()
-		ntp.EnsureOrder(rxt, &txt0)
+		clientID := srcAddr.Addr().String()
 
+		var txt0 time.Time
 		var ntpresp ntp.Packet
-		ntp.HandleRequest(&ntpreq, rxt, txt0, &ntpresp)
+		ntp.HandleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
 		ntp.EncodePacket(&buf, &ntpresp)
 
@@ -81,13 +81,15 @@ func runIPServer(conn *net.UDPConn) {
 			continue
 		}
 		txt1, id, err := udp.ReadTXTimestamp(conn)
-		if err != nil || id != txId {
-			txt1 = txt0
+		if err != nil {
 			log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", ipServerLogPrefix, id, txId, err)
+		} else if id != txId {
+			log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", ipServerLogPrefix, id, txId, err)
+			txId = id + 1
+		} else {
+			ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
+			txId++
 		}
-		txId++
-		ntp.EnsureOrder(txt0, &txt1)
-		ntp.StoreTimestamps(rxt, txt1)
 	}
 }
 

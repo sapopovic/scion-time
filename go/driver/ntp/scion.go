@@ -83,6 +83,9 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			underlay.EndhostPort)
 	}
 
+	srcAddr := &net.IPAddr{IP: localAddr.Host.IP}
+	dstAddr := &net.IPAddr{IP: remoteAddr.Host.IP}
+
 	buf := make([]byte, common.SupportedMTU)
 
 	reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
@@ -105,12 +108,12 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 	var scionLayer slayers.SCION
 	scionLayer.SrcIA = localAddr.IA
-	err = scionLayer.SetSrcAddr(&net.IPAddr{IP: localAddr.Host.IP})
+	err = scionLayer.SetSrcAddr(srcAddr)
 	if err != nil {
 		panic(err)
 	}
 	scionLayer.DstIA = remoteAddr.IA
-	err = scionLayer.SetDstAddr(&net.IPAddr{IP: remoteAddr.Host.IP})
+	err = scionLayer.SetDstAddr(dstAddr)
 	if err != nil {
 		panic(err)
 	}

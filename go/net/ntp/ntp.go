@@ -78,6 +78,16 @@ func TimeFromTime64(t Time64) time.Time {
 			(int64(t.Fraction)*nanosecondsPerSecond+1<<31)>>32))
 }
 
+func (t Time64) Before(u Time64) bool {
+	return t.Seconds < u.Seconds ||
+		t.Seconds == u.Seconds && t.Fraction < u.Fraction
+}
+
+func (t Time64) After(u Time64) bool {
+	return t.Seconds > u.Seconds ||
+		t.Seconds == u.Seconds && t.Fraction > u.Fraction
+}
+
 func ClockOffset(t0, t1, t2, t3 time.Time) time.Duration {
 	return (t1.Sub(t0) + t2.Sub(t3)) / 2
 }
