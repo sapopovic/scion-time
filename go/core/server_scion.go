@@ -93,7 +93,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		validType := len(decoded) >= 2 &&
 			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
 		if !validType {
-			log.Printf("%s Failed to read packet: unexpected type or structure", scionServerLogPrefix, err)
+			log.Printf("%s Failed to read packet: unexpected type or structure", scionServerLogPrefix)
 			continue
 		}
 

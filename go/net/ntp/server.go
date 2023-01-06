@@ -9,7 +9,7 @@ import (
 	"example.com/scion-time/go/core/timebase"
 )
 
-const tssCap = 2 ^ 20
+const tssCap = 1 << 20
 
 type tssItem struct {
 	key string
@@ -29,7 +29,7 @@ var (
 	errUnexpectedRequest = errors.New("unexpected request structure")
 
 	tss   = make(tssMap)
-	tssQ  = make(tssQueue, tssCap)
+	tssQ  = make(tssQueue, 0, tssCap)
 	tssMu sync.Mutex
 )
 
@@ -127,14 +127,18 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 			break
 		}
 	} else {
-		if len(tss) == tssCap {
-			tssi = heap.Pop(&tssQ).(*tssItem)
-			delete(tss, tssi.key)
+		if len(tss) == tssCap && !tssQ[0].qval.After(rxt64) {
+			x := heap.Pop(&tssQ).(*tssItem)
+			delete(tss, x.key)
 		}
-		tssi = &tssItem{key: clientID}
-		tss[tssi.key] = tssi
-		tssi.qval = rxt64
-		heap.Push(&tssQ, tssi)
+		if len(tss) == tssCap {
+			tssi = nil
+		} else {
+			tssi = &tssItem{key: clientID}
+			tss[tssi.key] = tssi
+			tssi.qval = rxt64
+			heap.Push(&tssQ, tssi)
+		}
 		o, min, max = -1, -1, -1
 	}
 
@@ -149,21 +153,22 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 		resp.TransmitTime = txt64
 	}
 
-	if max != -1 && rxt64.After(tssi.buf[max].rxt) {
-		tssi.qval = rxt64
-		heap.Fix(&tssQ, tssi.qidx)
-	}
-
-	if o != -1 {
-		tssi.buf[o].rxt = rxt64
-		tssi.buf[o].txt = txt64
-	} else if tssi.len == cap(tssi.buf) {
-		tssi.buf[min].rxt = rxt64
-		tssi.buf[min].txt = txt64
-	} else {
-		tssi.buf[tssi.len].rxt = rxt64
-		tssi.buf[tssi.len].txt = txt64
-		tssi.len++
+	if tssi != nil {
+		if max != -1 && rxt64.After(tssi.buf[max].rxt) {
+			tssi.qval = rxt64
+			heap.Fix(&tssQ, tssi.qidx)
+		}
+		if o != -1 {
+			tssi.buf[o].rxt = rxt64
+			tssi.buf[o].txt = txt64
+		} else if tssi.len == cap(tssi.buf) {
+			tssi.buf[min].rxt = rxt64
+			tssi.buf[min].txt = txt64
+		} else {
+			tssi.buf[tssi.len].rxt = rxt64
+			tssi.buf[tssi.len].txt = txt64
+			tssi.len++
+		}
 	}
 }
 
