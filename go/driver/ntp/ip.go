@@ -172,12 +172,10 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
-		log.Printf("%s %s, interleaved mode: %v, clock offset: %fs (%fms), round trip delay: %fs (%fms)",
+		log.Printf("%s %s, interleaved mode: %v, clock offset: %fs (%dns), round trip delay: %fs (%dns)",
 			ntpLogPrefix, remoteAddr, interleaved,
-			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()),
-			float64(off.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
-			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()),
-			float64(rtd.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
+			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()), off.Nanoseconds(),
+			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()), rtd.Nanoseconds())
 
 		c.prev.reference = reference
 		c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)

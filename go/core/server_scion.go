@@ -28,11 +28,15 @@ const (
 	scionServerNumGoroutine = 8
 )
 
+type TimestampOption struct {
+	*slayers.EndToEndOption
+}
+
 func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	var err error
 
 	defer conn.Close()
-	_ = udp.EnableRxTimestamps(conn)
+	_ = udp.EnableTimestamping(conn)
 
 	var txId uint32
 	buf := make([]byte, common.SupportedMTU)
@@ -80,6 +84,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		oob = oob[:oobn]
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
+			oob = oob[:0]
 			rxt = timebase.Now()
 			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
 		}
@@ -97,22 +102,43 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			continue
 		}
 
+		if len(decoded) != 2 {
+			panic("not yet implemented")
+		}
+
 		if int(udpLayer.DstPort) != localHostPort {
 			dstAddr, ok := netip.AddrFromSlice(scionLayer.RawDstAddr)
 			if !ok {
 				panic("unexpected IP address byte slice")
 			}
 			dstAddrPort := netip.AddrPortFrom(dstAddr, udpLayer.DstPort)
-			m, err := conn.WriteToUDPAddrPort(buf, dstAddrPort)
+
+			if len(oob) != 0 {
+				tsOpt := TimestampOption{EndToEndOption: &slayers.EndToEndOption{}}
+				tsOpt.OptType = 253 // experimental
+				tsOpt.OptData = oob
+
+				e2eExtn := slayers.EndToEndExtn{}
+				e2eExtn.NextHdr = scionLayer.NextHdr
+				e2eExtn.Options = []*slayers.EndToEndOption{tsOpt.EndToEndOption}
+
+				scionLayer.NextHdr = slayers.End2EndClass
+				err = gopacket.SerializeLayers(buffer, options, &scionLayer, &e2eExtn, &udpLayer, gopacket.Payload(udpLayer.Payload))
+
+				n += (int(e2eExtn.ExtLen) + 1) * 4
+			} else {
+				err = gopacket.SerializeLayers(buffer, options, &scionLayer, &udpLayer, gopacket.Payload(udpLayer.Payload))
+			}
+			if err != nil {
+				panic(err)
+			}
+
+			m, err := conn.WriteToUDPAddrPort(buffer.Bytes(), dstAddrPort)
 			if err != nil || m != n {
 				log.Printf("%s Failed to forward packet: %v, %v\n", scionServerLogPrefix, err, m)
 				continue
 			}
 		} else {
-			if len(decoded) != 2 {
-				panic("not yet implemented")
-			}
-
 			var ntpreq ntp.Packet
 			err = ntp.DecodePacket(&ntpreq, udpLayer.Payload)
 			if err != nil {

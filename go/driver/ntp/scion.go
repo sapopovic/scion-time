@@ -79,7 +79,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 	}
 	if nextHop == (netip.AddrPort{}) && remoteAddr.IA.Equal(localAddr.IA) {
 		nextHop = netip.AddrPortFrom(
-			remoteAddr.Host.AddrPort().Addr(),
+			netip.AddrFrom4(remoteAddr.Host.AddrPort().Addr().As4()),
 			underlay.EndhostPort)
 	}
 
@@ -191,7 +191,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 		var (
 			hbhLayer  slayers.HopByHopExtnSkipper
-			e2eLayer  slayers.EndToEndExtnSkipper
+			e2eLayer  slayers.EndToEndExtn
 			scmpLayer slayers.SCMP
 		)
 		parser := gopacket.NewDecodingLayerParser(
@@ -228,6 +228,17 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 				continue
 			}
 			return offset, weight, err
+		}
+
+		if len(decoded) >= 3 &&
+			decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
+			tsOpt, err := e2eLayer.FindOption(253 /* experimental */)
+			if err == nil {
+				cRxTime0, err := udp.TimestampFromOOBData(tsOpt.OptData)
+				if err == nil {
+					cRxTime = cRxTime0
+				}
+			}
 		}
 
 		var ntpresp ntp.Packet
@@ -283,12 +294,10 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
-		log.Printf("%s %s,%s, interleaved mode: %v, clock offset: %fs (%fms), round trip delay: %fs (%fms)",
+		log.Printf("%s %s,%s, interleaved mode: %v, clock offset: %fs (%dns), round trip delay: %fs (%dns)",
 			ntpLogPrefix, remoteAddr.IA, remoteAddr.Host, interleaved,
-			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()),
-			float64(off.Nanoseconds())/float64(time.Millisecond.Nanoseconds()),
-			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()),
-			float64(rtd.Nanoseconds())/float64(time.Millisecond.Nanoseconds()))
+			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()), off.Nanoseconds(),
+			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()), rtd.Nanoseconds())
 
 		c.prev.reference = reference
 		c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
