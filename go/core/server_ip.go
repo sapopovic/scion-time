@@ -41,8 +41,9 @@ func runIPServer(conn *net.UDPConn) {
 		oob = oob[:oobn]
 		rxt, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
+			oob = oob[:0]
 			rxt = timebase.Now()
-			log.Printf("%s Failed to read packet timestamp: %v", ipServerLogPrefix, err)
+			log.Printf("%s Failed to read packet rx timestamp: %v", ipServerLogPrefix, err)
 		}
 		buf = buf[:n]
 
@@ -53,10 +54,6 @@ func runIPServer(conn *net.UDPConn) {
 			continue
 		}
 
-		if ipServerLogEnabled {
-			log.Printf("%s Received request at %v from %v: %+v", ipServerLogPrefix, rxt, srcAddr, ntpreq)
-		}
-
 		err = ntp.ValidateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
 			log.Printf("%s Unexpected request packet: %v", ipServerLogPrefix, err)
@@ -64,6 +61,10 @@ func runIPServer(conn *net.UDPConn) {
 		}
 
 		clientID := srcAddr.Addr().String()
+
+		if ipServerLogEnabled {
+			log.Printf("%s Received request at %v from %s: %+v", ipServerLogPrefix, rxt, clientID, ntpreq)
+		}
 
 		var txt0 time.Time
 		var ntpresp ntp.Packet
@@ -82,9 +83,9 @@ func runIPServer(conn *net.UDPConn) {
 		}
 		txt1, id, err := udp.ReadTXTimestamp(conn)
 		if err != nil {
-			log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", ipServerLogPrefix, id, txId, err)
+			log.Printf("%s Failed to read packet tx timestamp: err = %v", ipServerLogPrefix, err)
 		} else if id != txId {
-			log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", ipServerLogPrefix, id, txId, err)
+			log.Printf("%s Failed to read packet tx timestamp: id = %v (expected %v)", ipServerLogPrefix, id, txId)
 			txId = id + 1
 		} else {
 			ntp.UpdateTXTimestamp(clientID, rxt, &txt1)

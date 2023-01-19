@@ -86,7 +86,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 		if err != nil {
 			oob = oob[:0]
 			rxt = timebase.Now()
-			log.Printf("%s Failed to read packet timestamp: %v", scionServerLogPrefix, err)
+			log.Printf("%s Failed to read packet rx timestamp: %v", scionServerLogPrefix, err)
 		}
 		buf = buf[:n]
 
@@ -146,10 +146,6 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				continue
 			}
 
-			if scionServerLogEnabled {
-				log.Printf("%s Received request at %v: %+v", scionServerLogPrefix, rxt, ntpreq)
-			}
-
 			err = ntp.ValidateRequest(&ntpreq, udpLayer.SrcPort)
 			if err != nil {
 				log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
@@ -161,6 +157,10 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				panic("unexpected IP address byte slice")
 			}
 			clientID := scionLayer.SrcIA.String() + "," + srcAddr.String()
+
+			if scionServerLogEnabled {
+				log.Printf("%s Received request at %v from %s: %+v", scionServerLogPrefix, rxt, clientID, ntpreq)
+			}
 
 			var txt0 time.Time
 			var ntpresp ntp.Packet
@@ -193,9 +193,9 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			}
 			txt1, id, err := udp.ReadTXTimestamp(conn)
 			if err != nil {
-				log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", scionServerLogPrefix, id, txId, err)
+				log.Printf("%s Failed to read packet tx timestamp: err = %v", scionServerLogPrefix, err)
 			} else if id != txId {
-				log.Printf("%s Failed to read packet timestamp: id = %v (expected %v), err = %v", scionServerLogPrefix, id, txId, err)
+				log.Printf("%s Failed to read packet tx timestamp: id = %v (expected %v)", scionServerLogPrefix, id, txId)
 				txId = id + 1
 			} else {
 				ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
