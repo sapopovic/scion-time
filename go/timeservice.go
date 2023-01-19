@@ -35,6 +35,9 @@ import (
 )
 
 const (
+	dispatcherModeExternal = "external"
+	dispatcherModeInternal = "internal"
+
 	refClockImpact       = 1.25
 	refClockCutoff       = 0
 	refClockSyncTimeout  = 5 * time.Second
@@ -286,7 +289,7 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	if err != nil {
 		log.Fatalf("Failed to start IP server: %v", err)
 	}
-	err = core.StartSCIONServer(localAddr.IA, snet.CopyUDPAddr(localAddr.Host))
+	err = core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
 		log.Fatalf("Failed to start SCION server: %v", err)
 	}
@@ -313,7 +316,7 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	if err != nil {
 		log.Fatalf("Failed to start IP server: %v", err)
 	}
-	err = core.StartSCIONServer(localAddr.IA, snet.CopyUDPAddr(localAddr.Host))
+	err = core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
 		log.Fatalf("Failed to start SCION server: %v", err)
 	}
@@ -339,7 +342,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	select {}
 }
 
-func runIPTool(localAddr, remoteAddr snet.UDPAddr) {
+func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 	lclk := &core.SystemClock{}
@@ -354,11 +357,19 @@ func runIPTool(localAddr, remoteAddr snet.UDPAddr) {
 	}
 }
 
-func runSCIONTool(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
+func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
+
+	if dispatcherMode == dispatcherModeInternal {
+		err = core.StartSCIONDisptacher(snet.CopyUDPAddr(localAddr.Host))
+		if err != nil {
+			log.Fatalf("Failed to start internal SCION disptacher: %v", err)
+		}
+	}
+
 	dc := newDaemonConnector(ctx, daemonAddr)
 	if err != nil {
 		log.Fatalf("Failed to create SCION daemon connector: %v", err)
@@ -389,19 +400,19 @@ func runSCIONTool(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 	}
 }
 
-func runIPBenchmark(localAddr, remoteAddr snet.UDPAddr) {
+func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr) {
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host)
 }
 
-func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
+func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
 }
 
-func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr snet.UDPAddr) {
+func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 	dc := newDaemonConnector(ctx, daemonAddr)
@@ -469,6 +480,7 @@ func main() {
 	var daemonAddr string
 	var localAddr snet.UDPAddr
 	var remoteAddr snet.UDPAddr
+	var dispatcherMode string
 	var drkeyMode string
 	var drkeyServerAddr snet.UDPAddr
 	var drkeyClientAddr snet.UDPAddr
@@ -493,6 +505,7 @@ func main() {
 	clientFlags.Var(&localAddr, "local", "Local address")
 
 	toolFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	toolFlags.StringVar(&dispatcherMode, "dispatcher", "", "Dispatcher mode")
 	toolFlags.Var(&localAddr, "local", "Local address")
 	toolFlags.Var(&remoteAddr, "remote", "Remote address")
 
@@ -543,15 +556,25 @@ func main() {
 			exitWithUsage()
 		}
 		log.Print("daemonAddr:", daemonAddr)
+		log.Print("dispatcherMode:", dispatcherMode)
 		log.Print("localAddr:", localAddr)
 		log.Print("remoteAddr:", remoteAddr)
 		if !remoteAddr.IA.IsZero() {
-			runSCIONTool(daemonAddr, &localAddr, &remoteAddr)
+			if dispatcherMode == "" {
+				dispatcherMode = dispatcherModeExternal
+			} else if dispatcherMode != dispatcherModeExternal &&
+				dispatcherMode != dispatcherModeInternal {
+				exitWithUsage()
+			}
+			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr)
 		} else {
 			if daemonAddr != "" {
 				exitWithUsage()
 			}
-			runIPTool(localAddr, remoteAddr)
+			if dispatcherMode != "" {
+				exitWithUsage()
+			}
+			runIPTool(&localAddr, &remoteAddr)
 		}
 	case benchmarkFlags.Name():
 		err := benchmarkFlags.Parse(os.Args[2:])
@@ -562,12 +585,12 @@ func main() {
 		log.Print("localAddr:", localAddr)
 		log.Print("remoteAddr:", remoteAddr)
 		if !remoteAddr.IA.IsZero() {
-			runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+			runSCIONBenchmark(daemonAddr, &localAddr, &remoteAddr)
 		} else {
 			if daemonAddr != "" {
 				exitWithUsage()
 			}
-			runIPBenchmark(localAddr, remoteAddr)
+			runIPBenchmark(&localAddr, &remoteAddr)
 		}
 	case drkeyFlags.Name():
 		err := drkeyFlags.Parse(os.Args[2:])
@@ -578,7 +601,7 @@ func main() {
 			exitWithUsage()
 		}
 		serverMode := drkeyMode == "server"
-		runDRKeyDemo(daemonAddr, serverMode, drkeyServerAddr, drkeyClientAddr)
+		runDRKeyDemo(daemonAddr, serverMode, &drkeyServerAddr, &drkeyClientAddr)
 	case "x":
 		runX()
 	default:

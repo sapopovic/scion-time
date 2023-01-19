@@ -10,7 +10,6 @@ import (
 
 	"github.com/libp2p/go-reuseport"
 
-	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/slayers"
 
 	"github.com/scionproto/scion/pkg/private/common"
@@ -138,7 +137,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				log.Printf("%s Failed to forward packet: %v, %v\n", scionServerLogPrefix, err, m)
 				continue
 			}
-		} else {
+		} else if localHostPort != underlay.EndhostPort {
 			var ntpreq ntp.Packet
 			err = ntp.DecodePacket(&ntpreq, udpLayer.Payload)
 			if err != nil {
@@ -205,8 +204,12 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	}
 }
 
-func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
-	log.Printf("%s Listening in %v on %v:%d via SCION", scionServerLogPrefix, localIA, localHost.IP, localHost.Port)
+func StartSCIONServer(localHost *net.UDPAddr) error {
+	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, localHost.Port)
+
+	if localHost.Port == underlay.EndhostPort {
+		log.Fatalf("%s Invalid listener port: %v", scionServerLogPrefix, localHost.Port)
+	}
 
 	localHostPort := localHost.Port
 	localHost.Port = underlay.EndhostPort
@@ -226,6 +229,24 @@ func StartSCIONServer(localIA addr.IA, localHost *net.UDPAddr) error {
 			go runSCIONServer(conn.(*net.UDPConn), localHostPort)
 		}
 	}
+
+	return nil
+}
+
+func StartSCIONDisptacher(localHost *net.UDPAddr) error {
+	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, underlay.EndhostPort)
+
+	if localHost.Port == underlay.EndhostPort {
+		log.Fatalf("%s Invalid listener port: %v", scionServerLogPrefix, localHost.Port)
+	}
+
+	localHost.Port = underlay.EndhostPort
+
+	conn, err := net.ListenUDP("udp", localHost)
+	if err != nil {
+		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
+	}
+	go runSCIONServer(conn, localHost.Port)
 
 	return nil
 }

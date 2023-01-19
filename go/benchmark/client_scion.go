@@ -21,7 +21,7 @@ import (
 	"example.com/scion-time/go/net/udp"
 )
 
-func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr snet.UDPAddr) {
+func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
 	dc, err := daemon.NewService(daemonAddr).Connect(ctx)
