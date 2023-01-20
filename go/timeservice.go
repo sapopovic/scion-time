@@ -330,6 +330,21 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
 
+	scionClocksAvailable := false
+	for _, c := range refClocks {
+		_, ok := c.(*ntpReferenceClockSCION)
+		if ok {
+			scionClocksAvailable = true
+			break
+		}
+	}
+	if scionClocksAvailable {
+		err := core.StartSCIONDisptacher(snet.CopyUDPAddr(localAddr.Host))
+		if err != nil {
+			log.Fatalf("Failed to start internal SCION disptacher: %v", err)
+		}
+	}
+
 	if len(refClocks) != 0 {
 		syncToRefClocks(lclk)
 		go runLocalClockSync(lclk)
