@@ -18,6 +18,7 @@ import (
 
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
+	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
 )
 
@@ -232,7 +233,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 		if len(decoded) >= 3 &&
 			decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
-			tsOpt, err := e2eLayer.FindOption(253 /* experimental */)
+			tsOpt, err := e2eLayer.FindOption(scion.OptTypeTimestamp)
 			if err == nil {
 				cRxTime0, err := udp.TimestampFromOOBData(tsOpt.OptData)
 				if err == nil {

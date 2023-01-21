@@ -17,6 +17,7 @@ import (
 
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
+	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
 )
 
@@ -26,10 +27,6 @@ const (
 
 	scionServerNumGoroutine = 8
 )
-
-type TimestampOption struct {
-	*slayers.EndToEndOption
-}
 
 func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	var err error
@@ -113,8 +110,8 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			dstAddrPort := netip.AddrPortFrom(dstAddr, udpLayer.DstPort)
 
 			if len(oob) != 0 {
-				tsOpt := TimestampOption{EndToEndOption: &slayers.EndToEndOption{}}
-				tsOpt.OptType = 253 // experimental
+				tsOpt := scion.TimestampOption{EndToEndOption: &slayers.EndToEndOption{}}
+				tsOpt.OptType = scion.OptTypeTimestamp
 				tsOpt.OptData = oob
 
 				e2eExtn := slayers.EndToEndExtn{}
