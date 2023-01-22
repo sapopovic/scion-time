@@ -115,9 +115,11 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 				}
 			}
 			if i != tssi.len {
+				// ensure uniqueness of rx timestamps per clientID
 				(*rxt).Add(1)
 				rxt64 = Time64FromTime(*rxt)
 				if !(*rxt).Before(*txt) {
+					// ensure strict monotonicity of rx/tx timestamps
 					*txt = *rxt
 					(*txt).Add(1)
 					txt64 = Time64FromTime(*txt)
@@ -128,12 +130,14 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 		}
 	} else {
 		if len(tss) == tssCap && !tssQ[0].qval.After(rxt64) {
+			// remove minimum timestamp queue item
 			x := heap.Pop(&tssQ).(*tssItem)
 			delete(tss, x.key)
 		}
 		if len(tss) == tssCap {
 			tssi = nil
 		} else {
+			// add timestamp store item
 			tssi = &tssItem{key: clientID}
 			tss[tssi.key] = tssi
 			tssi.qval = rxt64
@@ -145,7 +149,7 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 	resp.ReferenceTime = txt64
 	resp.ReceiveTime = rxt64
 	if req.ReceiveTime != req.TransmitTime && o != -1 {
-		// interleaved mode
+		// interleaved mode: serve from timestamp store
 		resp.OriginTime = req.ReceiveTime
 		resp.TransmitTime = tssi.buf[o].txt
 	} else {
@@ -155,16 +159,20 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 
 	if tssi != nil {
 		if max != -1 && rxt64.After(tssi.buf[max].rxt) {
+			// new maximum rx timestamp, fix queue accordingly
 			tssi.qval = rxt64
 			heap.Fix(&tssQ, tssi.qidx)
 		}
 		if o != -1 {
+			// maintain interleaved mode timestamp values
 			tssi.buf[o].rxt = rxt64
 			tssi.buf[o].txt = txt64
 		} else if tssi.len == cap(tssi.buf) {
+			// replace minimum timestamp values
 			tssi.buf[min].rxt = rxt64
 			tssi.buf[min].txt = txt64
 		} else {
+			// add timestamp values
 			tssi.buf[tssi.len].rxt = rxt64
 			tssi.buf[tssi.len].txt = txt64
 			tssi.len++
@@ -174,6 +182,7 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 
 func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 	if !rxt.Before(*txt) {
+		// ensure strict monotonicity of rx/tx timestamps
 		*txt = rxt
 		(*txt).Add(1)
 	}
@@ -184,10 +193,37 @@ func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 	tssi, ok := tss[clientID]
 	if ok {
 		rxt64 := Time64FromTime(rxt)
-		for i := 0; i != tssi.len; i++ {
+		txt64 := Time64FromTime(*txt)
+		var i, x, max0, max1 int
+		for i, x, max0, max1 = 0, -1, -1, -1; i != tssi.len; i++ {
 			if tssi.buf[i].rxt == rxt64 {
-				tssi.buf[i].txt = Time64FromTime(*txt)
-				break
+				x = i
+			}
+			if max0 == -1 || !tssi.buf[i].rxt.Before(tssi.buf[max0].rxt) {
+				max0, max1 = i, max0
+			} else if max1 == -1 || !tssi.buf[i].rxt.Before(tssi.buf[max1].rxt) {
+				max1 = i
+			}
+		}
+		if x != -1 {
+			if tssi.buf[x].txt != txt64 {
+				tssi.buf[x].txt = txt64
+			} else {
+				// No updated tx timestamp available
+				if tssi.len == 1 {
+					// remove timestamp store item
+					heap.Remove(&tssQ, tssi.qidx)
+					delete(tss, tssi.key)
+				} else {
+					// remove timestamp values
+					if tssi.buf[max0].rxt == rxt64 {
+						// new maximum rx timestamp, fix queue accordingly
+						tssi.qval = tssi.buf[max1].rxt
+						heap.Fix(&tssQ, tssi.qidx)
+					}
+					tssi.buf[x] = tssi.buf[tssi.len - 1]
+					tssi.len--
+				}
 			}
 		}
 	}

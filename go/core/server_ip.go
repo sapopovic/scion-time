@@ -83,14 +83,16 @@ func runIPServer(conn *net.UDPConn) {
 		}
 		txt1, id, err := udp.ReadTXTimestamp(conn)
 		if err != nil {
+			txt1 = txt0
 			log.Printf("%s Failed to read packet tx timestamp: err = %v", ipServerLogPrefix, err)
 		} else if id != txId {
+			txt1 = txt0
 			log.Printf("%s Failed to read packet tx timestamp: id = %v (expected %v)", ipServerLogPrefix, id, txId)
 			txId = id + 1
 		} else {
-			ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
 			txId++
 		}
+		ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
 	}
 }
 
