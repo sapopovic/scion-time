@@ -3,17 +3,20 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"time"
 
 	"example.com/scion-time/go/core"
+	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/go/driver/mbg"
 )
 
 func runX() {
-	clk := &core.SystemClock{}
-	t0 := clk.Now()
-	fmt.Println(t0)
-	clk.Step(10 * time.Minute)
-	t1 := clk.Now()
-	fmt.Println(t1)
+	ctx := context.Background()
+	lclk := &core.SystemClock{}
+	timebase.RegisterClock(lclk)
+	for {
+		mbg.MeasureClockOffset(ctx, "/dev/mbgclock0")
+		lclk.Sleep(1 * time.Second)
+	}
 }
