@@ -27,6 +27,7 @@ import (
 	"example.com/scion-time/go/drkeyutil"
 
 	"example.com/scion-time/go/net/udp"
+	"example.com/scion-time/go/net/scion"
 
 	mbgd "example.com/scion-time/go/driver/mbg"
 	ntpd "example.com/scion-time/go/driver/ntp"
@@ -436,7 +437,7 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *sn
 	}
 
 	meta := drkey.HostHostMeta{
-		ProtoId:  drkey.SCMP,
+		ProtoId:  scion.DRKeyProtoIdTS,
 		Validity: time.Now(),
 		SrcIA:    serverAddr.IA,
 		DstIA:    clientAddr.IA,

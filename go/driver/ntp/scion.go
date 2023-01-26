@@ -23,12 +23,15 @@ import (
 )
 
 const (
-	udpHdrLen = 8
+	authOptDataLen = 12 /* len(metadata) */ + 16 /* len(MAC) */
+	udpHdrLen      = 8
 )
 
 type SCIONClient struct {
-	Interleaved bool
-	prev        struct {
+	Authenticated bool
+	Interleaved   bool
+	authOpt       slayers.PacketAuthOption
+	prev          struct {
 		reference string
 		cTxTime   ntp.Time64
 		cRxTime   ntp.Time64
@@ -55,6 +58,13 @@ func compareIPs(x, y []byte) int {
 
 func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPAddr,
 	path snet.Path) (offset time.Duration, weight float64, err error) {
+	if c.Authenticated {
+		if c.authOpt.EndToEndOption == nil {
+			c.authOpt.EndToEndOption = &slayers.EndToEndOption{}
+			c.authOpt.OptData = make([]byte, authOptDataLen)
+		}
+	}
+
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
 	if err != nil {
 		return offset, weight, err
@@ -128,6 +138,39 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 	}
 	scionLayer.PayloadLen = uint16(udpHdrLen + len(buf))
 	layers = append(layers, &scionLayer)
+
+	if c.Authenticated {
+		spi := scion.PacketAuthClientSPI
+		algo := scion.PacketAuthAlgorithm
+		ts := uint32(0) // @@@
+		sn := uint32(0) // @@@
+
+		optData := c.authOpt.OptData[:cap(c.authOpt.OptData)]
+		optData[0] = byte(spi >> 24)
+		optData[1] = byte(spi >> 16)
+		optData[2] = byte(spi >> 8)
+		optData[3] = byte(spi)
+		optData[4] = byte(algo)
+		optData[5] = byte(ts >> 16)
+		optData[6] = byte(ts >> 8)
+		optData[7] = byte(ts)
+		optData[8] = 0
+		optData[9] = byte(sn >> 16)
+		optData[10] = byte(sn >> 8)
+		optData[11] = byte(sn)
+		optData[12], optData[13], optData[14], optData[15] = 0, 0, 0, 0
+		optData[16], optData[17], optData[18], optData[19] = 0, 0, 0, 0
+		optData[20], optData[21], optData[22], optData[23] = 0, 0, 0, 0
+		optData[24], optData[25], optData[26], optData[27] = 0, 0, 0, 0
+
+		c.authOpt.OptType = slayers.OptTypeAuthenticator
+		c.authOpt.OptData = optData
+		c.authOpt.OptAlign = [2]uint8{4, 2}
+		c.authOpt.OptDataLen = 0
+		c.authOpt.ActualLength = 0
+
+		// @@@
+	}
 
 	var udpLayer slayers.UDP
 	udpLayer.SrcPort = uint16(localPort)
