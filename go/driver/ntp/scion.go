@@ -300,10 +300,12 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()), off.Nanoseconds(),
 			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()), rtd.Nanoseconds())
 
-		c.prev.reference = reference
-		c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
-		c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
-		c.prev.sRxTime = ntpresp.ReceiveTime
+		if c.Interleaved {
+			c.prev.reference = reference
+			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
+			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
+			c.prev.sRxTime = ntpresp.ReceiveTime
+		}
 
 		// offset, weight = off, 1000.0
 
