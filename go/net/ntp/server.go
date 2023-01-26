@@ -221,7 +221,7 @@ func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 						tssi.qval = tssi.buf[max1].rxt
 						heap.Fix(&tssQ, tssi.qidx)
 					}
-					tssi.buf[x] = tssi.buf[tssi.len - 1]
+					tssi.buf[x] = tssi.buf[tssi.len-1]
 					tssi.len--
 				}
 			}
