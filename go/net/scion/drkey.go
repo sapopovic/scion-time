@@ -10,6 +10,7 @@ const (
 	DRKeyEpochLater            = 0
 	DRKeyProtoIdTS             = drkey.SCMP
 
+	PacketAuthOptDataLen = 12 /* len(metadata) */ + 16 /* len(MAC) */
 
 	PacketAuthClientSPI = uint32(DRKeyTypeHostHost) << 18 |
 		uint32(DRKeyDirectionReceiverSide) << 17 |

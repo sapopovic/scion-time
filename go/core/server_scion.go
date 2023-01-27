@@ -29,8 +29,6 @@ const (
 )
 
 func runSCIONServer(conn *net.UDPConn, localHostPort int) {
-	var err error
-
 	defer conn.Close()
 	_ = udp.EnableTimestamping(conn)
 
@@ -41,19 +39,13 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	var (
 		scionLayer slayers.SCION
 		hbhLayer   slayers.HopByHopExtnSkipper
-		e2eLayer   slayers.EndToEndExtnSkipper
+		e2eLayer   slayers.EndToEndExtn
 		udpLayer   slayers.UDP
 		scmpLayer  slayers.SCMP
 	)
 	scionLayer.RecyclePaths()
-	err = udpLayer.SetNetworkLayerForChecksum(&scionLayer)
-	if err != nil {
-		panic(err)
-	}
-	err = scmpLayer.SetNetworkLayerForChecksum(&scionLayer)
-	if err != nil {
-		panic(err)
-	}
+	udpLayer.SetNetworkLayerForChecksum(&scionLayer)
+	scmpLayer.SetNetworkLayerForChecksum(&scionLayer)
 	parser := gopacket.NewDecodingLayerParser(
 		slayers.LayerTypeSCION, &scionLayer, &hbhLayer, &e2eLayer, &udpLayer, &scmpLayer,
 	)
@@ -98,9 +90,25 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			continue
 		}
 
-		if len(decoded) != 2 {
-			panic("not yet implemented")
+		authenticated := false
+		if len(decoded) >= 3 &&
+			decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
+			authOpt, err := e2eLayer.FindOption(slayers.OptTypeAuthenticator)
+			if err == nil {
+				optData := authOpt.OptData
+				if len(optData) == scion.PacketAuthOptDataLen {
+					spi := uint32(optData[3]) |
+						uint32(optData[2]) << 8 |
+						uint32(optData[1]) << 16 |
+						uint32(optData[0]) << 24
+					algo := uint8(optData[4])
+					if spi == scion.PacketAuthClientSPI && algo == scion.PacketAuthAlgorithm {
+						log.Print("@@@")
+					}
+				}
+			}
 		}
+		_ = authenticated
 
 		if int(udpLayer.DstPort) != localHostPort {
 			dstAddr, ok := netip.AddrFromSlice(scionLayer.RawDstAddr)
@@ -108,6 +116,10 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				panic("unexpected IP address byte slice")
 			}
 			dstAddrPort := netip.AddrPortFrom(dstAddr, udpLayer.DstPort)
+
+			if len(decoded) != 2 {
+				panic("not yet implemented")
+			}
 
 			if len(oob) != 0 {
 				tsOpt := scion.TimestampOption{EndToEndOption: &slayers.EndToEndOption{}}
@@ -169,6 +181,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			if err != nil {
 				panic(err)
 			}
+			scionLayer.NextHdr = slayers.L4UDP
 
 			udpLayer.DstPort, udpLayer.SrcPort = udpLayer.SrcPort, udpLayer.DstPort
 			ntp.EncodePacket(&udpLayer.Payload, &ntpresp)

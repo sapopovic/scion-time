@@ -10,6 +10,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const (
+ 	HdrLen = 8
+)
+
 var (
 	errTimestampNotFound = errors.New("failed to read timestamp from out of band data")
 	errUnexpectedData    = errors.New("failed to read out of band data")

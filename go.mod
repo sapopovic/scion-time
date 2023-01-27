@@ -2,11 +2,12 @@ module example.com/scion-time
 
 go 1.19
 
-replace github.com/scionproto/scion => github.com/scionproto/scion v0.8.1-0.20221031101136-004ab1897fd4
+replace github.com/scionproto/scion => github.com/scionproto/scion v0.8.1-0.20230125160204-f3b508f14f8c
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2
 	github.com/facebook/time v0.0.0-20221028152543-83a59dce1a6c
+	github.com/google/gopacket v1.1.19
 	github.com/libp2p/go-reuseport v0.2.0
 	github.com/scionproto/scion v0.0.0-00010101000000-000000000000
 	golang.org/x/sys v0.1.0
@@ -19,7 +20,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dchest/cmac v0.0.0-20150527144652-62ff55a1048c // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/gopacket v1.1.19 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect

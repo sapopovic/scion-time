@@ -363,7 +363,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	ctx := context.Background()
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
-	c := &ntpd.IPClient{Interleaved: true}
+	c := &ntpd.IPClient{InterleavedMode: true}
 	for n := 2; n != 0; n-- {
 		_, _, err = c.MeasureClockOffsetIP(ctx, localAddr.Host, remoteAddr.Host)
 		if err != nil {
@@ -406,7 +406,10 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	log.Printf("\t%v", sp)
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
-	c := &ntpd.SCIONClient{Interleaved: true}
+	c := &ntpd.SCIONClient{
+		InterleavedMode: true,
+		DRKeyFetcher: drkeyutil.NewFetcher(dc),
+	}
 	for n := 2; n != 0; n-- {
 		_, _, err = c.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
 		if err != nil {

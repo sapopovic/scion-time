@@ -10,28 +10,31 @@ import (
 
 	"github.com/google/gopacket"
 
+	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/snet"
+	"github.com/scionproto/scion/pkg/spao"
 
 	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/private/topology/underlay"
 
 	"example.com/scion-time/go/core/timebase"
+
+	"example.com/scion-time/go/drkeyutil"
+
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
 )
 
-const (
-	authOptDataLen = 12 /* len(metadata) */ + 16 /* len(MAC) */
-	udpHdrLen      = 8
-)
-
 type SCIONClient struct {
-	Authenticated bool
-	Interleaved   bool
-	authOpt       slayers.PacketAuthOption
-	prev          struct {
+	InterleavedMode bool
+	DRKeyFetcher    *drkeyutil.Fetcher
+	auth            struct {
+		opt slayers.PacketAuthOption
+		buf []byte
+	}
+	prev            struct {
 		reference string
 		cTxTime   ntp.Time64
 		cRxTime   ntp.Time64
@@ -58,11 +61,10 @@ func compareIPs(x, y []byte) int {
 
 func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPAddr,
 	path snet.Path) (offset time.Duration, weight float64, err error) {
-	if c.Authenticated {
-		if c.authOpt.EndToEndOption == nil {
-			c.authOpt.EndToEndOption = &slayers.EndToEndOption{}
-			c.authOpt.OptData = make([]byte, authOptDataLen)
-		}
+	if c.DRKeyFetcher != nil && c.auth.opt.EndToEndOption == nil {
+		c.auth.opt.EndToEndOption = &slayers.EndToEndOption{}
+		c.auth.opt.OptData = make([]byte, scion.PacketAuthOptDataLen)
+		c.auth.buf = make([]byte, spao.MACBufferSize)
 	}
 
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
@@ -105,7 +107,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 	ntpreq := ntp.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
-	if c.Interleaved && reference == c.prev.reference &&
+	if c.InterleavedMode && reference == c.prev.reference &&
 		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= time.Second {
 		ntpreq.OriginTime = c.prev.sRxTime
 		ntpreq.ReceiveTime = c.prev.cRxTime
@@ -114,8 +116,6 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		ntpreq.TransmitTime = ntp.Time64FromTime(cTxTime0)
 	}
 	ntp.EncodePacket(&buf, &ntpreq)
-
-	var layers []gopacket.SerializableLayer
 
 	var scionLayer slayers.SCION
 	scionLayer.SrcIA = localAddr.IA
@@ -133,63 +133,105 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		panic(err)
 	}
 	scionLayer.NextHdr = slayers.L4UDP
-	if len(buf) > math.MaxUint16-udpHdrLen {
+	if len(buf) > math.MaxUint16-udp.HdrLen {
 		panic("payload too large")
 	}
-	scionLayer.PayloadLen = uint16(udpHdrLen + len(buf))
-	layers = append(layers, &scionLayer)
-
-	if c.Authenticated {
-		spi := scion.PacketAuthClientSPI
-		algo := scion.PacketAuthAlgorithm
-		ts := uint32(0) // @@@
-		sn := uint32(0) // @@@
-
-		optData := c.authOpt.OptData[:cap(c.authOpt.OptData)]
-		optData[0] = byte(spi >> 24)
-		optData[1] = byte(spi >> 16)
-		optData[2] = byte(spi >> 8)
-		optData[3] = byte(spi)
-		optData[4] = byte(algo)
-		optData[5] = byte(ts >> 16)
-		optData[6] = byte(ts >> 8)
-		optData[7] = byte(ts)
-		optData[8] = 0
-		optData[9] = byte(sn >> 16)
-		optData[10] = byte(sn >> 8)
-		optData[11] = byte(sn)
-		optData[12], optData[13], optData[14], optData[15] = 0, 0, 0, 0
-		optData[16], optData[17], optData[18], optData[19] = 0, 0, 0, 0
-		optData[20], optData[21], optData[22], optData[23] = 0, 0, 0, 0
-		optData[24], optData[25], optData[26], optData[27] = 0, 0, 0, 0
-
-		c.authOpt.OptType = slayers.OptTypeAuthenticator
-		c.authOpt.OptData = optData
-		c.authOpt.OptAlign = [2]uint8{4, 2}
-		c.authOpt.OptDataLen = 0
-		c.authOpt.ActualLength = 0
-
-		// @@@
-	}
+	scionLayer.PayloadLen = uint16(udp.HdrLen + len(buf))
 
 	var udpLayer slayers.UDP
 	udpLayer.SrcPort = uint16(localPort)
 	udpLayer.DstPort = uint16(remoteAddr.Host.Port)
-	err = udpLayer.SetNetworkLayerForChecksum(&scionLayer)
-	if err != nil {
-		panic(err)
-	}
-	layers = append(layers, &udpLayer, gopacket.Payload(buf))
+	udpLayer.SetNetworkLayerForChecksum(&scionLayer)
+
+	payload := gopacket.Payload(buf)
 
 	buffer := gopacket.NewSerializeBuffer()
 	options := gopacket.SerializeOptions{
 		ComputeChecksums: true,
 		FixLengths:       true,
 	}
-	err = gopacket.SerializeLayers(buffer, options, layers...)
+
+	err = payload.SerializeTo(buffer, options)
 	if err != nil {
 		panic(err)
 	}
+	buffer.PushLayer(payload.LayerType())
+
+	err = udpLayer.SerializeTo(buffer, options)
+	if err != nil {
+		panic(err)
+	}
+	buffer.PushLayer(udpLayer.LayerType())
+
+	if c.DRKeyFetcher != nil {
+		key, err := c.DRKeyFetcher.FetchHostHostKey(ctx, drkey.HostHostMeta{
+			ProtoId:  scion.DRKeyProtoIdTS,
+			Validity: cTxTime0,
+			SrcIA:    remoteAddr.IA,
+			DstIA:    localAddr.IA,
+			SrcHost:  remoteAddr.Host.IP.String(),
+			DstHost:  localAddr.Host.IP.String(),
+		})
+		if err == nil {
+			spi := scion.PacketAuthClientSPI
+			algo := scion.PacketAuthAlgorithm
+
+			optData := c.auth.opt.OptData[:cap(c.auth.opt.OptData)]
+			optData[0] = byte(spi >> 24)
+			optData[1] = byte(spi >> 16)
+			optData[2] = byte(spi >> 8)
+			optData[3] = byte(spi)
+			optData[4] = byte(algo)
+			// TODO: Timestamp and Sequence Number
+			// See https://github.com/scionproto/scion/pull/4300
+			optData[5], optData[6], optData[7] = 0, 0, 0
+			optData[8], optData[9], optData[10], optData[11] = 0, 0, 0, 0
+			// Authenticator
+			optData[12], optData[13], optData[14], optData[15] = 0, 0, 0, 0
+			optData[16], optData[17], optData[18], optData[19] = 0, 0, 0, 0
+			optData[20], optData[21], optData[22], optData[23] = 0, 0, 0, 0
+			optData[24], optData[25], optData[26], optData[27] = 0, 0, 0, 0
+
+			c.auth.opt.OptType = slayers.OptTypeAuthenticator
+			c.auth.opt.OptData = optData
+			c.auth.opt.OptAlign = [2]uint8{4, 2}
+			c.auth.opt.OptDataLen = 0
+			c.auth.opt.ActualLength = 0
+
+			_, err = spao.ComputeAuthCMAC(
+				spao.MACInput{
+					Key:        key.Key[:],
+					Header:     c.auth.opt,
+					ScionLayer: &scionLayer,
+					PldType:    scionLayer.NextHdr,
+					Pld:        buffer.Bytes(),
+				},
+				c.auth.buf,
+				c.auth.opt.Authenticator(),
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			e2eExtn := slayers.EndToEndExtn{}
+			e2eExtn.NextHdr = scionLayer.NextHdr
+			e2eExtn.Options = []*slayers.EndToEndOption{c.auth.opt.EndToEndOption}
+
+			err = e2eExtn.SerializeTo(buffer, options)
+			if err != nil {
+				panic(err)
+			}
+			buffer.PushLayer(e2eExtn.LayerType())
+
+			scionLayer.NextHdr = slayers.End2EndClass
+		}
+	}
+
+	err = scionLayer.SerializeTo(buffer, options)
+	if err != nil {
+		panic(err)
+	}
+	buffer.PushLayer(scionLayer.LayerType())
 
 	n, err := conn.WriteToUDPAddrPort(buffer.Bytes(), nextHop)
 	if err != nil {
@@ -296,7 +338,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		}
 
 		interleaved := false
-		if c.Interleaved && ntpresp.OriginTime == c.prev.cRxTime {
+		if c.InterleavedMode && ntpresp.OriginTime == c.prev.cRxTime {
 			interleaved = true
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
@@ -343,7 +385,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()), off.Nanoseconds(),
 			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()), rtd.Nanoseconds())
 
-		if c.Interleaved {
+		if c.InterleavedMode {
 			c.prev.reference = reference
 			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
 			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)

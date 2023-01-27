@@ -227,8 +227,8 @@ github.com/prometheus/procfs v0.6.0 h1:mxy4L2jP6qMonqmq+aTtOx1ifVWUgG/TAmntgbh3x
 github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
-github.com/scionproto/scion v0.8.1-0.20221031101136-004ab1897fd4 h1:s+3aZU+GhKjGKMPGsBuwsWLY7I7VWMzkuXNAvKsI0Gc=
-github.com/scionproto/scion v0.8.1-0.20221031101136-004ab1897fd4/go.mod h1:RM4NSEQdjvsFMKKzr8dqocO96kCPlDkdHD5LGRzn7e4=
+github.com/scionproto/scion v0.8.1-0.20230125160204-f3b508f14f8c h1:BC+vSYdiqEvduX2hTaPk1qP0+E5Vuq/Hvjk8nOSLkDQ=
+github.com/scionproto/scion v0.8.1-0.20230125160204-f3b508f14f8c/go.mod h1:RM4NSEQdjvsFMKKzr8dqocO96kCPlDkdHD5LGRzn7e4=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/sirupsen/logrus v1.6.0/go.mod h1:7uNnSEd1DgxDLC74fIahvMZmmYsHGZGEOFrfsX/uA88=

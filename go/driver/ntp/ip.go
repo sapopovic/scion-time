@@ -13,8 +13,8 @@ import (
 )
 
 type IPClient struct {
-	Interleaved bool
-	prev        struct {
+	InterleavedMode bool
+	prev            struct {
 		reference string
 		cTxTime   ntp.Time64
 		cRxTime   ntp.Time64
@@ -58,7 +58,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 	ntpreq := ntp.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
-	if c.Interleaved && reference == c.prev.reference &&
+	if c.InterleavedMode && reference == c.prev.reference &&
 		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= time.Second {
 		ntpreq.OriginTime = c.prev.sRxTime
 		ntpreq.ReceiveTime = c.prev.cRxTime
@@ -130,7 +130,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		}
 
 		interleaved := false
-		if c.Interleaved && ntpresp.OriginTime == c.prev.cRxTime {
+		if c.InterleavedMode && ntpresp.OriginTime == c.prev.cRxTime {
 			interleaved = true
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
@@ -177,7 +177,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()), off.Nanoseconds(),
 			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()), rtd.Nanoseconds())
 
-		if c.Interleaved {
+		if c.InterleavedMode {
 			c.prev.reference = reference
 			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
 			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
