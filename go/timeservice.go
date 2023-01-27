@@ -26,8 +26,8 @@ import (
 
 	"example.com/scion-time/go/drkeyutil"
 
-	"example.com/scion-time/go/net/udp"
 	"example.com/scion-time/go/net/scion"
+	"example.com/scion-time/go/net/udp"
 
 	mbgd "example.com/scion-time/go/driver/mbg"
 	ntpd "example.com/scion-time/go/driver/ntp"
@@ -286,11 +286,12 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		go runGlobalClockSync(lclk)
 	}
 
+	dc := newDaemonConnector(context.Background(), daemonAddr)
 	err := core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
 		log.Fatalf("Failed to start IP server: %v", err)
 	}
-	err = core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host))
+	err = core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), drkeyutil.NewFetcher(dc))
 	if err != nil {
 		log.Fatalf("Failed to start SCION server: %v", err)
 	}
@@ -313,11 +314,12 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		log.Fatalf("Unexpected configuration: scion_peers=%v", netClocks)
 	}
 
+	dc := newDaemonConnector(context.Background(), daemonAddr)
 	err := core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
 	if err != nil {
 		log.Fatalf("Failed to start IP server: %v", err)
 	}
-	err = core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host))
+	err = core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), drkeyutil.NewFetcher(dc))
 	if err != nil {
 		log.Fatalf("Failed to start SCION server: %v", err)
 	}
@@ -387,9 +389,6 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 
 	dc := newDaemonConnector(ctx, daemonAddr)
-	if err != nil {
-		log.Fatalf("Failed to create SCION daemon connector: %v", err)
-	}
 	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 	if err != nil {
 		log.Fatalf("Failed to lookup paths: %v:", err)
@@ -408,7 +407,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
 	c := &ntpd.SCIONClient{
 		InterleavedMode: true,
-		DRKeyFetcher: drkeyutil.NewFetcher(dc),
+		DRKeyFetcher:    drkeyutil.NewFetcher(dc),
 	}
 	for n := 2; n != 0; n-- {
 		_, _, err = c.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
@@ -432,12 +431,8 @@ func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 }
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
-	var err error
 	ctx := context.Background()
 	dc := newDaemonConnector(ctx, daemonAddr)
-	if err != nil {
-		log.Fatalf("Failed to create SCION daemon connector: %v", err)
-	}
 
 	meta := drkey.HostHostMeta{
 		ProtoId:  scion.DRKeyProtoIdTS,

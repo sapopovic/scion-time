@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+	"crypto/subtle"
 	"log"
 	"net"
 	"net/netip"
@@ -10,12 +12,17 @@ import (
 
 	"github.com/libp2p/go-reuseport"
 
+	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/slayers"
+	"github.com/scionproto/scion/pkg/spao"
 
 	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/private/topology/underlay"
 
 	"example.com/scion-time/go/core/timebase"
+
+	"example.com/scion-time/go/drkeyutil"
+
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
@@ -28,13 +35,21 @@ const (
 	scionServerNumGoroutine = 8
 )
 
-func runSCIONServer(conn *net.UDPConn, localHostPort int) {
+func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) {
 	defer conn.Close()
 	_ = udp.EnableTimestamping(conn)
+
+	ctx := context.Background()
 
 	var txId uint32
 	buf := make([]byte, common.SupportedMTU)
 	oob := make([]byte, udp.TimestampLen())
+
+	var authBuf, authMAC []byte
+	if f != nil {
+		authBuf = make([]byte, spao.MACBufferSize)
+		authMAC = make([]byte, scion.PacketAuthMACLen)
+	}
 
 	var (
 		scionLayer slayers.SCION
@@ -90,31 +105,67 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 			continue
 		}
 
+		srcAddr, ok := netip.AddrFromSlice(scionLayer.RawSrcAddr)
+		if !ok {
+			panic("unexpected IP address byte slice")
+		}
+		dstAddr, ok := netip.AddrFromSlice(scionLayer.RawDstAddr)
+		if !ok {
+			panic("unexpected IP address byte slice")
+		}
+
 		authenticated := false
-		if len(decoded) >= 3 &&
+		if f != nil && len(decoded) >= 3 &&
 			decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
-			authOpt, err := e2eLayer.FindOption(slayers.OptTypeAuthenticator)
+			opt, err := e2eLayer.FindOption(slayers.OptTypeAuthenticator)
 			if err == nil {
-				optData := authOpt.OptData
+				optData := opt.OptData
 				if len(optData) == scion.PacketAuthOptDataLen {
 					spi := uint32(optData[3]) |
-						uint32(optData[2]) << 8 |
-						uint32(optData[1]) << 16 |
-						uint32(optData[0]) << 24
+						uint32(optData[2])<<8 |
+						uint32(optData[1])<<16 |
+						uint32(optData[0])<<24
 					algo := uint8(optData[4])
 					if spi == scion.PacketAuthClientSPI && algo == scion.PacketAuthAlgorithm {
-						log.Print("@@@")
+						sv, err := f.FetchSecretValue(ctx, drkey.SecretValueMeta{
+							Validity: rxt,
+							ProtoId:  scion.DRKeyProtoIdTS,
+						})
+						if err == nil {
+							key, err := drkeyutil.DeriveHostHostKey(sv, drkey.HostHostMeta{
+								ProtoId:  scion.DRKeyProtoIdTS,
+								Validity: rxt,
+								SrcIA:    scionLayer.DstIA,
+								DstIA:    scionLayer.SrcIA,
+								SrcHost:  dstAddr.String(),
+								DstHost:  srcAddr.String(),
+							})
+							if err == nil {
+								_, err = spao.ComputeAuthCMAC(
+									spao.MACInput{
+										Key:        key.Key[:],
+										Header:     slayers.PacketAuthOption{opt},
+										ScionLayer: &scionLayer,
+										PldType:    slayers.L4UDP,
+										Pld:        buf[len(buf)-int(udpLayer.Length):],
+									},
+									authBuf,
+									authMAC,
+								)
+								if err != nil {
+									panic(err)
+								}
+								if subtle.ConstantTimeCompare(optData[scion.PacketAuthMetadataLen:], authMAC) != 0 {
+									authenticated = true
+								}
+							}
+						}
 					}
 				}
 			}
 		}
-		_ = authenticated
 
 		if int(udpLayer.DstPort) != localHostPort {
-			dstAddr, ok := netip.AddrFromSlice(scionLayer.RawDstAddr)
-			if !ok {
-				panic("unexpected IP address byte slice")
-			}
 			dstAddrPort := netip.AddrPortFrom(dstAddr, udpLayer.DstPort)
 
 			if len(decoded) != 2 {
@@ -160,14 +211,11 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 				continue
 			}
 
-			srcAddr, ok := netip.AddrFromSlice(scionLayer.RawSrcAddr)
-			if !ok {
-				panic("unexpected IP address byte slice")
-			}
 			clientID := scionLayer.SrcIA.String() + "," + srcAddr.String()
 
 			if scionServerLogEnabled {
-				log.Printf("%s Received request at %v from %s: %+v", scionServerLogPrefix, rxt, clientID, ntpreq)
+				log.Printf("%s Received request at %v from %s, authenticated: %v: %+v",
+					scionServerLogPrefix, rxt, clientID, authenticated, ntpreq)
 			}
 
 			var txt0 time.Time
@@ -216,7 +264,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int) {
 	}
 }
 
-func StartSCIONServer(localHost *net.UDPAddr) error {
+func StartSCIONServer(localHost *net.UDPAddr, f *drkeyutil.Fetcher) error {
 	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, localHost.Port)
 
 	if localHost.Port == underlay.EndhostPort {
@@ -231,14 +279,14 @@ func StartSCIONServer(localHost *net.UDPAddr) error {
 		if err != nil {
 			log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
 		}
-		go runSCIONServer(conn, localHostPort)
+		go runSCIONServer(conn, localHostPort, f)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
 			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
 				log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
 			}
-			go runSCIONServer(conn.(*net.UDPConn), localHostPort)
+			go runSCIONServer(conn.(*net.UDPConn), localHostPort, f)
 		}
 	}
 
@@ -258,7 +306,7 @@ func StartSCIONDisptacher(localHost *net.UDPAddr) error {
 	if err != nil {
 		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
 	}
-	go runSCIONServer(conn, localHost.Port)
+	go runSCIONServer(conn, localHost.Port, nil /* DRKey fetcher */)
 
 	return nil
 }

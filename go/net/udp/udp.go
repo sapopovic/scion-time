@@ -11,7 +11,7 @@ import (
 )
 
 const (
- 	HdrLen = 8
+	HdrLen = 8
 )
 
 var (

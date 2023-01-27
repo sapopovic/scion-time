@@ -34,7 +34,7 @@ type SCIONClient struct {
 		opt slayers.PacketAuthOption
 		buf []byte
 	}
-	prev            struct {
+	prev struct {
 		reference string
 		cTxTime   ntp.Time64
 		cRxTime   ntp.Time64
