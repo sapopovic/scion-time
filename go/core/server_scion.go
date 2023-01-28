@@ -45,10 +45,12 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 	buf := make([]byte, common.SupportedMTU)
 	oob := make([]byte, udp.TimestampLen())
 
-	var authBuf, authMAC []byte
+	var authKey, authBuf, authMAC, authOptData []byte
+	var authOpt slayers.PacketAuthOption
 	if f != nil {
 		authBuf = make([]byte, spao.MACBufferSize)
 		authMAC = make([]byte, scion.PacketAuthMACLen)
+		authOpt.EndToEndOption = &slayers.EndToEndOption{}
 	}
 
 	var (
@@ -73,6 +75,9 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 	}
 
 	for {
+		authKey = nil
+		authOptData = nil
+
 		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
@@ -119,13 +124,13 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 			decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
 			opt, err := e2eLayer.FindOption(slayers.OptTypeAuthenticator)
 			if err == nil {
-				optData := opt.OptData
-				if len(optData) == scion.PacketAuthOptDataLen {
-					spi := uint32(optData[3]) |
-						uint32(optData[2])<<8 |
-						uint32(optData[1])<<16 |
-						uint32(optData[0])<<24
-					algo := uint8(optData[4])
+				authOptData = opt.OptData
+				if len(authOptData) == scion.PacketAuthOptDataLen {
+					spi := uint32(authOptData[3]) |
+						uint32(authOptData[2])<<8 |
+						uint32(authOptData[1])<<16 |
+						uint32(authOptData[0])<<24
+					algo := uint8(authOptData[4])
 					if spi == scion.PacketAuthClientSPI && algo == scion.PacketAuthAlgorithm {
 						sv, err := f.FetchSecretValue(ctx, drkey.SecretValueMeta{
 							Validity: rxt,
@@ -141,9 +146,10 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 								DstHost:  srcAddr.String(),
 							})
 							if err == nil {
+								authKey = key.Key[:]
 								_, err = spao.ComputeAuthCMAC(
 									spao.MACInput{
-										Key:        key.Key[:],
+										Key:        authKey,
 										Header:     slayers.PacketAuthOption{opt},
 										ScionLayer: &scionLayer,
 										PldType:    slayers.L4UDP,
@@ -155,7 +161,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 								if err != nil {
 									panic(err)
 								}
-								if subtle.ConstantTimeCompare(optData[scion.PacketAuthMetadataLen:], authMAC) != 0 {
+								if subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], authMAC) != 0 {
 									authenticated = true
 								}
 							}
@@ -234,10 +240,83 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 			udpLayer.DstPort, udpLayer.SrcPort = udpLayer.SrcPort, udpLayer.DstPort
 			ntp.EncodePacket(&udpLayer.Payload, &ntpresp)
 
-			err = gopacket.SerializeLayers(buffer, options, &scionLayer, &udpLayer, gopacket.Payload(udpLayer.Payload))
+			payload := gopacket.Payload(udpLayer.Payload)
+
+			buffer.Clear()
+
+			err = payload.SerializeTo(buffer, options)
 			if err != nil {
 				panic(err)
 			}
+			buffer.PushLayer(payload.LayerType())
+
+			err = udpLayer.SerializeTo(buffer, options)
+			if err != nil {
+				panic(err)
+			}
+			buffer.PushLayer(udpLayer.LayerType())
+
+			if authKey != nil {
+				spi := scion.PacketAuthServerSPI
+				algo := scion.PacketAuthAlgorithm
+
+				authOptData = authOptData[:scion.PacketAuthOptDataLen]
+				authOptData[0] = byte(spi >> 24)
+				authOptData[1] = byte(spi >> 16)
+				authOptData[2] = byte(spi >> 8)
+				authOptData[3] = byte(spi)
+				authOptData[4] = byte(algo)
+				// TODO: Timestamp and Sequence Number
+				// See https://github.com/scionproto/scion/pull/4300
+				authOptData[5], authOptData[6], authOptData[7] = 0, 0, 0
+				authOptData[8], authOptData[9], authOptData[10], authOptData[11] = 0, 0, 0, 0
+				// Authenticator
+				authOptData[12], authOptData[13], authOptData[14], authOptData[15] = 0, 0, 0, 0
+				authOptData[16], authOptData[17], authOptData[18], authOptData[19] = 0, 0, 0, 0
+				authOptData[20], authOptData[21], authOptData[22], authOptData[23] = 0, 0, 0, 0
+				authOptData[24], authOptData[25], authOptData[26], authOptData[27] = 0, 0, 0, 0
+
+				authOpt.OptType = slayers.OptTypeAuthenticator
+				authOpt.OptData = authOptData
+				authOpt.OptAlign = [2]uint8{4, 2}
+				authOpt.OptDataLen = 0
+				authOpt.ActualLength = 0
+
+				_, err = spao.ComputeAuthCMAC(
+					spao.MACInput{
+						Key:        authKey,
+						Header:     authOpt,
+						ScionLayer: &scionLayer,
+						PldType:    scionLayer.NextHdr,
+						Pld:        buffer.Bytes(),
+					},
+					authBuf,
+					authOpt.Authenticator(),
+				)
+				if err != nil {
+					panic(err)
+				}
+
+				e2eExtn := slayers.EndToEndExtn{}
+				e2eExtn.NextHdr = scionLayer.NextHdr
+				e2eExtn.Options = []*slayers.EndToEndOption{authOpt.EndToEndOption}
+
+if false /* @@@ */ {
+				err = e2eExtn.SerializeTo(buffer, options)
+				if err != nil {
+					panic(err)
+				}
+				buffer.PushLayer(e2eExtn.LayerType())
+
+				scionLayer.NextHdr = slayers.End2EndClass
+}
+			}
+
+			err = scionLayer.SerializeTo(buffer, options)
+			if err != nil {
+				panic(err)
+			}
+			buffer.PushLayer(scionLayer.LayerType())
 
 			n, err = conn.WriteToUDPAddrPort(buffer.Bytes(), lastHop)
 			if err != nil {
@@ -264,7 +343,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 	}
 }
 
-func StartSCIONServer(localHost *net.UDPAddr, f *drkeyutil.Fetcher) error {
+func StartSCIONServer(localHost *net.UDPAddr, f *drkeyutil.Fetcher) {
 	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, localHost.Port)
 
 	if localHost.Port == underlay.EndhostPort {
@@ -289,11 +368,9 @@ func StartSCIONServer(localHost *net.UDPAddr, f *drkeyutil.Fetcher) error {
 			go runSCIONServer(conn.(*net.UDPConn), localHostPort, f)
 		}
 	}
-
-	return nil
 }
 
-func StartSCIONDisptacher(localHost *net.UDPAddr) error {
+func StartSCIONDisptacher(localHost *net.UDPAddr) {
 	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, underlay.EndhostPort)
 
 	if localHost.Port == underlay.EndhostPort {
@@ -307,6 +384,4 @@ func StartSCIONDisptacher(localHost *net.UDPAddr) error {
 		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
 	}
 	go runSCIONServer(conn, localHost.Port, nil /* DRKey fetcher */)
-
-	return nil
 }

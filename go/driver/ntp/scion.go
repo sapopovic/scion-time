@@ -33,6 +33,7 @@ type SCIONClient struct {
 	auth            struct {
 		opt slayers.PacketAuthOption
 		buf []byte
+		key []byte
 	}
 	prev struct {
 		reference string
@@ -173,6 +174,8 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			DstHost:  localAddr.Host.IP.String(),
 		})
 		if err == nil {
+			c.auth.key = key.Key[:]
+
 			spi := scion.PacketAuthClientSPI
 			algo := scion.PacketAuthAlgorithm
 
@@ -200,7 +203,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 			_, err = spao.ComputeAuthCMAC(
 				spao.MACInput{
-					Key:        key.Key[:],
+					Key:        c.auth.key,
 					Header:     c.auth.opt,
 					ScionLayer: &scionLayer,
 					PldType:    scionLayer.NextHdr,

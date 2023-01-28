@@ -287,14 +287,8 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	}
 
 	dc := newDaemonConnector(context.Background(), daemonAddr)
-	err := core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
-	if err != nil {
-		log.Fatalf("Failed to start IP server: %v", err)
-	}
-	err = core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), drkeyutil.NewFetcher(dc))
-	if err != nil {
-		log.Fatalf("Failed to start SCION server: %v", err)
-	}
+	core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
+	core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), drkeyutil.NewFetcher(dc))
 
 	select {}
 }
@@ -315,14 +309,8 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	}
 
 	dc := newDaemonConnector(context.Background(), daemonAddr)
-	err := core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
-	if err != nil {
-		log.Fatalf("Failed to start IP server: %v", err)
-	}
-	err = core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), drkeyutil.NewFetcher(dc))
-	if err != nil {
-		log.Fatalf("Failed to start SCION server: %v", err)
-	}
+	core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
+	core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), drkeyutil.NewFetcher(dc))
 
 	select {}
 }
@@ -342,10 +330,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		}
 	}
 	if scionClocksAvailable {
-		err := core.StartSCIONDisptacher(snet.CopyUDPAddr(localAddr.Host))
-		if err != nil {
-			log.Fatalf("Failed to start internal SCION disptacher: %v", err)
-		}
+		core.StartSCIONDisptacher(snet.CopyUDPAddr(localAddr.Host))
 	}
 
 	if len(refClocks) != 0 {
@@ -382,10 +367,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	timebase.RegisterClock(lclk)
 
 	if dispatcherMode == dispatcherModeInternal {
-		err = core.StartSCIONDisptacher(snet.CopyUDPAddr(localAddr.Host))
-		if err != nil {
-			log.Fatalf("Failed to start internal SCION disptacher: %v", err)
-		}
+		core.StartSCIONDisptacher(snet.CopyUDPAddr(localAddr.Host))
 	}
 
 	dc := newDaemonConnector(ctx, daemonAddr)

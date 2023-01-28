@@ -96,7 +96,7 @@ func runIPServer(conn *net.UDPConn) {
 	}
 }
 
-func StartIPServer(localHost *net.UDPAddr) error {
+func StartIPServer(localHost *net.UDPAddr) {
 	log.Printf("%s Listening on %v:%d via IP", ipServerLogPrefix, localHost.IP, localHost.Port)
 
 	if ipServerNumGoroutine == 1 {
@@ -114,6 +114,4 @@ func StartIPServer(localHost *net.UDPAddr) error {
 			go runIPServer(conn.(*net.UDPConn))
 		}
 	}
-
-	return nil
 }
