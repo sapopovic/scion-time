@@ -178,6 +178,22 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 				panic("not yet implemented")
 			}
 
+			payload := gopacket.Payload(udpLayer.Payload)
+
+			buffer.Clear()
+
+			err = payload.SerializeTo(buffer, options)
+			if err != nil {
+				panic(err)
+			}
+			buffer.PushLayer(payload.LayerType())
+
+			err = udpLayer.SerializeTo(buffer, options)
+			if err != nil {
+				panic(err)
+			}
+			buffer.PushLayer(udpLayer.LayerType())
+
 			if len(oob) != 0 {
 				tsOpt := scion.TimestampOption{EndToEndOption: &slayers.EndToEndOption{}}
 				tsOpt.OptType = scion.OptTypeTimestamp
@@ -187,16 +203,22 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 				e2eExtn.NextHdr = scionLayer.NextHdr
 				e2eExtn.Options = []*slayers.EndToEndOption{tsOpt.EndToEndOption}
 
-				scionLayer.NextHdr = slayers.End2EndClass
-				err = gopacket.SerializeLayers(buffer, options, &scionLayer, &e2eExtn, &udpLayer, gopacket.Payload(udpLayer.Payload))
+				err = e2eExtn.SerializeTo(buffer, options)
+				if err != nil {
+					panic(err)
+				}
+				buffer.PushLayer(e2eExtn.LayerType())
 
 				n += (int(e2eExtn.ExtLen) + 1) * 4
-			} else {
-				err = gopacket.SerializeLayers(buffer, options, &scionLayer, &udpLayer, gopacket.Payload(udpLayer.Payload))
+
+				scionLayer.NextHdr = slayers.End2EndClass
 			}
+
+			err = scionLayer.SerializeTo(buffer, options)
 			if err != nil {
 				panic(err)
 			}
+			buffer.PushLayer(scionLayer.LayerType())
 
 			m, err := conn.WriteToUDPAddrPort(buffer.Bytes(), dstAddrPort)
 			if err != nil || m != n {
