@@ -3,7 +3,6 @@ package ntp
 import (
 	"context"
 	"log"
-	"math"
 	"net"
 	"net/netip"
 	"time"
@@ -134,10 +133,6 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		panic(err)
 	}
 	scionLayer.NextHdr = slayers.L4UDP
-	if len(buf) > math.MaxUint16-udp.HdrLen {
-		panic("payload too large")
-	}
-	scionLayer.PayloadLen = uint16(udp.HdrLen + len(buf))
 
 	var udpLayer slayers.UDP
 	udpLayer.SrcPort = uint16(localPort)
@@ -323,10 +318,15 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
 			tsOpt, err := e2eLayer.FindOption(scion.OptTypeTimestamp)
 			if err == nil {
+				log.Print("@@@: tsOpt.OptData=", tsOpt.OptData)
 				cRxTime0, err := udp.TimestampFromOOBData(tsOpt.OptData)
 				if err == nil {
 					cRxTime = cRxTime0
 				}
+			}
+			authOpt, err := e2eLayer.FindOption(slayers.OptTypeAuthenticator)
+			if err == nil {
+				log.Print("@@@: authOpt.OptData=", authOpt.OptData)
 			}
 		}
 
