@@ -2,6 +2,7 @@ package ntp
 
 import (
 	"context"
+	"crypto/subtle"
 	"log"
 	"net"
 	"net/netip"
@@ -32,7 +33,7 @@ type SCIONClient struct {
 	auth            struct {
 		opt slayers.PacketAuthOption
 		buf []byte
-		key []byte
+		mac []byte
 	}
 	prev struct {
 		reference string
@@ -65,7 +66,9 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		c.auth.opt.EndToEndOption = &slayers.EndToEndOption{}
 		c.auth.opt.OptData = make([]byte, scion.PacketAuthOptDataLen)
 		c.auth.buf = make([]byte, spao.MACBufferSize)
+		c.auth.mac = make([]byte, scion.PacketAuthMACLen)		
 	}
+	var authKey []byte
 
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
 	if err != nil {
@@ -169,7 +172,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			DstHost:  localAddr.Host.IP.String(),
 		})
 		if err == nil {
-			c.auth.key = key.Key[:]
+			authKey = key.Key[:]
 
 			spi := scion.PacketAuthClientSPI
 			algo := scion.PacketAuthAlgorithm
@@ -198,7 +201,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 			_, err = spao.ComputeAuthCMAC(
 				spao.MACInput{
-					Key:        c.auth.key,
+					Key:        authKey,
 					Header:     c.auth.opt,
 					ScionLayer: &scionLayer,
 					PldType:    scionLayer.NextHdr,
@@ -314,19 +317,45 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			return offset, weight, err
 		}
 
+		authenticated := false
 		if len(decoded) >= 3 &&
 			decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
 			tsOpt, err := e2eLayer.FindOption(scion.OptTypeTimestamp)
 			if err == nil {
-				log.Print("@@@: tsOpt.OptData=", tsOpt.OptData)
 				cRxTime0, err := udp.TimestampFromOOBData(tsOpt.OptData)
 				if err == nil {
 					cRxTime = cRxTime0
 				}
 			}
-			authOpt, err := e2eLayer.FindOption(slayers.OptTypeAuthenticator)
-			if err == nil {
-				log.Print("@@@: authOpt.OptData=", authOpt.OptData)
+			if authKey != nil {
+				authOpt, err := e2eLayer.FindOption(slayers.OptTypeAuthenticator)
+				if err == nil {
+					authOptData := authOpt.OptData
+					if len(authOptData) == scion.PacketAuthOptDataLen {
+						spi := uint32(authOptData[3]) |
+							uint32(authOptData[2])<<8 |
+							uint32(authOptData[1])<<16 |
+							uint32(authOptData[0])<<24
+						algo := uint8(authOptData[4])
+						if spi == scion.PacketAuthServerSPI && algo == scion.PacketAuthAlgorithm {
+							_, err = spao.ComputeAuthCMAC(
+								spao.MACInput{
+									Key:        authKey,
+									Header:     slayers.PacketAuthOption{authOpt},
+									ScionLayer: &scionLayer,
+									PldType:    slayers.L4UDP,
+									Pld:        buf[len(buf)-int(udpLayer.Length):],
+								},
+								c.auth.buf,
+								c.auth.mac,
+							)
+							if err != nil {
+								panic(err)
+							}
+							authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], c.auth.mac) != 0
+						}
+					}
+				}
 			}
 		}
 
@@ -383,8 +412,8 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
-		log.Printf("%s %s,%s, interleaved mode: %v, clock offset: %fs (%dns), round trip delay: %fs (%dns)",
-			ntpLogPrefix, remoteAddr.IA, remoteAddr.Host, interleaved,
+		log.Printf("%s %s,%s, interleaved mode: %v, authenticated: %v, clock offset: %fs (%dns), round trip delay: %fs (%dns)",
+			ntpLogPrefix, remoteAddr.IA, remoteAddr.Host, interleaved, authenticated,
 			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()), off.Nanoseconds(),
 			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()), rtd.Nanoseconds())
 

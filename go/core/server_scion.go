@@ -213,9 +213,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 									if err != nil {
 										panic(err)
 									}
-									if subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], authMAC) != 0 {
-										authenticated = true
-									}
+									authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], authMAC) != 0
 								}
 							}
 						}
