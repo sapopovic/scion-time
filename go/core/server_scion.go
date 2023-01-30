@@ -124,7 +124,10 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 
 			payload := gopacket.Payload(udpLayer.Payload)
 
-			buffer.Clear()
+			err = buffer.Clear()
+			if err != nil {
+				panic(err)
+			}
 
 			err = payload.SerializeTo(buffer, options)
 			if err != nil {
@@ -259,7 +262,10 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 
 			payload := gopacket.Payload(udpLayer.Payload)
 
-			buffer.Clear()
+			err = buffer.Clear()
+			if err != nil {
+				panic(err)
+			}
 
 			err = payload.SerializeTo(buffer, options)
 			if err != nil {
