@@ -12,6 +12,7 @@ import (
 
 	"github.com/libp2p/go-reuseport"
 
+	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/spao"
@@ -364,7 +365,18 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 	}
 }
 
-func StartSCIONServer(localHost *net.UDPAddr, f *drkeyutil.Fetcher) {
+func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
+	s := &daemon.Service{
+		Address: daemonAddr,
+	}
+	c, err := s.Connect(ctx)
+	if err != nil {
+		log.Fatal("%s Failed to create SCION Daemon connector:", scionServerLogPrefix, err)
+	}
+	return c
+}
+
+func StartSCIONServer(localHost *net.UDPAddr, daemonAddr string) {
 	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, localHost.Port)
 
 	if localHost.Port == underlay.EndhostPort {
@@ -375,6 +387,7 @@ func StartSCIONServer(localHost *net.UDPAddr, f *drkeyutil.Fetcher) {
 	localHost.Port = underlay.EndhostPort
 
 	if scionServerNumGoroutine == 1 {
+		f := drkeyutil.NewFetcher(newDaemonConnector(context.Background(), daemonAddr))
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
 			log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
@@ -382,6 +395,7 @@ func StartSCIONServer(localHost *net.UDPAddr, f *drkeyutil.Fetcher) {
 		go runSCIONServer(conn, localHostPort, f)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
+			f := drkeyutil.NewFetcher(newDaemonConnector(context.Background(), daemonAddr))
 			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
 				log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)

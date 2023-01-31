@@ -286,9 +286,8 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		go runGlobalClockSync(lclk)
 	}
 
-	dc := newDaemonConnector(context.Background(), daemonAddr)
 	core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
-	core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), drkeyutil.NewFetcher(dc))
+	core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), daemonAddr)
 
 	select {}
 }
@@ -308,9 +307,8 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		log.Fatalf("Unexpected configuration: scion_peers=%v", netClocks)
 	}
 
-	dc := newDaemonConnector(context.Background(), daemonAddr)
 	core.StartIPServer(snet.CopyUDPAddr(localAddr.Host))
-	core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), drkeyutil.NewFetcher(dc))
+	core.StartSCIONServer(snet.CopyUDPAddr(localAddr.Host), daemonAddr)
 
 	select {}
 }
