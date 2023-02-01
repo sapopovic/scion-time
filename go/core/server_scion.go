@@ -381,7 +381,7 @@ func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector
 	}
 	c, err := s.Connect(ctx)
 	if err != nil {
-		log.Fatal("%s Failed to create SCION Daemon connector:", scionServerLogPrefix, err)
+		log.Fatalf("%s Failed to create SCION Daemon connector: %v", scionServerLogPrefix, err)
 	}
 	return c
 }
