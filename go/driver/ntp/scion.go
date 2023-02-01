@@ -31,7 +31,7 @@ type SCIONClient struct {
 	InterleavedMode bool
 	DRKeyFetcher    *drkeyutil.Fetcher
 	auth            struct {
-		opt slayers.PacketAuthOption
+		opt *slayers.EndToEndOption
 		buf []byte
 		mac []byte
 	}
@@ -62,11 +62,11 @@ func compareIPs(x, y []byte) int {
 
 func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPAddr,
 	path snet.Path) (offset time.Duration, weight float64, err error) {
-	if c.DRKeyFetcher != nil && c.auth.opt.EndToEndOption == nil {
-		c.auth.opt.EndToEndOption = &slayers.EndToEndOption{}
+	if c.DRKeyFetcher != nil && c.auth.opt == nil {
+		c.auth.opt = &slayers.EndToEndOption{}
 		c.auth.opt.OptData = make([]byte, scion.PacketAuthOptDataLen)
 		c.auth.buf = make([]byte, spao.MACBufferSize)
-		c.auth.mac = make([]byte, scion.PacketAuthMACLen)		
+		c.auth.mac = make([]byte, scion.PacketAuthMACLen)
 	}
 	var authKey []byte
 
@@ -177,38 +177,39 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			spi := scion.PacketAuthClientSPI
 			algo := scion.PacketAuthAlgorithm
 
-			optData := c.auth.opt.OptData[:cap(c.auth.opt.OptData)]
-			optData[0] = byte(spi >> 24)
-			optData[1] = byte(spi >> 16)
-			optData[2] = byte(spi >> 8)
-			optData[3] = byte(spi)
-			optData[4] = byte(algo)
+			authOptData := c.auth.opt.OptData
+			authOptData[0] = byte(spi >> 24)
+			authOptData[1] = byte(spi >> 16)
+			authOptData[2] = byte(spi >> 8)
+			authOptData[3] = byte(spi)
+			authOptData[4] = byte(algo)
 			// TODO: Timestamp and Sequence Number
 			// See https://github.com/scionproto/scion/pull/4300
-			optData[5], optData[6], optData[7] = 0, 0, 0
-			optData[8], optData[9], optData[10], optData[11] = 0, 0, 0, 0
+			authOptData[5], authOptData[6], authOptData[7] = 0, 0, 0
+			authOptData[8], authOptData[9], authOptData[10], authOptData[11] = 0, 0, 0, 0
 			// Authenticator
-			optData[12], optData[13], optData[14], optData[15] = 0, 0, 0, 0
-			optData[16], optData[17], optData[18], optData[19] = 0, 0, 0, 0
-			optData[20], optData[21], optData[22], optData[23] = 0, 0, 0, 0
-			optData[24], optData[25], optData[26], optData[27] = 0, 0, 0, 0
+			authOptData[12], authOptData[13], authOptData[14], authOptData[15] = 0, 0, 0, 0
+			authOptData[16], authOptData[17], authOptData[18], authOptData[19] = 0, 0, 0, 0
+			authOptData[20], authOptData[21], authOptData[22], authOptData[23] = 0, 0, 0, 0
+			authOptData[24], authOptData[25], authOptData[26], authOptData[27] = 0, 0, 0, 0
 
 			c.auth.opt.OptType = slayers.OptTypeAuthenticator
-			c.auth.opt.OptData = optData
-			c.auth.opt.OptAlign = [2]uint8{4, 2}
+			c.auth.opt.OptData = authOptData
+			c.auth.opt.OptAlign[0] = 4
+			c.auth.opt.OptAlign[1] = 2
 			c.auth.opt.OptDataLen = 0
 			c.auth.opt.ActualLength = 0
 
 			_, err = spao.ComputeAuthCMAC(
 				spao.MACInput{
 					Key:        authKey,
-					Header:     c.auth.opt,
+					Header:     slayers.PacketAuthOption{c.auth.opt},
 					ScionLayer: &scionLayer,
 					PldType:    scionLayer.NextHdr,
 					Pld:        buffer.Bytes(),
 				},
 				c.auth.buf,
-				c.auth.opt.Authenticator(),
+				authOptData[scion.PacketAuthMetadataLen:],
 			)
 			if err != nil {
 				panic(err)
@@ -216,7 +217,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 			e2eExtn := slayers.EndToEndExtn{}
 			e2eExtn.NextHdr = scionLayer.NextHdr
-			e2eExtn.Options = []*slayers.EndToEndOption{c.auth.opt.EndToEndOption}
+			e2eExtn.Options = []*slayers.EndToEndOption{c.auth.opt}
 
 			err = e2eExtn.SerializeTo(buffer, options)
 			if err != nil {
@@ -330,29 +331,36 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			if authKey != nil {
 				authOpt, err := e2eLayer.FindOption(slayers.OptTypeAuthenticator)
 				if err == nil {
+					if len(authOpt.OptData) != scion.PacketAuthOptDataLen {
+						panic("unexpected authenticator option data")
+					}
 					authOptData := authOpt.OptData
-					if len(authOptData) == scion.PacketAuthOptDataLen {
-						spi := uint32(authOptData[3]) |
-							uint32(authOptData[2])<<8 |
-							uint32(authOptData[1])<<16 |
-							uint32(authOptData[0])<<24
-						algo := uint8(authOptData[4])
-						if spi == scion.PacketAuthServerSPI && algo == scion.PacketAuthAlgorithm {
-							_, err = spao.ComputeAuthCMAC(
-								spao.MACInput{
-									Key:        authKey,
-									Header:     slayers.PacketAuthOption{authOpt},
-									ScionLayer: &scionLayer,
-									PldType:    slayers.L4UDP,
-									Pld:        buf[len(buf)-int(udpLayer.Length):],
+					spi := uint32(authOptData[3]) |
+						uint32(authOptData[2])<<8 |
+						uint32(authOptData[1])<<16 |
+						uint32(authOptData[0])<<24
+					algo := uint8(authOptData[4])
+					if spi == scion.PacketAuthServerSPI && algo == scion.PacketAuthAlgorithm {
+						_, err = spao.ComputeAuthCMAC(
+							spao.MACInput{
+								Key:        authKey,
+								Header:     slayers.PacketAuthOption{
+									EndToEndOption: authOpt,
 								},
-								c.auth.buf,
-								c.auth.mac,
-							)
-							if err != nil {
-								panic(err)
-							}
-							authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], c.auth.mac) != 0
+								ScionLayer: &scionLayer,
+								PldType:    slayers.L4UDP,
+								Pld:        buf[len(buf)-int(udpLayer.Length):],
+							},
+							c.auth.buf,
+							c.auth.mac,
+						)
+						if err != nil {
+							panic(err)
+						}
+						authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], c.auth.mac) != 0
+						if !authenticated {
+							log.Printf("%s Failed to authenticate packet", ntpLogPrefix)
+							continue
 						}
 					}
 				}
