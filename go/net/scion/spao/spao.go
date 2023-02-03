@@ -180,7 +180,7 @@ func zeroOutMutablePath(orig path.Path, buf []byte) error {
 		copy(buf[20:], []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 		return nil
 	default:
-		return serrors.New(fmt.Sprintf("@@@unknown path type %T", orig))
+		return serrors.New(fmt.Sprintf("unknown path type %T", orig))
 	}
 }
 
