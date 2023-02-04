@@ -118,7 +118,6 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 
 		if int(udpLayer.DstPort) != localHostPort {
 			dstAddrPort := netip.AddrPortFrom(dstAddr, udpLayer.DstPort)
-
 			payload := gopacket.Payload(udpLayer.Payload)
 
 			err = buffer.Clear()
