@@ -174,32 +174,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		if err == nil {
 			authKey = key.Key[:]
 
-			spi := scion.PacketAuthClientSPI
-			algo := scion.PacketAuthAlgorithm
-
-			authOptData := c.auth.opt.OptData
-			authOptData[0] = byte(spi >> 24)
-			authOptData[1] = byte(spi >> 16)
-			authOptData[2] = byte(spi >> 8)
-			authOptData[3] = byte(spi)
-			authOptData[4] = byte(algo)
-			// TODO: Timestamp and Sequence Number
-			// See https://github.com/scionproto/scion/pull/4300
-			authOptData[5], authOptData[6], authOptData[7] = 0, 0, 0
-			authOptData[8], authOptData[9], authOptData[10], authOptData[11] = 0, 0, 0, 0
-			// Authenticator
-			authOptData[12], authOptData[13], authOptData[14], authOptData[15] = 0, 0, 0, 0
-			authOptData[16], authOptData[17], authOptData[18], authOptData[19] = 0, 0, 0, 0
-			authOptData[20], authOptData[21], authOptData[22], authOptData[23] = 0, 0, 0, 0
-			authOptData[24], authOptData[25], authOptData[26], authOptData[27] = 0, 0, 0, 0
-
-			c.auth.opt.OptType = slayers.OptTypeAuthenticator
-			c.auth.opt.OptData = authOptData
-			c.auth.opt.OptAlign[0] = 4
-			c.auth.opt.OptAlign[1] = 2
-			c.auth.opt.OptDataLen = 0
-			c.auth.opt.ActualLength = 0
-
+			scion.PreparePacketAuthOpt(c.auth.opt, scion.PacketAuthSPIClient, scion.PacketAuthAlgorithm)
 			_, err = spao.ComputeAuthCMAC(
 				spao.MACInput{
 					Key:        authKey,
@@ -209,7 +184,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 					Pld:        buffer.Bytes(),
 				},
 				c.auth.buf,
-				authOptData[scion.PacketAuthMetadataLen:],
+				c.auth.opt.OptData[scion.PacketAuthMetadataLen:],
 			)
 			if err != nil {
 				panic(err)
@@ -340,13 +315,11 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 						uint32(authOptData[1])<<16 |
 						uint32(authOptData[0])<<24
 					algo := uint8(authOptData[4])
-					if spi == scion.PacketAuthServerSPI && algo == scion.PacketAuthAlgorithm {
+					if spi == scion.PacketAuthSPIServer && algo == scion.PacketAuthAlgorithm {
 						_, err = spao.ComputeAuthCMAC(
 							spao.MACInput{
 								Key:        authKey,
-								Header:     slayers.PacketAuthOption{
-									EndToEndOption: authOpt,
-								},
+								Header:     slayers.PacketAuthOption{authOpt},
 								ScionLayer: &scionLayer,
 								PldType:    slayers.L4UDP,
 								Pld:        buf[len(buf)-int(udpLayer.Length):],
