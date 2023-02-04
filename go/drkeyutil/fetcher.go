@@ -8,7 +8,7 @@ import (
 )
 
 type Fetcher struct {
-	dc daemon.Connector
+	dc  daemon.Connector
 	svs map[drkey.Protocol]drkey.SecretValue
 }
 
@@ -30,7 +30,7 @@ func (f *Fetcher) FetchHostHostKey(ctx context.Context, meta drkey.HostHostMeta)
 
 func NewFetcher(c daemon.Connector) *Fetcher {
 	return &Fetcher{
-		dc: c,
+		dc:  c,
 		svs: make(map[drkey.Protocol]drkey.SecretValue),
 	}
 }

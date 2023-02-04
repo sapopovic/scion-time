@@ -54,7 +54,7 @@ func Median(ds []time.Duration) time.Duration {
 	if n%2 != 0 {
 		m = ds[i]
 	} else {
-		m = ds[i-1] + (ds[i] - ds[i-1]) / 2
+		m = ds[i-1] + (ds[i]-ds[i-1])/2
 	}
 	return m
 }
@@ -69,6 +69,6 @@ func FaultTolerantMidpoint(ds []time.Duration) time.Duration {
 	})
 	var m time.Duration
 	f := (n - 1) / 3
-	m = ds[f] + (ds[n-1-f] - ds[f]) / 2
+	m = ds[f] + (ds[n-1-f]-ds[f])/2
 	return m
 }
