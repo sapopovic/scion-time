@@ -19,6 +19,9 @@ import (
 	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/private/topology/underlay"
 
+	"go.uber.org/zap"
+
+	"example.com/scion-time/go/core/logbase"
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/drkeyutil"
@@ -361,6 +364,10 @@ func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector
 }
 
 func StartSCIONServer(localHost *net.UDPAddr, daemonAddr string) {
+	logbase.L().Info("server listening via SCION",
+		zap.Any("ip", localHost.IP),
+		zap.Int("port", localHost.Port),
+	)
 	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, localHost.Port)
 
 	if localHost.Port == underlay.EndhostPort {
