@@ -39,11 +39,9 @@ const (
 	scionServerNumGoroutine = 8
 )
 
-func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) {
+func runSCIONServer(ctx context.Context, conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) {
 	defer conn.Close()
 	_ = udp.EnableTimestamping(conn)
-
-	ctx := context.Background()
 
 	var txId uint32
 	buf := make([]byte, common.SupportedMTU)
@@ -82,11 +80,11 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 		oob = oob[:cap(oob)]
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
-			log.Printf("%s Failed to read packet: %v", scionServerLogPrefix, err)
+			logbase.L().Error("failed to read packet", zap.Error(err))
 			continue
 		}
 		if flags != 0 {
-			log.Printf("%s Failed to read packet, flags: %v", scionServerLogPrefix, flags)
+			logbase.L().Error("failed to read packet", zap.Int("flags", flags))
 			continue
 		}
 		oob = oob[:oobn]
@@ -94,19 +92,19 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 		if err != nil {
 			oob = oob[:0]
 			rxt = timebase.Now()
-			log.Printf("%s Failed to read packet rx timestamp: %v", scionServerLogPrefix, err)
+			logbase.L().Error("failed to read packet rx timestamp", zap.Error(err))
 		}
 		buf = buf[:n]
 
 		err = parser.DecodeLayers(buf, &decoded)
 		if err != nil {
-			log.Printf("%s Failed to decode packet: %v", scionServerLogPrefix, err)
+			logbase.L().Info("failed to decode packet", zap.Error(err))
 			continue
 		}
 		validType := len(decoded) >= 2 &&
 			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
 		if !validType {
-			log.Printf("%s Failed to read packet: unexpected type or structure", scionServerLogPrefix)
+			logbase.L().Info("failed to decode packet", zap.String("cause", "unexpected type or structure"))
 			continue
 		}
 
@@ -172,7 +170,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 
 			m, err := conn.WriteToUDPAddrPort(buffer.Bytes(), dstAddrPort)
 			if err != nil || m != len(buffer.Bytes()) {
-				log.Printf("%s Failed to forward packet: %v, %v\n", scionServerLogPrefix, err, m)
+				logbase.L().Error("failed to write packet", zap.Error(err))
 				continue
 			}
 		} else if localHostPort != underlay.EndhostPort {
@@ -227,7 +225,7 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 								}
 								authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], authMAC) != 0
 								if !authenticated {
-									log.Printf("%s Failed to authenticate packet", scionServerLogPrefix)
+									logbase.L().Info("failed to authenticate packet")
 									continue
 								}
 							}
@@ -239,13 +237,13 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 			var ntpreq ntp.Packet
 			err = ntp.DecodePacket(&ntpreq, udpLayer.Payload)
 			if err != nil {
-				log.Printf("%s Failed to decode packet payload: %v", scionServerLogPrefix, err)
+				logbase.L().Info("failed to decode packet payload", zap.Error(err))
 				continue
 			}
 
 			err = ntp.ValidateRequest(&ntpreq, udpLayer.SrcPort)
 			if err != nil {
-				log.Printf("%s Unexpected request packet: %v", scionServerLogPrefix, err)
+				logbase.L().Info("failed to validate packet payload", zap.Error(err))
 				continue
 			}
 
@@ -328,21 +326,17 @@ func runSCIONServer(conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) 
 			buffer.PushLayer(scionLayer.LayerType())
 
 			n, err = conn.WriteToUDPAddrPort(buffer.Bytes(), lastHop)
-			if err != nil {
-				log.Printf("%s Failed to write packet: %v", scionServerLogPrefix, err)
-				continue
-			}
-			if n != len(buffer.Bytes()) {
-				log.Printf("%s Failed to write entire packet: %v/%v", scionServerLogPrefix, n, len(buffer.Bytes()))
+			if err != nil || n != len(buffer.Bytes()) {
+				logbase.L().Error("failed to write packet", zap.Error(err))
 				continue
 			}
 			txt1, id, err := udp.ReadTXTimestamp(conn)
 			if err != nil {
 				txt1 = txt0
-				log.Printf("%s Failed to read packet tx timestamp: err = %v", scionServerLogPrefix, err)
+				logbase.L().Error("failed to read packet tx timestamp", zap.Error(err))
 			} else if id != txId {
 				txt1 = txt0
-				log.Printf("%s Failed to read packet tx timestamp: id = %v (expected %v)", scionServerLogPrefix, id, txId)
+				logbase.L().Error("failed to read packet tx timestamp", zap.Uint32("id", id), zap.Uint32("expected", txId))
 				txId = id + 1
 			} else {
 				txId++
@@ -358,56 +352,54 @@ func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector
 	}
 	c, err := s.Connect(ctx)
 	if err != nil {
-		log.Fatalf("%s Failed to create SCION Daemon connector: %v", scionServerLogPrefix, err)
+		logbase.L().Fatal("failed to create Daemon connector", zap.Error(err))
 	}
 	return c
 }
 
 func StartSCIONServer(localHost *net.UDPAddr, daemonAddr string) {
-	logbase.L().Info("server listening via SCION",
-		zap.Any("ip", localHost.IP),
-		zap.Int("port", localHost.Port),
-	)
-	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, localHost.Port)
+	logbase.L().Info("server listening via SCION", zap.Any("ip", localHost.IP), zap.Int("port", localHost.Port))
 
 	if localHost.Port == underlay.EndhostPort {
-		log.Fatalf("%s Invalid listener port: %v", scionServerLogPrefix, localHost.Port)
+		logbase.L().Fatal("invalid listener port", zap.Int("port", underlay.EndhostPort))
 	}
 
 	localHostPort := localHost.Port
 	localHost.Port = underlay.EndhostPort
 
+	ctx := context.Background()
 	if scionServerNumGoroutine == 1 {
-		f := drkeyutil.NewFetcher(newDaemonConnector(context.Background(), daemonAddr))
+		f := drkeyutil.NewFetcher(newDaemonConnector(ctx, daemonAddr))
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
-			log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
+			logbase.L().Fatal("failed to listen for packets", zap.Error(err))
 		}
-		go runSCIONServer(conn, localHostPort, f)
+		go runSCIONServer(ctx, conn, localHostPort, f)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
-			f := drkeyutil.NewFetcher(newDaemonConnector(context.Background(), daemonAddr))
+			f := drkeyutil.NewFetcher(newDaemonConnector(ctx, daemonAddr))
 			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
-				log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
+				logbase.L().Fatal("failed to listen for packets", zap.Error(err))
 			}
-			go runSCIONServer(conn.(*net.UDPConn), localHostPort, f)
+			go runSCIONServer(ctx, conn.(*net.UDPConn), localHostPort, f)
 		}
 	}
 }
 
 func StartSCIONDisptacher(localHost *net.UDPAddr) {
-	log.Printf("%s Listening on %v:%d via SCION", scionServerLogPrefix, localHost.IP, underlay.EndhostPort)
+	logbase.L().Info("dispatcher listening via SCION", zap.Any("ip", localHost.IP), zap.Int("port", underlay.EndhostPort))
 
 	if localHost.Port == underlay.EndhostPort {
-		log.Fatalf("%s Invalid listener port: %v", scionServerLogPrefix, localHost.Port)
+		logbase.L().Fatal("invalid listener port", zap.Int("port", underlay.EndhostPort))
 	}
 
 	localHost.Port = underlay.EndhostPort
 
+	ctx := context.Background()
 	conn, err := net.ListenUDP("udp", localHost)
 	if err != nil {
-		log.Fatalf("%s Failed to listen for packets: %v", scionServerLogPrefix, err)
+		logbase.L().Fatal("failed to listen for packets", zap.Error(err))
 	}
-	go runSCIONServer(conn, localHost.Port, nil /* DRKey fetcher */)
+	go runSCIONServer(ctx, conn, localHost.Port, nil /* DRKey fetcher */)
 }
