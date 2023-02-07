@@ -32,9 +32,6 @@ import (
 )
 
 const (
-	scionServerLogPrefix  = "[core/server_scion]"
-	scionServerLogEnabled = true
-
 	scionServerNumGoroutine = 8
 )
 
@@ -249,10 +246,8 @@ func runSCIONServer(ctx context.Context, log *zap.Logger,
 
 			clientID := scionLayer.SrcIA.String() + "," + srcAddr.String()
 
-			if scionServerLogEnabled {
-				stdlog.Printf("%s Received request at %v from %s, authenticated: %v: %+v",
-					scionServerLogPrefix, rxt, clientID, authenticated, ntpreq)
-			}
+			stdlog.Printf("[core/server_scion] Received request at %v from %s, authenticated: %v: %+v",
+				rxt, clientID, authenticated, ntpreq)
 
 			var txt0 time.Time
 			var ntpresp ntp.Packet

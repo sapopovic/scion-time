@@ -1,11 +1,13 @@
 package core
 
 import (
-	"log"
+	stdlog "log"
 	"net"
 	"time"
 
 	"github.com/libp2p/go-reuseport"
+
+	"go.uber.org/zap"
 
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/net/ntp"
@@ -13,13 +15,10 @@ import (
 )
 
 const (
-	ipServerLogPrefix  = "[core/server_ip]"
-	ipServerLogEnabled = false
-
 	ipServerNumGoroutine = 8
 )
 
-func runIPServer(conn *net.UDPConn) {
+func runIPServer(log *zap.Logger, conn *net.UDPConn) {
 	defer conn.Close()
 	_ = udp.EnableTimestamping(conn)
 
@@ -31,11 +30,11 @@ func runIPServer(conn *net.UDPConn) {
 		oob = oob[:cap(oob)]
 		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
-			log.Printf("%s Failed to read packet: %v", ipServerLogPrefix, err)
+			log.Error("failed to read packet", zap.Error(err))
 			continue
 		}
 		if flags != 0 {
-			log.Printf("%s Failed to read packet, flags: %v", ipServerLogPrefix, flags)
+			log.Error("failed to read packet", zap.Int("flags", flags))
 			continue
 		}
 		oob = oob[:oobn]
@@ -43,28 +42,27 @@ func runIPServer(conn *net.UDPConn) {
 		if err != nil {
 			oob = oob[:0]
 			rxt = timebase.Now()
-			log.Printf("%s Failed to read packet rx timestamp: %v", ipServerLogPrefix, err)
+			log.Error("failed to read packet rx timestamp", zap.Error(err))
 		}
 		buf = buf[:n]
 
 		var ntpreq ntp.Packet
 		err = ntp.DecodePacket(&ntpreq, buf)
 		if err != nil {
-			log.Printf("%s Failed to decode packet payload: %v", ipServerLogPrefix, err)
+			log.Info("failed to decode packet payload", zap.Error(err))
 			continue
 		}
 
 		err = ntp.ValidateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
-			log.Printf("%s Unexpected request packet: %v", ipServerLogPrefix, err)
+			log.Info("failed to validate packet payload", zap.Error(err))
 			continue
 		}
 
 		clientID := srcAddr.Addr().String()
 
-		if ipServerLogEnabled {
-			log.Printf("%s Received request at %v from %s: %+v", ipServerLogPrefix, rxt, clientID, ntpreq)
-		}
+		stdlog.Printf("[core/server_ip] Received request at %v from %s: %+v",
+			rxt, clientID, ntpreq)
 
 		var txt0 time.Time
 		var ntpresp ntp.Packet
@@ -73,21 +71,17 @@ func runIPServer(conn *net.UDPConn) {
 		ntp.EncodePacket(&buf, &ntpresp)
 
 		n, err = conn.WriteToUDPAddrPort(buf, srcAddr)
-		if err != nil {
-			log.Printf("%s Failed to write packet: %v", ipServerLogPrefix, err)
-			continue
-		}
-		if n != len(buf) {
-			log.Printf("%s Failed to write entire packet: %v/%v", ipServerLogPrefix, n, len(buf))
+		if err != nil || n != len(buf) {
+			log.Error("failed to write packet", zap.Error(err))
 			continue
 		}
 		txt1, id, err := udp.ReadTXTimestamp(conn)
 		if err != nil {
 			txt1 = txt0
-			log.Printf("%s Failed to read packet tx timestamp: err = %v", ipServerLogPrefix, err)
+			log.Error("failed to read packet tx timestamp", zap.Error(err))
 		} else if id != txId {
 			txt1 = txt0
-			log.Printf("%s Failed to read packet tx timestamp: id = %v (expected %v)", ipServerLogPrefix, id, txId)
+			log.Error("failed to read packet tx timestamp", zap.Uint32("id", id), zap.Uint32("expected", txId))
 			txId = id + 1
 		} else {
 			txId++
@@ -96,22 +90,22 @@ func runIPServer(conn *net.UDPConn) {
 	}
 }
 
-func StartIPServer(localHost *net.UDPAddr) {
-	log.Printf("%s Listening on %v:%d via IP", ipServerLogPrefix, localHost.IP, localHost.Port)
+func StartIPServer(log *zap.Logger, localHost *net.UDPAddr) {
+	log.Info("server listening via IP", zap.Any("ip", localHost.IP), zap.Int("port", localHost.Port))
 
 	if ipServerNumGoroutine == 1 {
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
-			log.Fatalf("%s Failed to listen for packets: %v", ipServerLogPrefix, err)
+			log.Fatal("failed to listen for packets", zap.Error(err))
 		}
-		go runIPServer(conn)
+		go runIPServer(log, conn)
 	} else {
 		for i := ipServerNumGoroutine; i > 0; i-- {
 			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
-				log.Fatalf("%s Failed to listen for packets: %v", ipServerLogPrefix, err)
+				log.Fatal("failed to listen for packets", zap.Error(err))
 			}
-			go runIPServer(conn.(*net.UDPConn))
+			go runIPServer(log, conn.(*net.UDPConn))
 		}
 	}
 }
