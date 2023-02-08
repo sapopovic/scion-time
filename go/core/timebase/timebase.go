@@ -2,6 +2,7 @@ package timebase
 
 import (
 	"time"
+	"sync/atomic"
 )
 
 type LocalClock interface {
@@ -14,29 +15,31 @@ type LocalClock interface {
 }
 
 var (
-	lclk LocalClock
+	lclk atomic.Pointer[LocalClock]
 )
 
 func RegisterClock(c LocalClock) {
 	if c == nil {
 		panic("local clock must not be nil")
 	}
-	if lclk != nil {
+	swapped := lclk.CompareAndSwap(nil, &c)
+	if !swapped {
 		panic("local clock already registered")
 	}
-	lclk = c
 }
 
 func Now() time.Time {
-	if lclk == nil {
+	c := *lclk.Load()
+	if c == nil {
 		panic("no local clock registered")
 	}
-	return lclk.Now()
+	return c.Now()
 }
 
 func Epoch() uint64 {
-	if lclk == nil {
+	c := *lclk.Load()
+	if c == nil {
 		panic("no local clock registered")
 	}
-	return lclk.Epoch()
+	return c.Epoch()
 }
