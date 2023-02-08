@@ -3,16 +3,17 @@
 package core
 
 import (
-	"log"
 	"math"
 	"time"
+
+	"go.uber.org/zap"
 
 	"example.com/scion-time/go/core/timebase"
 )
 
-const sysClockLogPrefix = "[core/clock_sys_std]"
-
-type SystemClock struct{}
+type SystemClock struct{
+	Log *zap.Logger
+}
 
 var _ timebase.LocalClock = (*SystemClock)(nil)
 
@@ -29,14 +30,18 @@ func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
 }
 
 func (c *SystemClock) Step(offset time.Duration) {
-	log.Printf("%s core.SystemClock.Step(%v)", sysClockLogPrefix, offset)
+	c.Log.Debug("SystemClock.Step, not yet implemented", zap.Duration("offset", offset))
 }
 
 func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) {
-	log.Printf("%s core.SystemClock.Adjust(%v, %v, %v)", sysClockLogPrefix, offset, duration, frequency)
+	c.Log.Debug("SystemClock.Adjust, not yet implemented",
+		zap.Duration("offset", offset),
+		zap.Duration("duration", duration),
+		zap.Float64("frequency", frequency),
+	)
 }
 
 func (c SystemClock) Sleep(duration time.Duration) {
-	log.Printf("%s core.SystemClock.Sleep(%v)", sysClockLogPrefix, duration)
+	c.Log.Debug("SystemClock.Sleep", zap.Duration("duration", duration))
 	time.Sleep(duration)
 }

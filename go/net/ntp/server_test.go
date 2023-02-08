@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
 
@@ -11,7 +13,7 @@ import (
 )
 
 func init() {
-	lclk := &core.SystemClock{}
+	lclk := &core.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
 }
 

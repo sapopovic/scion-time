@@ -8,10 +8,11 @@ import (
 	"unsafe"
 
 	"fmt"
-	"log"
 	"math"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"golang.org/x/sys/unix"
 
@@ -20,8 +21,6 @@ import (
 )
 
 const (
-	sysClockLogPrefix = "[core/clock_sys_linux]"
-
 	ADJ_FREQUENCY = 2
 
 	STA_PLL      = 1
@@ -35,6 +34,7 @@ type adjustment struct {
 }
 
 type SystemClock struct {
+	Log        *zap.Logger
 	mu         sync.Mutex
 	epoch      uint64
 	adjustment *adjustment
@@ -46,7 +46,7 @@ func now() time.Time {
 	var ts unix.Timespec
 	err := unix.ClockGettime(unix.CLOCK_REALTIME, &ts)
 	if err != nil {
-		panic(fmt.Sprintf("%s unix.ClockGettime failed: %v", sysClockLogPrefix, err))
+		panic(fmt.Errorf("unix.ClockGettime failed: %w", err))
 	}
 	return time.Unix(ts.Unix()).UTC()
 }
@@ -54,18 +54,18 @@ func now() time.Time {
 func sleep(duration time.Duration) {
 	fd, err := unix.TimerfdCreate(unix.CLOCK_REALTIME, unix.TFD_NONBLOCK)
 	if err != nil {
-		panic(fmt.Sprintf("%s unix.TimerfdCreate failed: %v", sysClockLogPrefix, err))
+		panic(fmt.Errorf("unix.TimerfdCreate failed: %w", err))
 	}
 	ts, err := unix.TimeToTimespec(now().Add(duration))
 	if err != nil {
-		panic(fmt.Sprintf("%s unix.TimeToTimespec failed: %v", sysClockLogPrefix, err))
+		panic(fmt.Errorf("unix.TimeToTimespec failed: %w", err))
 	}
 	err = unix.TimerfdSettime(fd, unix.TFD_TIMER_ABSTIME, &unix.ItimerSpec{Value: ts}, nil /* oldValue */)
 	if err != nil {
-		panic(fmt.Sprintf("%s unix.TimerfdSettime failed: %v", sysClockLogPrefix, err))
+		panic(fmt.Errorf("unix.TimerfdSettime failed: %w", err))
 	}
 	if fd < math.MinInt32 || math.MaxInt32 < fd {
-		panic(fmt.Sprintf("%s unexpected fd value", sysClockLogPrefix))
+		panic("unix.TimerfdCreate returned unexpected value")
 	}
 	pollFds := []unix.PollFd{
 		{Fd: int32(fd), Events: unix.POLLIN},
@@ -76,27 +76,27 @@ func sleep(duration time.Duration) {
 			continue
 		}
 		if err != nil {
-			panic(fmt.Sprintf("%s unix.Poll failed: %v", sysClockLogPrefix, err))
+			panic(fmt.Errorf("unix.Poll failed: %w", err))
 		}
 		break
 	}
 	_ = unix.Close(fd)
 }
 
-func setTime(offset time.Duration) {
-	log.Printf("%s set time: %v", sysClockLogPrefix, offset)
+func setTime(log *zap.Logger, offset time.Duration) {
+	log.Debug("setting time", zap.Duration("offset", offset))
 	ts, err := unix.TimeToTimespec(now().Add(offset))
 	if err != nil {
-		panic(fmt.Sprintf("%s unix.TimeToTimespec failed: %v", sysClockLogPrefix, err))
+		panic(fmt.Errorf("unix.TimeToTimespec failed: %w", err))
 	}
 	_, _, errno := unix.Syscall(unix.SYS_CLOCK_SETTIME, uintptr(unix.CLOCK_REALTIME), uintptr(unsafe.Pointer(&ts)), 0)
 	if errno != 0 {
-		panic(fmt.Sprintf("%s unix.ClockSettime failed: %v", sysClockLogPrefix, errno))
+		panic(fmt.Errorf("unix.ClockSettime failed: %w", err))
 	}
 }
 
-func setFrequency(frequency float64) {
-	log.Printf("%s set frequency: %v", sysClockLogPrefix, frequency)
+func setFrequency(log *zap.Logger, frequency float64) {
+	log.Debug("setting frequency", zap.Float64("frequency", frequency))
 	tx := unix.Timex{
 		Modes:  ADJ_FREQUENCY,
 		Freq:   int64(math.Floor(frequency * 65536 * 1e6)),
@@ -104,7 +104,7 @@ func setFrequency(frequency float64) {
 	}
 	_, err := unix.Adjtimex(&tx)
 	if err != nil {
-		panic(fmt.Sprintf("%s unix.Adjtimex failed: %v", sysClockLogPrefix, err))
+		panic(fmt.Errorf("unix.Adjtimex failed: %w", err))
 	}
 }
 
@@ -128,9 +128,9 @@ func (c *SystemClock) Step(offset time.Duration) {
 	if c.adjustment != nil {
 		c.adjustment = nil
 	}
-	setTime(offset)
+	setTime(c.Log, offset)
 	if c.epoch == math.MaxUint64 {
-		panic(fmt.Sprintf("%s epoch overflow", sysClockLogPrefix))
+		panic("epoch overflow")
 	}
 	c.epoch++
 }
@@ -142,32 +142,32 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 		c.adjustment = nil
 	}
 	if duration < 0 {
-		panic(fmt.Sprintf("%s invalid duration value", sysClockLogPrefix))
+		panic("invalid duration value")
 	}
 	duration = duration / time.Second * time.Second
 	if duration == 0 {
 		duration = time.Second
 	}
-	setFrequency(frequency + timemath.Seconds(offset)/timemath.Seconds(duration))
+	setFrequency(c.Log, frequency + timemath.Seconds(offset)/timemath.Seconds(duration))
 	c.adjustment = &adjustment{
 		clock:     c,
 		duration:  duration,
 		afterFreq: frequency,
 	}
-	go func(adj *adjustment) {
+	go func(log *zap.Logger, adj *adjustment) {
 		sleep(adj.duration)
 		adj.clock.mu.Lock()
 		defer adj.clock.mu.Unlock()
 		if adj == adj.clock.adjustment {
-			setFrequency(adj.afterFreq)
+			setFrequency(log, adj.afterFreq)
 		}
-	}(c.adjustment)
+	}(c.Log, c.adjustment)
 }
 
 func (c SystemClock) Sleep(duration time.Duration) {
-	log.Printf("%s sleep: %v", sysClockLogPrefix, duration)
+	c.Log.Debug("sleeping", zap.Duration("duration", duration))
 	if duration < 0 {
-		panic(fmt.Sprintf("%s invalid duration value", sysClockLogPrefix))
+		panic("invalid duration value")
 	}
 	sleep(duration)
 }
