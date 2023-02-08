@@ -1,7 +1,6 @@
 package core
 
 import (
-	stdlog "log"
 	"net"
 	"time"
 
@@ -61,8 +60,11 @@ func runIPServer(log *zap.Logger, conn *net.UDPConn) {
 
 		clientID := srcAddr.Addr().String()
 
-		stdlog.Printf("[core/server_ip] Received request at %v from %s: %+v",
-			rxt, clientID, ntpreq)
+		log.Debug("received request",
+			zap.Time("at", rxt),
+			zap.String("from", clientID),
+			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq}),
+		)
 
 		var txt0 time.Time
 		var ntpresp ntp.Packet

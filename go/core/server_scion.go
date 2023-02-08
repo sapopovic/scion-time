@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"crypto/subtle"
-	stdlog "log"
 	"net"
 	"net/netip"
 	"time"
@@ -246,8 +245,12 @@ func runSCIONServer(ctx context.Context, log *zap.Logger,
 
 			clientID := scionLayer.SrcIA.String() + "," + srcAddr.String()
 
-			stdlog.Printf("[core/server_scion] Received request at %v from %s, authenticated: %v: %+v",
-				rxt, clientID, authenticated, ntpreq)
+			log.Debug("received request",
+				zap.Time("at", rxt),
+				zap.String("from", clientID),
+				zap.Bool("auth", authenticated),
+				zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq}),
+			)
 
 			var txt0 time.Time
 			var ntpresp ntp.Packet
