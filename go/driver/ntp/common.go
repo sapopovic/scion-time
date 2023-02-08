@@ -2,18 +2,17 @@ package ntp
 
 import (
 	"errors"
-	"log"
 	"math"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/core/timemath"
 )
 
 const (
-	ntpLogPrefix = "[driver/ntp]"
-
 	timeout = 1 * time.Second
 )
 
@@ -26,8 +25,10 @@ type filterContext struct {
 }
 
 var (
-	errUnexpectedPacketFlags = errors.New("failed to read packet: unexpected flags")
-	errUnexpectedPacket      = errors.New("failed to read packet: unexpected type or structure")
+	errWrite                  = errors.New("failed to write packet")
+	errUnexpectedPacketFlags  = errors.New("failed to read packet: unexpected flags")
+	errUnexpectedPacketSource = errors.New("failed to read packet: unexpected source")
+	errUnexpectedPacket       = errors.New("failed to read packet: unexpected type or structure")
 
 	filters   = make(map[string]filterContext)
 	filtersMu = sync.RWMutex{}
@@ -42,7 +43,7 @@ func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, we
 	return
 }
 
-func filter(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
+func filter(log *zap.Logger, reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration, weight float64) {
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
@@ -117,11 +118,18 @@ func filter(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 
 	offset, weight = combine(timemath.Duration(lo), timemath.Duration(mid), timemath.Duration(hi), trust)
 
-	log.Printf("%s %s, %v, %fs, %fs, %fs, %fs, %fs, %fs; offeset=%fs, weight=%f",
-		ntpLogPrefix, reference, branch,
-		lo, mid, hi,
-		loLim, f.amid, hiLim,
-		timemath.Seconds(offset), weight)
+	log.Debug("filtered response",
+		zap.String("from", reference),
+		zap.Int("branch", branch),
+		zap.Float64("lo [s]", lo),
+		zap.Float64("mid [s]", mid),
+		zap.Float64("hi [s]", hi),
+		zap.Float64("loLim [s]", loLim),
+		zap.Float64("amid [s]", f.amid),
+		zap.Float64("hiLim [s]", hiLim),
+		zap.Float64("offset [s]", timemath.Seconds(offset)),
+		zap.Float64("weight", weight),
+	)
 
 	return timemath.Inv(offset), weight
 }

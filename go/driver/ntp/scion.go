@@ -3,7 +3,6 @@ package ntp
 import (
 	"context"
 	"crypto/subtle"
-	"log"
 	"net"
 	"net/netip"
 	"time"
@@ -17,6 +16,8 @@ import (
 	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/private/topology/underlay"
 
+	"go.uber.org/zap"
+
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/drkeyutil"
@@ -28,6 +29,7 @@ import (
 )
 
 type SCIONClient struct {
+	Log             *zap.Logger
 	InterleavedMode bool
 	DRKeyFetcher    *drkeyutil.Fetcher
 	auth            struct {
@@ -43,7 +45,7 @@ type SCIONClient struct {
 	}
 }
 
-var defaultSCIONClient = &SCIONClient{}
+var defaultSCIONClient = &SCIONClient{Log: zap.NewNop()}
 
 func compareIPs(x, y []byte) int {
 	addrX, okX := netip.AddrFromSlice(x)
@@ -215,13 +217,12 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		return offset, weight, err
 	}
 	if n != len(buffer.Bytes()) {
-		log.Printf("%s Failed to write entire packet: %v/%v", ntpLogPrefix, n, len(buffer.Bytes()))
-		return offset, weight, err
+		return offset, weight, errWrite
 	}
 	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
 	if err != nil || id != 0 {
 		cTxTime1 = timebase.Now()
-		log.Printf("%s Failed to read packet timestamp: id = %v, err = %v", ntpLogPrefix, id, err)
+		c.Log.Error("failed to read packet tx timestamp", zap.Error(err))
 	}
 
 	oob := make([]byte, udp.TimestampLen())
@@ -231,7 +232,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				c.Log.Error("failed to read packet", zap.Error(err))
 				continue
 			}
 			return offset, weight, err
@@ -239,7 +240,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		if flags != 0 {
 			err = errUnexpectedPacketFlags
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet, flags: %v", ntpLogPrefix, flags)
+				c.Log.Error("failed to read packet", zap.Int("flags", flags))
 				continue
 			}
 			return offset, weight, err
@@ -248,7 +249,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		cRxTime, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			cRxTime = timebase.Now()
-			log.Printf("%s Failed to read packet timestamp: %v", ntpLogPrefix, err)
+			c.Log.Error("failed to read packet rx timestamp", zap.Error(err))
 		}
 		buf = buf[:n]
 
@@ -265,7 +266,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		err = parser.DecodeLayers(buf, &decoded)
 		if err != nil {
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to decode packet: %v", ntpLogPrefix, err)
+				c.Log.Info("failed to decode packet", zap.Error(err))
 				continue
 			}
 			return offset, weight, err
@@ -275,7 +276,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		if !validType {
 			err = errUnexpectedPacket
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				c.Log.Info("failed to decode packet", zap.String("cause", "unexpected type or structure"))
 				continue
 			}
 			return offset, weight, err
@@ -287,7 +288,12 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		if !validSrc || !validDst {
 			err = errUnexpectedPacket
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				if !validSrc {
+					c.Log.Info("received packet from unexpected source")
+				}
+				if !validDst {
+					c.Log.Info("received packet to unexpected destination")
+				}
 				continue
 			}
 			return offset, weight, err
@@ -332,7 +338,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 						}
 						authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], c.auth.mac) != 0
 						if !authenticated {
-							log.Printf("%s Failed to authenticate packet", ntpLogPrefix)
+							c.Log.Info("failed to authenticate packet")
 							continue
 						}
 					}
@@ -344,7 +350,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		err = ntp.DecodePacket(&ntpresp, udpLayer.Payload)
 		if err != nil {
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				c.Log.Info("failed to decode packet payload", zap.Error(err))
 				continue
 			}
 			return offset, weight, err
@@ -356,7 +362,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				c.Log.Info("received packet with unexpected type or structure")
 				continue
 			}
 			return offset, weight, err
@@ -367,7 +373,13 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			return offset, weight, err
 		}
 
-		log.Printf("%s Received packet at %v from %v: %+v", ntpLogPrefix, cRxTime, lastHop, ntpresp)
+		c.Log.Debug("received response",
+			zap.Time("at", cRxTime),
+			zap.String("from", reference),
+			zap.Stringer("via", lastHop),
+			zap.Bool("auth", authenticated),
+			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpresp}),
+		)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
 		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
@@ -393,10 +405,12 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
-		log.Printf("%s %s,%s, interleaved mode: %v, authenticated: %v, clock offset: %fs (%dns), round trip delay: %fs (%dns)",
-			ntpLogPrefix, remoteAddr.IA, remoteAddr.Host, interleaved, authenticated,
-			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()), off.Nanoseconds(),
-			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()), rtd.Nanoseconds())
+		c.Log.Debug("evaluated response",
+			zap.String("from", reference),
+			zap.Bool("interleaved", interleaved),
+			zap.Duration("clock offset", off),
+			zap.Duration("round trip delay", rtd),
+		)
 
 		if c.InterleavedMode {
 			c.prev.reference = reference
@@ -407,7 +421,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 		// offset, weight = off, 1000.0
 
-		offset, weight = filter(reference, t0, t1, t2, t3)
+		offset, weight = filter(c.Log, reference, t0, t1, t2, t3)
 		break
 	}
 

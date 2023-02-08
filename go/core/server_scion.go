@@ -357,7 +357,10 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 
 func StartSCIONServer(ctx context.Context, log *zap.Logger,
 	localHost *net.UDPAddr, daemonAddr string) {
-	log.Info("server listening via SCION", zap.Any("ip", localHost.IP), zap.Int("port", localHost.Port))
+	log.Info("server listening via SCION",
+		zap.Stringer("ip", localHost.IP),
+		zap.Int("port", localHost.Port),
+	)
 
 	if localHost.Port == underlay.EndhostPort {
 		log.Fatal("invalid listener port", zap.Int("port", underlay.EndhostPort))
@@ -387,7 +390,10 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 
 func StartSCIONDisptacher(ctx context.Context, log *zap.Logger,
 	localHost *net.UDPAddr) {
-	log.Info("dispatcher listening via SCION", zap.Any("ip", localHost.IP), zap.Int("port", underlay.EndhostPort))
+	log.Info("dispatcher listening via SCION",
+		zap.Stringer("ip", localHost.IP),
+		zap.Int("port", underlay.EndhostPort),
+	)
 
 	if localHost.Port == underlay.EndhostPort {
 		log.Fatal("invalid listener port", zap.Int("port", underlay.EndhostPort))

@@ -2,17 +2,20 @@ package ntp
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/netip"
 	"time"
 
+	"go.uber.org/zap"
+
 	"example.com/scion-time/go/core/timebase"
+
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
 )
 
 type IPClient struct {
+	Log             *zap.Logger
 	InterleavedMode bool
 	prev            struct {
 		reference string
@@ -22,7 +25,7 @@ type IPClient struct {
 	}
 }
 
-var defaultIPClient = &IPClient{}
+var defaultIPClient = &IPClient{Log: zap.NewNop()}
 
 func compareAddrs(x, y netip.Addr) int {
 	if x.Is4In6() {
@@ -73,13 +76,12 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		return offset, weight, err
 	}
 	if n != len(buf) {
-		log.Printf("%s Failed to write entire packet: %v/%v", ntpLogPrefix, n, len(buf))
-		return offset, weight, err
+		return offset, weight, errWrite
 	}
 	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
 	if err != nil || id != 0 {
 		cTxTime1 = timebase.Now()
-		log.Printf("%s Failed to read packet timestamp: id = %v, err = %v", ntpLogPrefix, id, err)
+		c.Log.Error("failed to read packet tx timestamp", zap.Error(err))
 	}
 
 	oob := make([]byte, udp.TimestampLen())
@@ -89,7 +91,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				c.Log.Error("failed to read packet", zap.Error(err))
 				continue
 			}
 			return offset, weight, err
@@ -97,7 +99,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		if flags != 0 {
 			err = errUnexpectedPacketFlags
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet, flags: %v", ntpLogPrefix, flags)
+				c.Log.Error("failed to read packet", zap.Int("flags", flags))
 				continue
 			}
 			return offset, weight, err
@@ -106,14 +108,14 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		cRxTime, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			cRxTime = timebase.Now()
-			log.Printf("%s Failed to read packet timestamp: %v", ntpLogPrefix, err)
+			c.Log.Error("failed to read packet rx timestamp", zap.Error(err))
 		}
 		buf = buf[:n]
 
 		if compareAddrs(srcAddr.Addr(), remoteAddr.AddrPort().Addr()) != 0 {
-			err = errUnexpectedPacket
+			err = errUnexpectedPacketSource
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				c.Log.Info("received packet from unexpected source")
 				continue
 			}
 			return offset, weight, err
@@ -123,7 +125,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		err = ntp.DecodePacket(&ntpresp, buf)
 		if err != nil {
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				c.Log.Info("failed to decode packet payload", zap.Error(err))
 				continue
 			}
 			return offset, weight, err
@@ -135,7 +137,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
 			if deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Printf("%s Failed to read packet: %v", ntpLogPrefix, err)
+				c.Log.Info("received packet with unexpected type or structure")
 				continue
 			}
 			return offset, weight, err
@@ -146,7 +148,11 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 			return offset, weight, err
 		}
 
-		log.Printf("%s Received packet at %v from %v: %+v", ntpLogPrefix, cRxTime, srcAddr, ntpresp)
+		c.Log.Debug("received response",
+			zap.Time("at", cRxTime),
+			zap.String("from", reference),
+			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpresp}),
+		)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
 		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
@@ -172,10 +178,12 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
-		log.Printf("%s %s, interleaved mode: %v, clock offset: %fs (%dns), round trip delay: %fs (%dns)",
-			ntpLogPrefix, remoteAddr, interleaved,
-			float64(off.Nanoseconds())/float64(time.Second.Nanoseconds()), off.Nanoseconds(),
-			float64(rtd.Nanoseconds())/float64(time.Second.Nanoseconds()), rtd.Nanoseconds())
+		c.Log.Debug("evaluated response",
+			zap.String("from", reference),
+			zap.Bool("interleaved", interleaved),
+			zap.Duration("clock offset", off),
+			zap.Duration("round trip delay", rtd),
+		)
 
 		if c.InterleavedMode {
 			c.prev.reference = reference
@@ -186,7 +194,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 
 		// offset, weight = off, 1000.0
 
-		offset, weight = filter(reference, t0, t1, t2, t3)
+		offset, weight = filter(c.Log, reference, t0, t1, t2, t3)
 
 		break
 	}

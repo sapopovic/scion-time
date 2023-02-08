@@ -357,9 +357,15 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
+	log := zap.Must(zap.NewDevelopment())
+
 	lclk := &core.SystemClock{}
 	timebase.RegisterClock(lclk)
-	c := &ntpd.IPClient{InterleavedMode: true}
+
+	c := &ntpd.IPClient{
+		Log:             log,
+		InterleavedMode: true,
+	}
 	for n := 2; n != 0; n-- {
 		_, _, err = c.MeasureClockOffsetIP(ctx, localAddr.Host, remoteAddr.Host)
 		if err != nil {
@@ -399,6 +405,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
 	c := &ntpd.SCIONClient{
+		Log:             log,
 		InterleavedMode: true,
 		DRKeyFetcher:    drkeyutil.NewFetcher(dc),
 	}

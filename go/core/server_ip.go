@@ -93,7 +93,10 @@ func runIPServer(log *zap.Logger, conn *net.UDPConn) {
 }
 
 func StartIPServer(log *zap.Logger, localHost *net.UDPAddr) {
-	log.Info("server listening via IP", zap.Any("ip", localHost.IP), zap.Int("port", localHost.Port))
+	log.Info("server listening via IP",
+		zap.Stringer("ip", localHost.IP),
+		zap.Int("port", localHost.Port),
+	)
 
 	if ipServerNumGoroutine == 1 {
 		conn, err := net.ListenUDP("udp", localHost)
