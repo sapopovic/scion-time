@@ -25,8 +25,6 @@ type IPClient struct {
 	}
 }
 
-var defaultIPClient = &IPClient{Log: zap.NewNop()}
-
 func compareAddrs(x, y netip.Addr) int {
 	if x.Is4In6() {
 		x = netip.AddrFrom4(x.As4())
@@ -202,7 +200,9 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 	return offset, weight, nil
 }
 
-func MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAddr *net.UDPAddr) (
+func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
+	localAddr, remoteAddr *net.UDPAddr) (
 	offset time.Duration, weight float64, err error) {
-	return defaultIPClient.MeasureClockOffsetIP(ctx, localAddr, remoteAddr)
+	c := IPClient{Log: log}
+	return c.MeasureClockOffsetIP(ctx, localAddr, remoteAddr)
 }

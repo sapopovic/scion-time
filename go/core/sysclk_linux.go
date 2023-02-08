@@ -148,7 +148,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 	if duration == 0 {
 		duration = time.Second
 	}
-	setFrequency(c.Log, frequency + timemath.Seconds(offset)/timemath.Seconds(duration))
+	setFrequency(c.Log, frequency+timemath.Seconds(offset)/timemath.Seconds(duration))
 	c.adjustment = &adjustment{
 		clock:     c,
 		duration:  duration,

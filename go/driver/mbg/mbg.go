@@ -9,13 +9,12 @@ import (
 
 	"context"
 	"encoding/binary"
-	"log"
 	"time"
+
+	"go.uber.org/zap"
 
 	"golang.org/x/sys/unix"
 )
-
-const mbgLogPrefix = "[driver/mbg]"
 
 const (
 	// See https://man7.org/linux/man-pages/man2/ioctl.2.html#NOTES
@@ -57,18 +56,18 @@ func nanoseconds(frac uint32) int64 {
 	return int64((uint64(frac) * uint64(time.Second)) / (1 << 32))
 }
 
-func MeasureClockOffset(ctx context.Context, dev string) (time.Duration, error) {
+func MeasureClockOffset(ctx context.Context, log *zap.Logger, dev string) (time.Duration, error) {
 	fd, err := unix.Open(dev, unix.O_RDWR, 0)
 	if err != nil {
-		log.Printf("%s Failed to open %s: %v", mbgLogPrefix, dev, err)
+		log.Error("unix.Open failed", zap.String("dev", dev), zap.Error(err))
 		return 0, err
 	}
-	defer func() {
+	defer func(log *zap.Logger, dev string) {
 		err = unix.Close(fd)
 		if err != nil {
-			log.Printf("%s Failed to close %s: %v", mbgLogPrefix, dev, err)
+			log.Info("unix.Close failed", zap.String("dev", dev), zap.Error(err))
 		}
-	}()
+	}(log, dev)
 
 	featureType := uint32(2 /* PCPS */)
 	featureNumber := uint32(6 /* HAS_HR_TIME */)
@@ -81,7 +80,7 @@ func MeasureClockOffset(ctx context.Context, dev string) (time.Duration, error) 
 		uintptr(ioctlRequest(ioctlWrite, len(featureData), 'M', 0xa4)),
 		uintptr(unsafe.Pointer(&featureData[0])))
 	if errno != 0 {
-		log.Printf("%s Failed to ioctl %s (features) or HR time not supported: %d", mbgLogPrefix, dev, errno)
+		log.Error("ioctl failed (features) or HR time not supported", zap.String("dev", dev), zap.Error(errno))
 		return 0, errno
 	}
 
@@ -90,7 +89,7 @@ func MeasureClockOffset(ctx context.Context, dev string) (time.Duration, error) 
 		uintptr(ioctlRequest(ioctlRead, len(cycleFrequencyData), 'M', 0x68)),
 		uintptr(unsafe.Pointer(&cycleFrequencyData[0])))
 	if errno != 0 {
-		log.Printf("%s Failed to ioctl %s (cycle frequency): %d", mbgLogPrefix, dev, errno)
+		log.Error("ioctl failed (cycle frequency)", zap.String("dev", dev), zap.Error(errno))
 		return 0, errno
 	}
 
@@ -102,7 +101,7 @@ func MeasureClockOffset(ctx context.Context, dev string) (time.Duration, error) 
 		uintptr(ioctlRequest(ioctlRead, len(timeData), 'M', 0x80)),
 		uintptr(unsafe.Pointer(&timeData[0])))
 	if errno != 0 {
-		log.Printf("%s Failed to ioctl %s (time): %d", mbgLogPrefix, dev, errno)
+		log.Error("ioctl failed (time)", zap.String("dev", dev), zap.Error(errno))
 		return 0, errno
 	}
 
@@ -120,11 +119,19 @@ func MeasureClockOffset(ctx context.Context, dev string) (time.Duration, error) 
 	refTime := time.Unix(refTimeSeconds, nanoseconds(refTimeFractions)).UTC()
 	sysTime := time.Unix(sysTimeSeconds, sysTimeNanoseconds).UTC()
 
-	log.Printf("%s RefTime: %v, UTC offset: %v, status: %v, signal: %v",
-		mbgLogPrefix, refTime, refTimeUTCOffset, refTimeStatus, refTimeSignal)
-	log.Printf("%s SysTime: %v, at: %v, latency: %v, frequency: %v",
-		mbgLogPrefix, sysTime, sysTimeCyclesBefore, refTimeCycles-sysTimeCyclesAfter, cycleFrequency)
-	log.Printf("%s Offset: %v\n", mbgLogPrefix, refTime.Sub(sysTime))
+	log.Debug("mbg reference time",
+		zap.Time("time", refTime),
+		zap.Int32("UTC offset", refTimeUTCOffset),
+		zap.Uint16("status", refTimeStatus),
+		zap.Uint8("signal", refTimeSignal),
+	)
+	log.Debug("mbg system time",
+		zap.Time("time", sysTime),
+		zap.Int64("at", sysTimeCyclesBefore),
+		zap.Int64("latency", refTimeCycles-sysTimeCyclesAfter),
+		zap.Uint64("frequency", cycleFrequency),
+	)
+	log.Debug("mbg clock offset", zap.Duration("offset", refTime.Sub(sysTime)))
 
 	return refTime.Sub(sysTime), nil
 }

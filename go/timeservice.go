@@ -58,27 +58,36 @@ type svcConfig struct {
 }
 
 type mbgReferenceClock struct {
+	log *zap.Logger
 	dev string
 }
 
 type ntpReferenceClockIP struct {
-	localAddr, remoteAddr *net.UDPAddr
+	log        *zap.Logger
+	localAddr  *net.UDPAddr
+	remoteAddr *net.UDPAddr
 }
 
 type ntpReferenceClockSCION struct {
-	localAddr, remoteAddr udp.UDPAddr
-	pather                *core.Pather
+	log        *zap.Logger
+	localAddr  udp.UDPAddr
+	remoteAddr udp.UDPAddr
+	pather     *core.Pather
 }
 
 type localReferenceClock struct{}
 
 var (
 	refClocks       []core.ReferenceClock
-	refClockClient  core.ReferenceClockClient
 	refClockOffsets []time.Duration
+	refClockClient  = core.ReferenceClockClient{
+		Log: zap.Must(zap.NewDevelopment()),
+	}
 	netClocks       []core.ReferenceClock
-	netClockClient  core.ReferenceClockClient
 	netClockOffsets []time.Duration
+	netClockClient  = core.ReferenceClockClient{
+		Log: zap.Must(zap.NewDevelopment()),
+	}
 )
 
 func runMonitor() {
@@ -93,17 +102,17 @@ func runMonitor() {
 }
 
 func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	return mbgd.MeasureClockOffset(ctx, c.dev)
+	return mbgd.MeasureClockOffset(ctx, c.log, c.dev)
 }
 
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	offset, _, err := ntpd.MeasureClockOffsetIP(ctx, c.localAddr, c.remoteAddr)
+	offset, _, err := ntpd.MeasureClockOffsetIP(ctx, c.log, c.localAddr, c.remoteAddr)
 	return offset, err
 }
 
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
-	offset, err := core.MeasureClockOffsetSCION(ctx, c.localAddr, c.remoteAddr, paths)
+	offset, err := core.MeasureClockOffsetSCION(ctx, c.log, c.localAddr, c.remoteAddr, paths)
 	return offset, err
 }
 
@@ -122,7 +131,7 @@ func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector
 	return c
 }
 
-func loadConfig(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func loadConfig(l *zap.Logger, configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	if configFile != "" {
 		var cfg svcConfig
 		err := config.LoadFile(configFile, &cfg)
@@ -132,6 +141,7 @@ func loadConfig(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		for _, s := range cfg.MBGReferenceClocks {
 			stdlog.Print("mbg_refernce_clock: ", s)
 			refClocks = append(refClocks, &mbgReferenceClock{
+				log: l,
 				dev: s,
 			})
 		}
@@ -144,12 +154,14 @@ func loadConfig(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 			}
 			if !remoteAddr.IA.IsZero() {
 				refClocks = append(refClocks, &ntpReferenceClockSCION{
+					log:        l,
 					localAddr:  udp.UDPAddrFromSnet(localAddr),
 					remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
 				})
 				dstIAs = append(dstIAs, remoteAddr.IA)
 			} else {
 				refClocks = append(refClocks, &ntpReferenceClockIP{
+					log:        l,
 					localAddr:  localAddr.Host,
 					remoteAddr: remoteAddr.Host,
 				})
@@ -165,6 +177,7 @@ func loadConfig(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 				stdlog.Fatalf("Unexpected SCION address \"%s\"", s)
 			}
 			netClocks = append(netClocks, &ntpReferenceClockSCION{
+				log:        l,
 				localAddr:  udp.UDPAddrFromSnet(localAddr),
 				remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
 			})
@@ -277,7 +290,7 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 	log := zap.Must(zap.NewDevelopment())
 
-	loadConfig(configFile, daemonAddr, localAddr)
+	loadConfig(log, configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -301,7 +314,7 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 	log := zap.Must(zap.NewDevelopment())
 
-	loadConfig(configFile, daemonAddr, localAddr)
+	loadConfig(log, configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -325,7 +338,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 	log := zap.Must(zap.NewDevelopment())
 
-	loadConfig(configFile, daemonAddr, localAddr)
+	loadConfig(log, configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)

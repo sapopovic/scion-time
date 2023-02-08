@@ -21,7 +21,7 @@ func runX() {
 	timebase.RegisterClock(lclk)
 
 	for {
-		mbg.MeasureClockOffset(ctx, "/dev/mbgclock0")
+		mbg.MeasureClockOffset(ctx, log, "/dev/mbgclock0")
 		lclk.Sleep(1 * time.Second)
 	}
 }

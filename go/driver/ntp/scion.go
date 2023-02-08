@@ -45,8 +45,6 @@ type SCIONClient struct {
 	}
 }
 
-var defaultSCIONClient = &SCIONClient{Log: zap.NewNop()}
-
 func compareIPs(x, y []byte) int {
 	addrX, okX := netip.AddrFromSlice(x)
 	addrY, okY := netip.AddrFromSlice(y)
@@ -428,7 +426,9 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 	return offset, weight, nil
 }
 
-func MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPAddr,
-	path snet.Path) (offset time.Duration, weight float64, err error) {
-	return defaultSCIONClient.MeasureClockOffsetSCION(ctx, localAddr, remoteAddr, path)
+func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
+	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
+	offset time.Duration, weight float64, err error) {
+	c := SCIONClient{Log: log}
+	return c.MeasureClockOffsetSCION(ctx, localAddr, remoteAddr, path)
 }

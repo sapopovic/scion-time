@@ -1,8 +1,8 @@
 package timebase
 
 import (
-	"time"
 	"sync/atomic"
+	"time"
 )
 
 type LocalClock interface {

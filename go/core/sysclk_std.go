@@ -11,7 +11,7 @@ import (
 	"example.com/scion-time/go/core/timebase"
 )
 
-type SystemClock struct{
+type SystemClock struct {
 	Log *zap.Logger
 }
 

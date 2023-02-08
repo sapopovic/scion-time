@@ -3,11 +3,12 @@ package core
 import (
 	"context"
 	"errors"
-	"log"
 	"sync/atomic"
 	"time"
 
 	"github.com/scionproto/scion/pkg/snet"
+
+	"go.uber.org/zap"
 
 	"example.com/scion-time/go/core/crypto"
 	"example.com/scion-time/go/core/timemath"
@@ -15,8 +16,6 @@ import (
 
 	"example.com/scion-time/go/driver/ntp"
 )
-
-const clockClientLogPrefix = "[core/clock_client]"
 
 type measurement struct {
 	off time.Duration
@@ -28,6 +27,7 @@ type ReferenceClock interface {
 }
 
 type ReferenceClockClient struct {
+	Log              *zap.Logger
 	numOpsInProgress uint32
 }
 
@@ -62,7 +62,7 @@ loop:
 	return j
 }
 
-func MeasureClockOffsetSCION(ctx context.Context,
+func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 	localAddr, remoteAddr udp.UDPAddr, ps []snet.Path) (time.Duration, error) {
 	sps := make([]snet.Path, 5)
 	n, err := crypto.Sample(ctx, len(sps), len(ps), func(dst, src int) {
@@ -76,20 +76,27 @@ func MeasureClockOffsetSCION(ctx context.Context,
 	}
 	sps = sps[:n]
 	for _, p := range sps {
-		log.Printf("%s Selected path to %v: %v", clockClientLogPrefix, remoteAddr.IA, p)
+		log.Debug("selected path",
+			zap.Stringer("to", remoteAddr.IA),
+			zap.Any("via", p),
+		)
 	}
 	off := make([]time.Duration, len(sps))
 
 	ms := make(chan measurement)
 	for _, p := range sps {
-		go func(ctx context.Context, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
-			off, _, err := ntp.MeasureClockOffsetSCION(ctx, localAddr, remoteAddr, p)
+		go func(ctx context.Context, log *zap.Logger,
+			localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
+			off, _, err := ntp.MeasureClockOffsetSCION(ctx, log, localAddr, remoteAddr, p)
 			if err != nil {
-				log.Printf("%s Failed to fetch clock offset from %v via %v: %v",
-					clockClientLogPrefix, remoteAddr.IA, p, err)
+				log.Info("failed to fetch clock offset",
+					zap.Stringer("from", remoteAddr.IA),
+					zap.Any("via", p),
+					zap.Error(err),
+				)
 			}
 			ms <- measurement{off, err}
-		}(ctx, localAddr, remoteAddr, p)
+		}(ctx, log, localAddr, remoteAddr, p)
 	}
 	collectMeasurements(ctx, off, ms, len(sps))
 	return timemath.Median(off), nil
@@ -110,14 +117,16 @@ func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,
 
 	ms := make(chan measurement)
 	for _, refclk := range refclks {
-		go func(ctx context.Context, refclk ReferenceClock) {
+		go func(ctx context.Context, log *zap.Logger, refclk ReferenceClock) {
 			off, err := refclk.MeasureClockOffset(ctx)
 			if err != nil {
-				log.Printf("%s Failed to fetch clock offset from %v: %v",
-					clockClientLogPrefix, refclk, err)
+				log.Info("failed to fetch clock offset",
+					zap.Any("from", refclk),
+					zap.Error(err),
+				)
 			}
 			ms <- measurement{off, err}
-		}(ctx, refclk)
+		}(ctx, c.Log, refclk)
 	}
 	collectMeasurements(ctx, off, ms, len(refclks))
 }
