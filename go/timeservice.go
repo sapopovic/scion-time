@@ -131,7 +131,7 @@ func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector
 	return c
 }
 
-func loadConfig(l *zap.Logger, configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func loadConfig(log *zap.Logger, configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	if configFile != "" {
 		var cfg svcConfig
 		err := config.LoadFile(configFile, &cfg)
@@ -141,7 +141,7 @@ func loadConfig(l *zap.Logger, configFile, daemonAddr string, localAddr *snet.UD
 		for _, s := range cfg.MBGReferenceClocks {
 			stdlog.Print("mbg_refernce_clock: ", s)
 			refClocks = append(refClocks, &mbgReferenceClock{
-				log: l,
+				log: log,
 				dev: s,
 			})
 		}
@@ -154,14 +154,14 @@ func loadConfig(l *zap.Logger, configFile, daemonAddr string, localAddr *snet.UD
 			}
 			if !remoteAddr.IA.IsZero() {
 				refClocks = append(refClocks, &ntpReferenceClockSCION{
-					log:        l,
+					log:        log,
 					localAddr:  udp.UDPAddrFromSnet(localAddr),
 					remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
 				})
 				dstIAs = append(dstIAs, remoteAddr.IA)
 			} else {
 				refClocks = append(refClocks, &ntpReferenceClockIP{
-					log:        l,
+					log:        log,
 					localAddr:  localAddr.Host,
 					remoteAddr: remoteAddr.Host,
 				})
@@ -177,7 +177,7 @@ func loadConfig(l *zap.Logger, configFile, daemonAddr string, localAddr *snet.UD
 				stdlog.Fatalf("Unexpected SCION address \"%s\"", s)
 			}
 			netClocks = append(netClocks, &ntpReferenceClockSCION{
-				log:        l,
+				log:        log,
 				localAddr:  udp.UDPAddrFromSnet(localAddr),
 				remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
 			})
@@ -187,7 +187,7 @@ func loadConfig(l *zap.Logger, configFile, daemonAddr string, localAddr *snet.UD
 			netClocks = append(netClocks, &localReferenceClock{})
 		}
 		if daemonAddr != "" {
-			pather := core.StartPather(newDaemonConnector(context.Background(), daemonAddr), dstIAs)
+			pather := core.StartPather(log, newDaemonConnector(context.Background(), daemonAddr), dstIAs)
 			for _, c := range refClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
 				if ok {

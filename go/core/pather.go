@@ -2,20 +2,20 @@ package core
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/snet"
 )
 
-const patherLogPrefix = "[core/pather]"
-
 const pathRefreshPeriod = 15 * time.Second
 
 type Pather struct {
+	log     *zap.Logger
 	mu      sync.Mutex
 	localIA addr.IA
 	paths   map[addr.IA][]snet.Path
@@ -38,11 +38,10 @@ func (p *Pather) Paths(ia addr.IA) []snet.Path {
 }
 
 func update(ctx context.Context, p *Pather, c daemon.Connector, dstIAs []addr.IA) {
-	log.Printf("%s Looking up peer paths", patherLogPrefix)
-
 	localIA, err := c.LocalIA(ctx)
 	if err != nil {
-		log.Printf("%s Failed to look up local IA: %v", patherLogPrefix, err)
+		p.log.Info("failed to look up local IA", zap.Error(err))
+		return
 	}
 
 	paths := map[addr.IA][]snet.Path{}
@@ -52,14 +51,9 @@ func update(ctx context.Context, p *Pather, c daemon.Connector, dstIAs []addr.IA
 		}
 		ps, err := c.Paths(ctx, dstIA, localIA, daemon.PathReqFlags{Refresh: true})
 		if err != nil {
-			log.Printf("%s Failed to look up peer paths: %v", patherLogPrefix, err)
+			p.log.Info("failed to look up paths", zap.Stringer("to", dstIA), zap.Error(err))
 		}
 		paths[dstIA] = append(paths[dstIA], ps...)
-	}
-	for peerIA := range paths {
-		for _, p := range paths[peerIA] {
-			log.Printf("%s %v:%v", peerIA, patherLogPrefix, p)
-		}
 	}
 
 	p.mu.Lock()
@@ -68,8 +62,8 @@ func update(ctx context.Context, p *Pather, c daemon.Connector, dstIAs []addr.IA
 	p.mu.Unlock()
 }
 
-func StartPather(c daemon.Connector, dstIAs []addr.IA) *Pather {
-	p := &Pather{}
+func StartPather(log *zap.Logger, c daemon.Connector, dstIAs []addr.IA) *Pather {
+	p := &Pather{log: log}
 	go func(p *Pather, c daemon.Connector, dstIAs []addr.IA) {
 		ctx := context.Background()
 		ticker := time.NewTicker(pathRefreshPeriod)
