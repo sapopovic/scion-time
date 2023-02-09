@@ -27,7 +27,7 @@ func ValidateMetadata(resp *Packet) error {
 
 func ValidateTimestamps(t0, t1, t2, t3 time.Time) error {
 	if t3.Sub(t0) < 0 {
-		panic("non monotonic local clock")
+		panic("unexpected local clock behavior")
 	}
 	if t2.Sub(t1) < 0 {
 		return errUnexpectedResponse
