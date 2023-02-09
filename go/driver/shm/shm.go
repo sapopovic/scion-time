@@ -6,14 +6,12 @@ package shm
 import (
 	"unsafe"
 
-	"fmt"
-	"log"
 	"time"
+
+	"go.uber.org/zap"
 
 	"golang.org/x/sys/unix"
 )
-
-const shmLogPrefix = "[driver/shm]"
 
 var (
 	shmInitialized bool
@@ -32,21 +30,21 @@ var (
 	shmTimeReceiveTimeStampNSec *uint32
 )
 
-func initSHM() error {
+func initSHM(log *zap.Logger) error {
 	var key int = 0x4e545030
 	var size int = 96 /* sizeof(struct shmTime) */
 	var flags int = 01000 /* IPC_CREAT */ | 0666
 	id, _, errno := unix.Syscall(unix.SYS_SHMGET, uintptr(key), uintptr(size), uintptr(flags))
 	if int(id) < 0 {
 		if int(id) != -1 {
-			panic(fmt.Sprintf("syscall shmget returned invalid value: %v", id))
+			log.Fatal("shmget returned invalid value", zap.Uintptr("id", id))
 		}
-		log.Printf("%s syscall shmget failed: %d", shmLogPrefix, errno)
+		log.Error("shmget failed", zap.Error(errno))
 		return errno
 	}
 	addr, _, errno := unix.Syscall(unix.SYS_SHMAT, id, uintptr(0), uintptr(0))
 	if int(addr) == -1 {
-		log.Printf("%s syscall shmat failed: %d", shmLogPrefix, errno)
+		log.Error("shmat failed", zap.Error(errno))
 		return errno
 	}
 
@@ -80,9 +78,9 @@ func initSHM() error {
 	return nil
 }
 
-func StoreClockSamples(refTime, sysTime time.Time) error {
+func StoreClockSamples(log *zap.Logger, refTime, sysTime time.Time) error {
 	if !shmInitialized {
-		err := initSHM()
+		err := initSHM(log)
 		if err != nil {
 			return err
 		}
