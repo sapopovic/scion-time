@@ -350,7 +350,7 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 	}
 	c, err := s.Connect(ctx)
 	if err != nil {
-		log.Fatal("failed to create Daemon connector", zap.Error(err))
+		log.Fatal("failed to create demon connector", zap.Error(err))
 	}
 	return c
 }

@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	stdlog "log"
 	"net"
 	"os"
 	"runtime"
@@ -21,6 +20,7 @@ import (
 	"github.com/scionproto/scion/private/config"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
@@ -78,25 +78,46 @@ type ntpReferenceClockSCION struct {
 type localReferenceClock struct{}
 
 var (
+	log = newLogger()
+
 	refClocks       []core.ReferenceClock
 	refClockOffsets []time.Duration
-	refClockClient  = core.ReferenceClockClient{
-		Log: zap.Must(zap.NewDevelopment()),
-	}
+	refClockClient  = core.ReferenceClockClient{Log: log}
 	netClocks       []core.ReferenceClock
 	netClockOffsets []time.Duration
-	netClockClient  = core.ReferenceClockClient{
-		Log: zap.Must(zap.NewDevelopment()),
-	}
+	netClockClient  = core.ReferenceClockClient{Log: log}
 )
 
-func runMonitor() {
+func newLogger() *zap.Logger {
+	c := zap.NewDevelopmentConfig()
+	c.DisableStacktrace = true
+	c.EncoderConfig.EncodeCaller = func(
+		caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
+		// See https://github.com/scionproto/scion/blob/master/pkg/log/log.go
+		p := caller.TrimmedPath()
+		if len(p) > 30 {
+			p = "..." + p[len(p)-27:]
+		}
+		enc.AppendString(fmt.Sprintf("%30s", p))
+	}
+	l, err := c.Build()
+	if err != nil {
+		panic(err)
+	}
+	return l
+}
+
+func runMonitor(log *zap.Logger) {
 	p := pprof.Lookup("threadcreate")
 	for {
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
-		stdlog.Printf("[monitor] TotalAlloc: %v, Mallocs: %v, Frees: %v, NumGC: %v, Thread Count: %v",
-			m.TotalAlloc, m.Mallocs, m.Frees, m.NumGC, p.Count())
+		log.Debug("runtime stats",
+			zap.Uint64("TotalAlloc", m.TotalAlloc),
+			zap.Uint64("Mallocs", m.Mallocs),
+			zap.Uint64("Frees", m.Frees),
+			zap.Int("Thread Count", p.Count()),
+		)
 		time.Sleep(15 * time.Second)
 	}
 }
@@ -120,26 +141,26 @@ func (c *localReferenceClock) MeasureClockOffset(ctx context.Context) (time.Dura
 	return 0, nil
 }
 
-func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
+func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
 	s := &daemon.Service{
 		Address: daemonAddr,
 	}
 	c, err := s.Connect(ctx)
 	if err != nil {
-		stdlog.Fatalf("Failed to create SCION Daemon connector: %v", err)
+		log.Fatal("failed to create demon connector", zap.Error(err))
 	}
 	return c
 }
 
-func loadConfig(log *zap.Logger, configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func loadConfig(ctx context.Context, log *zap.Logger,
+	configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	if configFile != "" {
 		var cfg svcConfig
 		err := config.LoadFile(configFile, &cfg)
 		if err != nil {
-			stdlog.Fatalf("Failed to load configuration: %v", err)
+			log.Fatal("failed to load configuration", zap.Error(err))
 		}
 		for _, s := range cfg.MBGReferenceClocks {
-			stdlog.Print("mbg_refernce_clock: ", s)
 			refClocks = append(refClocks, &mbgReferenceClock{
 				log: log,
 				dev: s,
@@ -147,10 +168,10 @@ func loadConfig(log *zap.Logger, configFile, daemonAddr string, localAddr *snet.
 		}
 		var dstIAs []addr.IA
 		for _, s := range cfg.NTPReferenceClocks {
-			stdlog.Print("ntp_reference_clock: ", s)
 			remoteAddr, err := snet.ParseUDPAddr(s)
 			if err != nil {
-				stdlog.Fatalf("Failed to parse reference clock address: %v", err)
+				log.Fatal("failed to parse reference clock address",
+					zap.String("address", s), zap.Error(err))
 			}
 			if !remoteAddr.IA.IsZero() {
 				refClocks = append(refClocks, &ntpReferenceClockSCION{
@@ -168,13 +189,12 @@ func loadConfig(log *zap.Logger, configFile, daemonAddr string, localAddr *snet.
 			}
 		}
 		for _, s := range cfg.SCIONPeers {
-			stdlog.Print("scion_peer: ", s)
 			remoteAddr, err := snet.ParseUDPAddr(s)
 			if err != nil {
-				stdlog.Fatalf("Failed to parse peer address %v", err)
+				log.Fatal("failed to parse peer address", zap.String("address", s), zap.Error(err))
 			}
 			if remoteAddr.IA.IsZero() {
-				stdlog.Fatalf("Unexpected SCION address \"%s\"", s)
+				log.Fatal("unexpected peer address", zap.String("address", s), zap.Error(err))
 			}
 			netClocks = append(netClocks, &ntpReferenceClockSCION{
 				log:        log,
@@ -187,7 +207,7 @@ func loadConfig(log *zap.Logger, configFile, daemonAddr string, localAddr *snet.
 			netClocks = append(netClocks, &localReferenceClock{})
 		}
 		if daemonAddr != "" {
-			pather := core.StartPather(log, newDaemonConnector(context.Background(), daemonAddr), dstIAs)
+			pather := core.StartPather(log, newDaemonConnector(ctx, log, daemonAddr), dstIAs)
 			for _, c := range refClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
 				if ok {
@@ -288,9 +308,8 @@ func runGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 
 func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
-	log := zap.Must(zap.NewDevelopment())
 
-	loadConfig(log, configFile, daemonAddr, localAddr)
+	loadConfig(ctx, log, configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -312,9 +331,8 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 
 func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
-	log := zap.Must(zap.NewDevelopment())
 
-	loadConfig(log, configFile, daemonAddr, localAddr)
+	loadConfig(ctx, log, configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -325,7 +343,7 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	}
 
 	if len(netClocks) != 0 {
-		stdlog.Fatalf("Unexpected configuration: scion_peers=%v", netClocks)
+		log.Fatal("unexpected configuration", zap.Int("number of peers", len(netClocks)))
 	}
 
 	core.StartIPServer(log, snet.CopyUDPAddr(localAddr.Host))
@@ -336,9 +354,8 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 
 func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
-	log := zap.Must(zap.NewDevelopment())
 
-	loadConfig(log, configFile, daemonAddr, localAddr)
+	loadConfig(ctx, log, configFile, daemonAddr, localAddr)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -361,7 +378,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	}
 
 	if len(netClocks) != 0 {
-		stdlog.Fatalf("Unexpected configuration: scion_peers=%v", netClocks)
+		log.Fatal("unexpected configuration", zap.Int("number of peers", len(netClocks)))
 	}
 
 	select {}
@@ -370,7 +387,6 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
-	log := zap.Must(zap.NewDevelopment())
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -382,7 +398,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	for n := 2; n != 0; n-- {
 		_, _, err = c.MeasureClockOffsetIP(ctx, localAddr.Host, remoteAddr.Host)
 		if err != nil {
-			stdlog.Fatalf("Failed to measure clock offset to %s: %v", remoteAddr.Host, err)
+			log.Fatal("failed to measure clock offset", zap.Stringer("to", remoteAddr.Host), zap.Error(err))
 		}
 		lclk.Sleep(125 * time.Microsecond)
 	}
@@ -391,7 +407,6 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
-	log := zap.Must(zap.NewDevelopment())
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -400,21 +415,19 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		core.StartSCIONDisptacher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
-	dc := newDaemonConnector(ctx, daemonAddr)
+	dc := newDaemonConnector(ctx, log, daemonAddr)
 	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 	if err != nil {
-		stdlog.Fatalf("Failed to lookup paths: %v:", err)
+		log.Fatal("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))
 	}
 	if len(ps) == 0 {
-		stdlog.Fatalf("No paths to %v available", remoteAddr.IA)
+		log.Fatal("no paths available", zap.Stringer("to", remoteAddr.IA))
 	}
-	stdlog.Printf("Available paths to %v:", remoteAddr.IA)
-	for _, p := range ps {
-		stdlog.Printf("\t%v", p)
-	}
+	log.Debug("available paths", zap.Stringer("to", remoteAddr.IA), zap.Any("via", ps))
+
 	sp := ps[0]
-	stdlog.Printf("Selected path to %v:", remoteAddr.IA)
-	stdlog.Printf("\t%v", sp)
+	log.Debug("selected path", zap.Stringer("to", remoteAddr.IA), zap.Any("via", sp))
+
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
 	c := &ntpd.SCIONClient{
@@ -425,7 +438,11 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	for n := 2; n != 0; n-- {
 		_, _, err = c.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
 		if err != nil {
-			stdlog.Fatalf("Failed to measure clock offset to %s,%s: %v", raddr.IA, raddr.Host, err)
+			log.Fatal("failed to measure clock offset",
+				zap.Stringer("remote IA", raddr.IA),
+				zap.Stringer("remote host", raddr.Host),
+				zap.Error(err),
+			)
 		}
 		lclk.Sleep(125 * time.Microsecond)
 	}
@@ -445,7 +462,7 @@ func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
 	ctx := context.Background()
-	dc := newDaemonConnector(ctx, daemonAddr)
+	dc := newDaemonConnector(ctx, log, daemonAddr)
 
 	meta := drkey.HostHostMeta{
 		ProtoId:  scion.DRKeyProtoIdTS,
@@ -501,7 +518,7 @@ func exitWithUsage() {
 }
 
 func main() {
-	go runMonitor()
+	go runMonitor(log)
 
 	var configFile string
 	var daemonAddr string
@@ -555,37 +572,24 @@ func main() {
 		if err != nil || serverFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-		stdlog.Print("configFile:", configFile)
-		stdlog.Print("daemonAddr:", daemonAddr)
-		stdlog.Print("localAddr:", localAddr)
 		runServer(configFile, daemonAddr, &localAddr)
 	case relayFlags.Name():
 		err := relayFlags.Parse(os.Args[2:])
 		if err != nil || relayFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-		stdlog.Print("configFile:", configFile)
-		stdlog.Print("daemonAddr:", daemonAddr)
-		stdlog.Print("localAddr:", localAddr)
 		runRelay(configFile, daemonAddr, &localAddr)
 	case clientFlags.Name():
 		err := clientFlags.Parse(os.Args[2:])
 		if err != nil || clientFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-		stdlog.Print("configFile:", configFile)
-		stdlog.Print("daemonAddr:", daemonAddr)
-		stdlog.Print("localAddr:", localAddr)
 		runClient(configFile, daemonAddr, &localAddr)
 	case toolFlags.Name():
 		err := toolFlags.Parse(os.Args[2:])
 		if err != nil || toolFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-		stdlog.Print("daemonAddr:", daemonAddr)
-		stdlog.Print("dispatcherMode:", dispatcherMode)
-		stdlog.Print("localAddr:", localAddr)
-		stdlog.Print("remoteAddr:", remoteAddr)
 		if !remoteAddr.IA.IsZero() {
 			if dispatcherMode == "" {
 				dispatcherMode = dispatcherModeExternal
@@ -608,9 +612,6 @@ func main() {
 		if err != nil || benchmarkFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-		stdlog.Print("daemonAddr:", daemonAddr)
-		stdlog.Print("localAddr:", localAddr)
-		stdlog.Print("remoteAddr:", remoteAddr)
 		if !remoteAddr.IA.IsZero() {
 			runSCIONBenchmark(daemonAddr, &localAddr, &remoteAddr)
 		} else {

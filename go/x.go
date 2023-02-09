@@ -6,8 +6,6 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/zap"
-
 	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/driver/mbg"
@@ -15,7 +13,6 @@ import (
 
 func runX() {
 	ctx := context.Background()
-	log := zap.Must(zap.NewDevelopment())
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)

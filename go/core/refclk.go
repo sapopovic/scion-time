@@ -75,12 +75,8 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 		return 0, errNoPaths
 	}
 	sps = sps[:n]
-	for _, p := range sps {
-		log.Debug("selected path",
-			zap.Stringer("to", remoteAddr.IA),
-			zap.Any("via", p),
-		)
-	}
+	log.Debug("selected paths", zap.Stringer("to", remoteAddr.IA), zap.Any("via", sps))
+
 	off := make([]time.Duration, len(sps))
 
 	ms := make(chan measurement)
