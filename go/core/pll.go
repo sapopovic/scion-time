@@ -3,18 +3,17 @@ package core
 // Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
 import (
-	"fmt"
-	"log"
 	"math"
 	"time"
+
+	"go.uber.org/zap"
 
 	"example.com/scion-time/go/core/timebase"
 	"example.com/scion-time/go/core/timemath"
 )
 
-const pllLogPrefix = "[core/pll]"
-
 type PLL struct {
+	log     *zap.Logger
 	clk     timebase.LocalClock
 	epoch   uint64
 	mode    uint64
@@ -22,8 +21,8 @@ type PLL struct {
 	a, b, i float64
 }
 
-func NewPLL(clk timebase.LocalClock) *PLL {
-	return &PLL{clk: clk}
+func NewPLL(log *zap.Logger, clk timebase.LocalClock) *PLL {
+	return &PLL{log: log, clk: clk}
 }
 
 func (l *PLL) Do(offset time.Duration, weight float64) {
@@ -41,7 +40,7 @@ func (l *PLL) Do(offset time.Duration, weight float64) {
 	case 1: // awaiting step
 		mdt := now.Sub(l.t0)
 		if mdt < 0 {
-			panic(fmt.Sprintf("%s unexpected clock behavior", pllLogPrefix))
+			panic("unexpected clock behavior")
 		}
 		if mdt > 2*time.Second && weight > 3 {
 			if timemath.Abs(offset) > 1*time.Millisecond {
@@ -53,7 +52,7 @@ func (l *PLL) Do(offset time.Duration, weight float64) {
 	case 2: // awaiting PLL
 		mdt := now.Sub(l.t0)
 		if mdt < 0 {
-			panic(fmt.Sprintf("%s unexpected clock behavior", pllLogPrefix))
+			panic("unexpected clock behavior")
 		}
 		if mdt > 6*time.Second {
 			const (
@@ -68,11 +67,11 @@ func (l *PLL) Do(offset time.Duration, weight float64) {
 	case 3: // tracking
 		mdt := now.Sub(l.t0)
 		if mdt < 0 {
-			panic(fmt.Sprintf("%s unexpected clock behavior", pllLogPrefix))
+			panic("unexpected clock behavior")
 		}
 		dt := timemath.Seconds(now.Sub(l.t))
 		if dt < 0.0 {
-			panic(fmt.Sprintf("%s unexpected clock behavior", pllLogPrefix))
+			panic("unexpected clock behavior")
 		}
 		if weight < 50 {
 			a = 3e-2
@@ -103,11 +102,20 @@ func (l *PLL) Do(offset time.Duration, weight float64) {
 			p = d * -500e-6
 		}
 	default:
-		panic(fmt.Sprintf("%s unexpected mode", pllLogPrefix))
+		panic("unexpected PLL mode")
 	}
 	l.t = now
-	log.Printf("%s mode=%v, dt=%v, offset=%v, weight=%v -> p=%v, d=%v, l.i=%v, a=%v, b=%v",
-		pllLogPrefix, l.mode, dt, timemath.Seconds(offset), weight, p, d, l.i, a, b)
+	l.log.Debug("PLL iteration",
+		zap.Uint64("mode", l.mode),
+		zap.Float64("dt", dt),
+		zap.Float64("offset", timemath.Seconds(offset)),
+		zap.Float64("weight", weight),
+		zap.Float64("p", p),
+		zap.Float64("d", d),
+		zap.Float64("l.i", l.i),
+		zap.Float64("a", a),
+		zap.Float64("b", b),
+	)
 	if d > 0.0 {
 		l.clk.Adjust(timemath.Duration(p), timemath.Duration(d), l.i)
 	}

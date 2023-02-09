@@ -220,7 +220,7 @@ func syncToRefClocks(lclk timebase.LocalClock) {
 	}
 }
 
-func runLocalClockSync(lclk timebase.LocalClock) {
+func runLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	if refClockImpact <= 1.0 {
 		panic("invalid reference clock impact factor")
 	}
@@ -234,7 +234,7 @@ func runLocalClockSync(lclk timebase.LocalClock) {
 	if maxCorr <= 0 {
 		panic("invalid reference clock max correction")
 	}
-	pll := core.NewPLL(lclk)
+	pll := core.NewPLL(log, lclk)
 	for {
 		corr := measureOffsetToRefClocks(refClockSyncTimeout)
 		if timemath.Abs(corr) > refClockCutoff {
@@ -255,7 +255,7 @@ func measureOffsetToNetClocks(timeout time.Duration) time.Duration {
 	return timemath.FaultTolerantMidpoint(netClockOffsets)
 }
 
-func runGlobalClockSync(lclk timebase.LocalClock) {
+func runGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	if netClockImpact <= 1.0 {
 		panic("invalid network clock impact factor")
 	}
@@ -272,7 +272,7 @@ func runGlobalClockSync(lclk timebase.LocalClock) {
 	if maxCorr <= 0 {
 		panic("invalid network clock max correction")
 	}
-	pll := core.NewPLL(lclk)
+	pll := core.NewPLL(log, lclk)
 	for {
 		corr := measureOffsetToNetClocks(netClockSyncTimeout)
 		if timemath.Abs(corr) > netClockCutoff {
@@ -297,11 +297,11 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 
 	if len(refClocks) != 0 {
 		syncToRefClocks(lclk)
-		go runLocalClockSync(lclk)
+		go runLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
-		go runGlobalClockSync(lclk)
+		go runGlobalClockSync(log, lclk)
 	}
 
 	core.StartIPServer(log, snet.CopyUDPAddr(localAddr.Host))
@@ -321,7 +321,7 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 
 	if len(refClocks) != 0 {
 		syncToRefClocks(lclk)
-		go runLocalClockSync(lclk)
+		go runLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
@@ -357,7 +357,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 
 	if len(refClocks) != 0 {
 		syncToRefClocks(lclk)
-		go runLocalClockSync(lclk)
+		go runLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
