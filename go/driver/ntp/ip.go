@@ -49,7 +49,10 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 			return offset, weight, err
 		}
 	}
-	_ = udp.EnableTimestamping(conn)
+	err = udp.EnableTimestamping(conn)
+	if err != nil {
+		c.Log.Error("failed to enable timestamping", zap.Error(err))
+	}
 
 	buf := make([]byte, ntp.PacketLen)
 

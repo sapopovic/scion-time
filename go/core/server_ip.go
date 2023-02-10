@@ -19,7 +19,10 @@ const (
 
 func runIPServer(log *zap.Logger, conn *net.UDPConn) {
 	defer conn.Close()
-	_ = udp.EnableTimestamping(conn)
+	err := udp.EnableTimestamping(conn)
+	if err != nil {
+		log.Error("failed to enable timestamping", zap.Error(err))
+	}
 
 	var txId uint32
 	buf := make([]byte, ntp.PacketLen)

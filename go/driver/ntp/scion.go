@@ -82,7 +82,10 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			return offset, weight, err
 		}
 	}
-	_ = udp.EnableTimestamping(conn)
+	err = udp.EnableTimestamping(conn)
+	if err != nil {
+		c.Log.Error("failed to enable timestamping", zap.Error(err))
+	}
 
 	localPort := conn.LocalAddr().(*net.UDPAddr).Port
 

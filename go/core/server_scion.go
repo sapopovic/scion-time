@@ -37,7 +37,10 @@ const (
 func runSCIONServer(ctx context.Context, log *zap.Logger,
 	conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) {
 	defer conn.Close()
-	_ = udp.EnableTimestamping(conn)
+	err := udp.EnableTimestamping(conn)
+	if err != nil {
+		log.Error("failed to enable timestamping", zap.Error(err))
+	}
 
 	var txId uint32
 	buf := make([]byte, common.SupportedMTU)
