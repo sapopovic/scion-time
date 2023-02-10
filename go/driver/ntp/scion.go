@@ -425,10 +425,3 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 	return offset, weight, nil
 }
-
-func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
-	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
-	offset time.Duration, weight float64, err error) {
-	c := SCIONClient{Log: log}
-	return c.MeasureClockOffsetSCION(ctx, localAddr, remoteAddr, path)
-}

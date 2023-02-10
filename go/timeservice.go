@@ -63,13 +63,13 @@ type mbgReferenceClock struct {
 }
 
 type ntpReferenceClockIP struct {
-	log        *zap.Logger
+	ntpc       *ntpd.IPClient
 	localAddr  *net.UDPAddr
 	remoteAddr *net.UDPAddr
 }
 
 type ntpReferenceClockSCION struct {
-	log        *zap.Logger
+	ntpc       *ntpd.SCIONClient
 	localAddr  udp.UDPAddr
 	remoteAddr udp.UDPAddr
 	pather     *core.Pather
@@ -127,14 +127,12 @@ func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context) (time.Durati
 }
 
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	offset, _, err := ntpd.MeasureClockOffsetIP(ctx, c.log, c.localAddr, c.remoteAddr)
-	return offset, err
+	return core.MeasureClockOffsetIP(ctx, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
-	offset, err := core.MeasureClockOffsetSCION(ctx, c.log, c.localAddr, c.remoteAddr, paths)
-	return offset, err
+	return core.MeasureClockOffsetSCION(ctx, c.ntpc, c.localAddr, c.remoteAddr, paths)
 }
 
 func (c *localReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
@@ -175,14 +173,20 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 			}
 			if !remoteAddr.IA.IsZero() {
 				refClocks = append(refClocks, &ntpReferenceClockSCION{
-					log:        log,
+					ntpc: &ntpd.SCIONClient{
+						Log:             log,
+						InterleavedMode: true,
+					},
 					localAddr:  udp.UDPAddrFromSnet(localAddr),
 					remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
 				})
 				dstIAs = append(dstIAs, remoteAddr.IA)
 			} else {
 				refClocks = append(refClocks, &ntpReferenceClockIP{
-					log:        log,
+					ntpc: &ntpd.IPClient{
+						Log:             log,
+						InterleavedMode: true,
+					},
 					localAddr:  localAddr.Host,
 					remoteAddr: remoteAddr.Host,
 				})
@@ -196,8 +200,12 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 			if remoteAddr.IA.IsZero() {
 				log.Fatal("unexpected peer address", zap.String("address", s), zap.Error(err))
 			}
+
 			netClocks = append(netClocks, &ntpReferenceClockSCION{
-				log:        log,
+				ntpc: &ntpd.SCIONClient{
+					Log:             log,
+					InterleavedMode: true,
+				},
 				localAddr:  udp.UDPAddrFromSnet(localAddr),
 				remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
 			})
@@ -207,16 +215,20 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 			netClocks = append(netClocks, &localReferenceClock{})
 		}
 		if daemonAddr != "" {
-			pather := core.StartPather(log, newDaemonConnector(ctx, log, daemonAddr), dstIAs)
+			dc := newDaemonConnector(ctx, log, daemonAddr)
+			pather := core.StartPather(log, dc, dstIAs)
+			drkeyFetcher := drkeyutil.NewFetcher(dc)
 			for _, c := range refClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
 				if ok {
+					scionclk.ntpc.DRKeyFetcher = drkeyFetcher
 					scionclk.pather = pather
 				}
 			}
 			for _, c := range netClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
 				if ok {
+					scionclk.ntpc.DRKeyFetcher = drkeyFetcher
 					scionclk.pather = pather
 				}
 			}
@@ -395,12 +407,11 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 		Log:             log,
 		InterleavedMode: true,
 	}
-	for n := 2; n != 0; n-- {
+	for i := 0; i != 2; i++ {
 		_, _, err = c.MeasureClockOffsetIP(ctx, localAddr.Host, remoteAddr.Host)
 		if err != nil {
 			log.Fatal("failed to measure clock offset", zap.Stringer("to", remoteAddr.Host), zap.Error(err))
 		}
-		lclk.Sleep(125 * time.Microsecond)
 	}
 }
 
@@ -435,7 +446,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		InterleavedMode: true,
 		DRKeyFetcher:    drkeyutil.NewFetcher(dc),
 	}
-	for n := 2; n != 0; n-- {
+	for i := 0; i != 2; i++ {
 		_, _, err = c.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
 		if err != nil {
 			log.Fatal("failed to measure clock offset",
@@ -444,7 +455,6 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 				zap.Error(err),
 			)
 		}
-		lclk.Sleep(125 * time.Microsecond)
 	}
 }
 

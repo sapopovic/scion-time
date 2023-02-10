@@ -199,10 +199,3 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 
 	return offset, weight, nil
 }
-
-func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
-	localAddr, remoteAddr *net.UDPAddr) (
-	offset time.Duration, weight float64, err error) {
-	c := IPClient{Log: log}
-	return c.MeasureClockOffsetIP(ctx, localAddr, remoteAddr)
-}
