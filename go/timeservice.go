@@ -126,8 +126,16 @@ func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context) (time.Durati
 	return mbgd.MeasureClockOffset(ctx, c.log, c.dev)
 }
 
+func (c *mbgReferenceClock) String() string {
+	return fmt.Sprintf("mbg reference clock at %s", c.dev)
+}
+
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	return core.MeasureClockOffsetIP(ctx, c.ntpc, c.localAddr, c.remoteAddr)
+}
+
+func (c *ntpReferenceClockIP) String() string {
+	return fmt.Sprintf("NTP reference clock (IP) at %s", c.remoteAddr)
 }
 
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
@@ -135,8 +143,16 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (time.D
 	return core.MeasureClockOffsetSCION(ctx, c.ntpc, c.localAddr, c.remoteAddr, paths)
 }
 
+func (c *ntpReferenceClockSCION) String() string {
+	return fmt.Sprintf("NTP reference clock (SCION) at %s", c.remoteAddr)
+}
+
 func (c *localReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	return 0, nil
+}
+
+func (c *localReferenceClock) String() string {
+	return "local reference clock"
 }
 
 func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {

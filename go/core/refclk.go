@@ -26,6 +26,7 @@ type measurement struct {
 
 type ReferenceClock interface {
 	MeasureClockOffset(ctx context.Context) (time.Duration, error)
+	String() string
 }
 
 type ReferenceClockClient struct {
@@ -56,7 +57,7 @@ func MeasureClockOffsetIP(ctx context.Context, ntpc *ntp.IPClient,
 				off, err = o, e
 			}
 			nerr++
-			ntpc.Log.Info("failed to fetch clock offset",
+			ntpc.Log.Info("failed to measure clock offset",
 				zap.Stringer("from", remoteAddr), zap.Error(e))
 		}
 	}
@@ -134,7 +135,7 @@ func MeasureClockOffsetSCION(ctx context.Context, ntpc *ntp.SCIONClient,
 						off, err = o, e
 					}
 					nerr++
-					ntpc.Log.Info("failed to fetch clock offset",
+					ntpc.Log.Info("failed to measure clock offset",
 						zap.Stringer("from", remoteAddr.IA), zap.Any("via", p), zap.Error(e))
 				}
 			}
@@ -166,8 +167,8 @@ func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,
 		go func(ctx context.Context, log *zap.Logger, refclk ReferenceClock) {
 			off, err := refclk.MeasureClockOffset(ctx)
 			if err != nil {
-				log.Info("failed to fetch clock offset",
-					zap.Any("from", refclk),
+				log.Info("failed to measure clock offset",
+					zap.Stringer("from", refclk),
 					zap.Error(err),
 				)
 			}
