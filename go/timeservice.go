@@ -453,7 +453,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	log.Debug("available paths", zap.Stringer("to", remoteAddr.IA), zap.Array("via", scion.PathArrayMarshaler{Paths: ps}))
 
 	sp := ps[0]
-	log.Debug("selected path", zap.Stringer("to", remoteAddr.IA), zap.Any("via", sp))
+	log.Debug("selected path", zap.Stringer("to", remoteAddr.IA), zap.Object("via", scion.PathMarshaler{Path: sp}))
 
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
@@ -466,8 +466,8 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		_, _, err = c.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
 		if err != nil {
 			log.Fatal("failed to measure clock offset",
-				zap.Stringer("remote IA", raddr.IA),
-				zap.Stringer("remote host", raddr.Host),
+				zap.Stringer("remoteIA", raddr.IA),
+				zap.Stringer("remoteHost", raddr.Host),
 				zap.Error(err),
 			)
 		}

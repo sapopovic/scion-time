@@ -59,7 +59,7 @@ func MeasureClockOffsetIP(ctx context.Context, ntpc *ntp.IPClient,
 			}
 			nerr++
 			ntpc.Log.Info("failed to measure clock offset",
-				zap.Stringer("from", remoteAddr), zap.Error(e))
+				zap.Stringer("to", remoteAddr), zap.Error(e))
 		}
 	}
 	return off, err
@@ -137,7 +137,10 @@ func MeasureClockOffsetSCION(ctx context.Context, ntpc *ntp.SCIONClient,
 					}
 					nerr++
 					ntpc.Log.Info("failed to measure clock offset",
-						zap.Stringer("from", remoteAddr.IA), zap.Any("via", p), zap.Error(e))
+						zap.Stringer("to", remoteAddr.IA),
+						zap.Object("via", scion.PathMarshaler{Path: p}),
+						zap.Error(e),
+					)
 				}
 			}
 			ms <- measurement{off, err}
@@ -169,7 +172,7 @@ func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,
 			off, err := refclk.MeasureClockOffset(ctx)
 			if err != nil {
 				log.Info("failed to measure clock offset",
-					zap.Stringer("from", refclk),
+					zap.Stringer("to", refclk),
 					zap.Error(err),
 				)
 			}
