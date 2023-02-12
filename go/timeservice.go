@@ -450,7 +450,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	if len(ps) == 0 {
 		log.Fatal("no paths available", zap.Stringer("to", remoteAddr.IA))
 	}
-	log.Debug("available paths", zap.Stringer("to", remoteAddr.IA), zap.Any("via", ps))
+	log.Debug("available paths", zap.Stringer("to", remoteAddr.IA), zap.Array("via", scion.PathArrayMarshaler{Paths: ps}))
 
 	sp := ps[0]
 	log.Debug("selected path", zap.Stringer("to", remoteAddr.IA), zap.Any("via", sp))

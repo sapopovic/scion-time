@@ -14,6 +14,7 @@ import (
 
 	"example.com/scion-time/go/core/crypto"
 	"example.com/scion-time/go/core/timemath"
+	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
 
 	"example.com/scion-time/go/driver/ntp"
@@ -105,7 +106,7 @@ func MeasureClockOffsetSCION(ctx context.Context, ntpc *ntp.SCIONClient,
 		return 0, errNoPaths
 	}
 	sps = sps[:n]
-	ntpc.Log.Debug("selected paths", zap.Stringer("to", remoteAddr.IA), zap.Any("via", sps))
+	ntpc.Log.Debug("selected paths", zap.Stringer("to", remoteAddr.IA), zap.Array("via", scion.PathArrayMarshaler{Paths: ps}))
 
 	off := make([]time.Duration, len(sps))
 	ms := make(chan measurement)
