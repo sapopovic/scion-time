@@ -41,7 +41,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 	)
 }
 
-func (c SystemClock) Sleep(duration time.Duration) {
+func (c *SystemClock) Sleep(duration time.Duration) {
 	c.Log.Debug("SystemClock.Sleep", zap.Duration("duration", duration))
 	time.Sleep(duration)
 }

@@ -163,7 +163,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 	}(c.Log, c.adjustment)
 }
 
-func (c SystemClock) Sleep(duration time.Duration) {
+func (c *SystemClock) Sleep(duration time.Duration) {
 	c.Log.Debug("sleeping", zap.Duration("duration", duration))
 	if duration < 0 {
 		panic("invalid duration value")
