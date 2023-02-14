@@ -31,7 +31,7 @@ var (
 	errUnexpectedPacket       = errors.New("failed to read packet: unexpected type or structure")
 
 	filters   = make(map[string]filterContext)
-	filtersMu = sync.RWMutex{}
+	filtersMu = sync.Mutex{}
 )
 
 func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, weight float64) {
@@ -48,9 +48,8 @@ func filter(log *zap.Logger, reference string, cTxTime, sRxTime, sTxTime, cRxTim
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
-	filtersMu.RLock()
+	filtersMu.Lock()
 	f := filters[reference]
-	filtersMu.RUnlock()
 
 	lo := timemath.Seconds(cTxTime.Sub(sRxTime))
 	hi := timemath.Seconds(cRxTime.Sub(sTxTime))
@@ -110,7 +109,6 @@ func filter(log *zap.Logger, reference string, cTxTime, sRxTime, sTxTime, cRxTim
 	f.alolo += (lo*lo - f.alolo) / r
 	f.ahihi += (hi*hi - f.ahihi) / r
 
-	filtersMu.Lock()
 	filters[reference] = f
 	filtersMu.Unlock()
 

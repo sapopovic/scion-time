@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -93,9 +92,9 @@ loop:
 	return j
 }
 
-func MeasureClockOffsetSCION(ctx context.Context, ntpc *ntp.SCIONClient,
+func MeasureClockOffsetSCION(ctx context.Context, ntpcs []*ntp.SCIONClient,
 	localAddr, remoteAddr udp.UDPAddr, ps []snet.Path) (time.Duration, error) {
-	sps := make([]snet.Path, 5)
+	sps := make([]snet.Path, len(ntpcs))
 	n, err := crypto.Sample(ctx, len(sps), len(ps), func(dst, src int) {
 		sps[dst] = ps[src]
 	})
@@ -106,33 +105,31 @@ func MeasureClockOffsetSCION(ctx context.Context, ntpc *ntp.SCIONClient,
 		return 0, errNoPaths
 	}
 	sps = sps[:n]
-	ntpc.Log.Debug("selected paths", zap.Stringer("to", remoteAddr.IA), zap.Array("via", scion.PathArrayMarshaler{Paths: ps}))
 
 	off := make([]time.Duration, len(sps))
 	ms := make(chan measurement)
-	var ntpcMu sync.Mutex
-	for _, p := range sps {
+	for i := 0; i != len(sps); i++ {
 		go func(ctx context.Context, ntpc *ntp.SCIONClient,
 			localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
 			var err error
 			var off time.Duration
 			var nerr, n int
+			ntpc.Log.Debug("measuring clock offset",
+				zap.Stringer("to", remoteAddr.IA),
+				zap.Object("via", scion.PathMarshaler{Path: p}),
+			)
 			if ntpc.InterleavedMode {
+				ntpc.ResetInterleavedMode()
 				n = 2
 			} else {
 				n = 1
 			}
-			for i := 0; i != n; i++ {
-				// TODO: find a way to parallelize measurements over multiple paths in interleaved mode
-				o, _, e := func() (time.Duration, float64, error) {
-					ntpcMu.Lock()
-					defer ntpcMu.Unlock()
-					return ntpc.MeasureClockOffsetSCION(ctx, localAddr, remoteAddr, p)
-				}()
+			for j := 0; j != n; j++ {
+				o, _, e := ntpc.MeasureClockOffsetSCION(ctx, localAddr, remoteAddr, p)
 				if e == nil {
 					off, err = o, e
 				} else {
-					if nerr == i {
+					if nerr == j {
 						off, err = o, e
 					}
 					nerr++
@@ -144,7 +141,7 @@ func MeasureClockOffsetSCION(ctx context.Context, ntpc *ntp.SCIONClient,
 				}
 			}
 			ms <- measurement{off, err}
-		}(ctx, ntpc, localAddr, remoteAddr, p)
+		}(ctx, ntpcs[i], localAddr, remoteAddr, sps[i])
 	}
 	collectMeasurements(ctx, off, ms)
 	return timemath.Median(off), nil

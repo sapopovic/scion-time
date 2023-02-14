@@ -60,6 +60,10 @@ func compareIPs(x, y []byte) int {
 	return addrX.Compare(addrY)
 }
 
+func (c *SCIONClient) ResetInterleavedMode() {
+	c.prev.reference = ""
+}
+
 func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPAddr,
 	path snet.Path) (offset time.Duration, weight float64, err error) {
 	if c.DRKeyFetcher != nil && c.auth.opt == nil {

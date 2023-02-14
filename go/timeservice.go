@@ -69,7 +69,7 @@ type ntpReferenceClockIP struct {
 }
 
 type ntpReferenceClockSCION struct {
-	ntpc       *ntpd.SCIONClient
+	ntpcs      [5]*ntpd.SCIONClient
 	localAddr  udp.UDPAddr
 	remoteAddr udp.UDPAddr
 	pather     *core.Pather
@@ -130,6 +130,18 @@ func (c *mbgReferenceClock) String() string {
 	return fmt.Sprintf("mbg reference clock at %s", c.dev)
 }
 
+func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceClockIP {
+	c := &ntpReferenceClockIP{
+		localAddr:  localAddr,
+		remoteAddr: remoteAddr,
+	}
+	c.ntpc = &ntpd.IPClient{
+		Log:             log,
+		InterleavedMode: true,
+	}
+	return c
+}
+
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	return core.MeasureClockOffsetIP(ctx, c.ntpc, c.localAddr, c.remoteAddr)
 }
@@ -138,9 +150,23 @@ func (c *ntpReferenceClockIP) String() string {
 	return fmt.Sprintf("NTP reference clock (IP) at %s", c.remoteAddr)
 }
 
+func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceClockSCION {
+	c := &ntpReferenceClockSCION{
+		localAddr:  localAddr,
+		remoteAddr: remoteAddr,
+	}
+	for i := 0; i != len(c.ntpcs); i++ {
+		c.ntpcs[i] = &ntpd.SCIONClient{
+			Log:             log,
+			InterleavedMode: true,
+		}
+	}
+	return c
+}
+
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
-	return core.MeasureClockOffsetSCION(ctx, c.ntpc, c.localAddr, c.remoteAddr, paths)
+	return core.MeasureClockOffsetSCION(ctx, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
 }
 
 func (c *ntpReferenceClockSCION) String() string {
@@ -188,24 +214,16 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 					zap.String("address", s), zap.Error(err))
 			}
 			if !remoteAddr.IA.IsZero() {
-				refClocks = append(refClocks, &ntpReferenceClockSCION{
-					ntpc: &ntpd.SCIONClient{
-						Log:             log,
-						InterleavedMode: true,
-					},
-					localAddr:  udp.UDPAddrFromSnet(localAddr),
-					remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
-				})
+				refClocks = append(refClocks, newNTPRefernceClockSCION(
+					udp.UDPAddrFromSnet(localAddr),
+					udp.UDPAddrFromSnet(remoteAddr),
+				))
 				dstIAs = append(dstIAs, remoteAddr.IA)
 			} else {
-				refClocks = append(refClocks, &ntpReferenceClockIP{
-					ntpc: &ntpd.IPClient{
-						Log:             log,
-						InterleavedMode: true,
-					},
-					localAddr:  localAddr.Host,
-					remoteAddr: remoteAddr.Host,
-				})
+				refClocks = append(refClocks, newNTPRefernceClockIP(
+					localAddr.Host,
+					remoteAddr.Host,
+				))
 			}
 		}
 		for _, s := range cfg.SCIONPeers {
@@ -216,15 +234,10 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 			if remoteAddr.IA.IsZero() {
 				log.Fatal("unexpected peer address", zap.String("address", s), zap.Error(err))
 			}
-
-			netClocks = append(netClocks, &ntpReferenceClockSCION{
-				ntpc: &ntpd.SCIONClient{
-					Log:             log,
-					InterleavedMode: true,
-				},
-				localAddr:  udp.UDPAddrFromSnet(localAddr),
-				remoteAddr: udp.UDPAddrFromSnet(remoteAddr),
-			})
+			netClocks = append(netClocks, newNTPRefernceClockSCION(
+				udp.UDPAddrFromSnet(localAddr),
+				udp.UDPAddrFromSnet(remoteAddr),
+			))
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		}
 		if len(netClocks) != 0 {
@@ -237,15 +250,19 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 			for _, c := range refClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
 				if ok {
-					scionclk.ntpc.DRKeyFetcher = drkeyFetcher
 					scionclk.pather = pather
+					for i := 0; i != len(scionclk.ntpcs); i++ {
+						scionclk.ntpcs[i].DRKeyFetcher = drkeyFetcher
+					}
 				}
 			}
 			for _, c := range netClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
 				if ok {
-					scionclk.ntpc.DRKeyFetcher = drkeyFetcher
 					scionclk.pather = pather
+					for i := 0; i != len(scionclk.ntpcs); i++ {
+						scionclk.ntpcs[i].DRKeyFetcher = drkeyFetcher
+					}
 				}
 			}
 		}
