@@ -12,13 +12,8 @@ import (
 	"example.com/scion-time/go/core/timemath"
 )
 
-const (
-	timeout = 1 * time.Second
-)
-
 type filterContext struct {
 	epoch          uint64
-	lo, mid, hi    float64
 	alo, amid, ahi float64
 	alolo, ahihi   float64
 	navg           float64

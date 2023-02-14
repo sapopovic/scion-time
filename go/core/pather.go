@@ -67,11 +67,8 @@ func StartPather(log *zap.Logger, c daemon.Connector, dstIAs []addr.IA) *Pather 
 	go func(p *Pather, c daemon.Connector, dstIAs []addr.IA) {
 		ctx := context.Background()
 		ticker := time.NewTicker(pathRefreshPeriod)
-		for {
-			select {
-			case <-ticker.C:
-				update(ctx, p, c, dstIAs)
-			}
+		for range ticker.C {
+			update(ctx, p, c, dstIAs)
 		}
 	}(p, c, dstIAs)
 	return p

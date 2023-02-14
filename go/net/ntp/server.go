@@ -116,12 +116,12 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 			}
 			if i != tssi.len {
 				// ensure uniqueness of rx timestamps per clientID
-				(*rxt).Add(1)
+				*rxt = rxt.Add(1)
 				rxt64 = Time64FromTime(*rxt)
-				if !(*rxt).Before(*txt) {
+				if !rxt.Before(*txt) {
 					// ensure strict monotonicity of rx/tx timestamps
 					*txt = *rxt
-					(*txt).Add(1)
+					*txt = txt.Add(1)
 					txt64 = Time64FromTime(*txt)
 				}
 				continue
@@ -184,7 +184,7 @@ func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 	if !rxt.Before(*txt) {
 		// ensure strict monotonicity of rx/tx timestamps
 		*txt = rxt
-		(*txt).Add(1)
+		*txt = txt.Add(1)
 	}
 
 	tssMu.Lock()

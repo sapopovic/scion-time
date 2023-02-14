@@ -105,7 +105,11 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 				_ = ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
 				roundTripDelay := ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime)
 
-				hg.RecordValue(roundTripDelay.Microseconds())
+				err = hg.RecordValue(roundTripDelay.Microseconds())
+				if err != nil {
+					log.Printf("Failed to record histogram value: %v", err)
+					return
+				}
 			}
 			mu.Lock()
 			defer mu.Unlock()

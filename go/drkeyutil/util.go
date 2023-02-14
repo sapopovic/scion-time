@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/scionproto/scion/pkg/addr"
@@ -31,7 +32,7 @@ func FetchSecretValue(
 		return drkey.SecretValue{}, serrors.New("no control service address found")
 	}
 
-	conn, err := grpc.DialContext(ctx, cs[0], grpc.WithInsecure())
+	conn, err := grpc.DialContext(ctx, cs[0], grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return drkey.SecretValue{}, serrors.WrapStr("dialing control service", err)
 	}

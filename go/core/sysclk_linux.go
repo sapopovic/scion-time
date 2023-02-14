@@ -109,7 +109,7 @@ func setFrequency(log *zap.Logger, frequency float64) {
 
 func (c *SystemClock) Epoch() uint64 {
 	c.mu.Lock()
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 	return c.epoch
 }
 
@@ -123,7 +123,7 @@ func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
 
 func (c *SystemClock) Step(offset time.Duration) {
 	c.mu.Lock()
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 	if c.adjustment != nil {
 		c.adjustment = nil
 	}
@@ -136,7 +136,7 @@ func (c *SystemClock) Step(offset time.Duration) {
 
 func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) {
 	c.mu.Lock()
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 	if c.adjustment != nil {
 		c.adjustment = nil
 	}

@@ -211,7 +211,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger,
 								_, err = spao.ComputeAuthCMAC(
 									spao.MACInput{
 										Key:        authKey,
-										Header:     slayers.PacketAuthOption{authOpt},
+										Header:     slayers.PacketAuthOption{EndToEndOption: authOpt},
 										ScionLayer: &scionLayer,
 										PldType:    slayers.L4UDP,
 										Pld:        buf[len(buf)-int(udpLayer.Length):],
@@ -295,7 +295,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger,
 				_, err = spao.ComputeAuthCMAC(
 					spao.MACInput{
 						Key:        authKey,
-						Header:     slayers.PacketAuthOption{authOpt},
+						Header:     slayers.PacketAuthOption{EndToEndOption: authOpt},
 						ScionLayer: &scionLayer,
 						PldType:    scionLayer.NextHdr,
 						Pld:        buffer.Bytes(),

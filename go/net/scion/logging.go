@@ -21,9 +21,13 @@ type PathInterfaceArrayMarshaler struct {
 }
 
 func (m PathInterfaceArrayMarshaler) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	var err error
 	for _, i := range m.PathInterfaces {
 		i := i
-		enc.AppendObject(PathInterfaceMarshaler{PathInterface: i})
+		err = enc.AppendObject(PathInterfaceMarshaler{PathInterface: i})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -33,9 +37,13 @@ type PathMarshaler struct {
 }
 
 func (m PathMarshaler) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	var err error
 	p := m.Path
 	md := p.Metadata()
-	enc.AddArray("hops", PathInterfaceArrayMarshaler{PathInterfaces: md.Interfaces})
+	err = enc.AddArray("hops", PathInterfaceArrayMarshaler{PathInterfaces: md.Interfaces})
+	if err != nil {
+		return err
+	}
 	enc.AddUint16("MTU", md.MTU)
 	var nh string
 	unh := p.UnderlayNextHop()
@@ -53,9 +61,13 @@ type PathArrayMarshaler struct {
 }
 
 func (m PathArrayMarshaler) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	var err error
 	for _, p := range m.Paths {
 		p := p
-		enc.AppendObject(PathMarshaler{Path: p})
+		err = enc.AppendObject(PathMarshaler{Path: p})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

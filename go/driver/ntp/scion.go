@@ -185,7 +185,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			_, err = spao.ComputeAuthCMAC(
 				spao.MACInput{
 					Key:        authKey,
-					Header:     slayers.PacketAuthOption{c.auth.opt},
+					Header:     slayers.PacketAuthOption{EndToEndOption: c.auth.opt},
 					ScionLayer: &scionLayer,
 					PldType:    scionLayer.NextHdr,
 					Pld:        buffer.Bytes(),
@@ -330,7 +330,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 						_, err = spao.ComputeAuthCMAC(
 							spao.MACInput{
 								Key:        authKey,
-								Header:     slayers.PacketAuthOption{authOpt},
+								Header:     slayers.PacketAuthOption{EndToEndOption: authOpt},
 								ScionLayer: &scionLayer,
 								PldType:    slayers.L4UDP,
 								Pld:        buf[len(buf)-int(udpLayer.Length):],
