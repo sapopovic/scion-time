@@ -2,7 +2,7 @@ module example.com/scion-time
 
 go 1.19
 
-replace github.com/scionproto/scion => github.com/scionproto/scion v0.8.1-0.20230125160204-f3b508f14f8c
+replace github.com/scionproto/scion => github.com/scionproto/scion v0.8.1-0.20230216150859-3318edbf50c7
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2
@@ -24,7 +24,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
@@ -42,6 +41,5 @@ require (
 	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20230202175211-008b39050e57 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317 // indirect
 )

@@ -14,6 +14,7 @@ import (
 	"github.com/scionproto/scion/pkg/snet"
 
 	"github.com/scionproto/scion/pkg/private/common"
+	"github.com/scionproto/scion/pkg/spao"
 	"github.com/scionproto/scion/private/topology/underlay"
 
 	"go.uber.org/zap"
@@ -24,7 +25,6 @@ import (
 
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/scion"
-	"example.com/scion-time/go/net/scion/spao"
 	"example.com/scion-time/go/net/udp"
 )
 
