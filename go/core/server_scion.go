@@ -10,6 +10,8 @@ import (
 	"github.com/google/gopacket"
 
 	"github.com/libp2p/go-reuseport"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
@@ -34,7 +36,25 @@ const (
 	scionServerNumGoroutine = 8
 )
 
-func runSCIONServer(ctx context.Context, log *zap.Logger,
+type scionServerMetrics struct {
+	reqsServed    prometheus.Counter
+	pktsForwarded prometheus.Counter
+}
+
+func newSCIONServerMetrics() *scionServerMetrics {
+	return &scionServerMetrics{
+		reqsServed: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_reqs_served_scion_total",
+			Help: "The total number of requests served via SCION",
+		}),
+		pktsForwarded: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_pkts_forwarded_scion_total",
+			Help: "The total number of packets forwarded via SCION",
+		}),
+	}
+}
+
+func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetrics,
 	conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) {
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn)
@@ -172,6 +192,8 @@ func runSCIONServer(ctx context.Context, log *zap.Logger,
 				log.Error("failed to write packet", zap.Error(err))
 				continue
 			}
+
+			mtrcs.pktsForwarded.Inc()
 		} else if localHostPort != underlay.EndhostPort {
 			var (
 				authOpt *slayers.EndToEndOption
@@ -343,6 +365,8 @@ func runSCIONServer(ctx context.Context, log *zap.Logger,
 				txId++
 			}
 			ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
+
+			mtrcs.reqsServed.Inc()
 		}
 	}
 }
@@ -372,13 +396,15 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 	localHostPort := localHost.Port
 	localHost.Port = underlay.EndhostPort
 
+	mtrcs := newSCIONServerMetrics()
+
 	if scionServerNumGoroutine == 1 {
 		f := drkeyutil.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
 			log.Fatal("failed to listen for packets", zap.Error(err))
 		}
-		go runSCIONServer(ctx, log, conn, localHostPort, f)
+		go runSCIONServer(ctx, log, mtrcs, conn, localHostPort, f)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
 			f := drkeyutil.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
@@ -386,7 +412,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 			if err != nil {
 				log.Fatal("failed to listen for packets", zap.Error(err))
 			}
-			go runSCIONServer(ctx, log, conn.(*net.UDPConn), localHostPort, f)
+			go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHostPort, f)
 		}
 	}
 }
@@ -404,9 +430,11 @@ func StartSCIONDisptacher(ctx context.Context, log *zap.Logger,
 
 	localHost.Port = underlay.EndhostPort
 
+	mtrcs := newSCIONServerMetrics()
+
 	conn, err := net.ListenUDP("udp", localHost)
 	if err != nil {
 		log.Fatal("failed to listen for packets", zap.Error(err))
 	}
-	go runSCIONServer(ctx, log, conn, localHost.Port, nil /* DRKey fetcher */)
+	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Port, nil /* DRKey fetcher */)
 }

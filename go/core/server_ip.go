@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/libp2p/go-reuseport"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"go.uber.org/zap"
 
@@ -17,7 +19,20 @@ const (
 	ipServerNumGoroutine = 8
 )
 
-func runIPServer(log *zap.Logger, conn *net.UDPConn) {
+type ipServerMetrics struct {
+	reqsServed prometheus.Counter
+}
+
+func newIPServerMetrics() *ipServerMetrics {
+	return &ipServerMetrics{
+		reqsServed: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_reqs_served_ip_total",
+			Help: "The total number of requests served via IP",
+		}),
+	}
+}
+
+func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn) {
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn)
 	if err != nil {
@@ -92,6 +107,8 @@ func runIPServer(log *zap.Logger, conn *net.UDPConn) {
 			txId++
 		}
 		ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
+
+		mtrcs.reqsServed.Inc()
 	}
 }
 
@@ -101,19 +118,21 @@ func StartIPServer(log *zap.Logger, localHost *net.UDPAddr) {
 		zap.Int("port", localHost.Port),
 	)
 
+	mtrcs := newIPServerMetrics()
+
 	if ipServerNumGoroutine == 1 {
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
 			log.Fatal("failed to listen for packets", zap.Error(err))
 		}
-		go runIPServer(log, conn)
+		go runIPServer(log, mtrcs, conn)
 	} else {
 		for i := ipServerNumGoroutine; i > 0; i-- {
 			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
 				log.Fatal("failed to listen for packets", zap.Error(err))
 			}
-			go runIPServer(log, conn.(*net.UDPConn))
+			go runIPServer(log, mtrcs, conn.(*net.UDPConn))
 		}
 	}
 }

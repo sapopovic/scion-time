@@ -8,10 +8,11 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
-	"runtime"
-	"runtime/pprof"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
@@ -108,18 +109,9 @@ func newLogger() *zap.Logger {
 }
 
 func runMonitor(log *zap.Logger) {
-	p := pprof.Lookup("threadcreate")
-	for {
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		log.Debug("runtime stats",
-			zap.Uint64("TotalAlloc", m.TotalAlloc),
-			zap.Uint64("Mallocs", m.Mallocs),
-			zap.Uint64("Frees", m.Frees),
-			zap.Int("Thread Count", p.Count()),
-		)
-		time.Sleep(15 * time.Second)
-	}
+	http.Handle("/metrics", promhttp.Handler())
+	err := http.ListenAndServe("127.0.0.1:8080", nil)
+	log.Fatal("failed to serve metrics", zap.Error(err))
 }
 
 func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
@@ -371,7 +363,7 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	core.StartIPServer(log, snet.CopyUDPAddr(localAddr.Host))
 	core.StartSCIONServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), daemonAddr)
 
-	select {}
+	runMonitor(log)
 }
 
 func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
@@ -394,7 +386,7 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	core.StartIPServer(log, snet.CopyUDPAddr(localAddr.Host))
 	core.StartSCIONServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), daemonAddr)
 
-	select {}
+	runMonitor(log)
 }
 
 func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
@@ -426,7 +418,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		log.Fatal("unexpected configuration", zap.Int("number of peers", len(netClocks)))
 	}
 
-	select {}
+	runMonitor(log)
 }
 
 func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
@@ -561,8 +553,6 @@ func exitWithUsage() {
 }
 
 func main() {
-	go runMonitor(log)
-
 	var configFile string
 	var daemonAddr string
 	var localAddr snet.UDPAddr
