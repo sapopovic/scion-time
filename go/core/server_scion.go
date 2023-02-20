@@ -37,19 +37,34 @@ const (
 )
 
 type scionServerMetrics struct {
-	reqsServed    prometheus.Counter
-	pktsForwarded prometheus.Counter
+	pktsReceived      prometheus.Counter
+	pktsAuthenticated prometheus.Counter
+	pktsForwarded     prometheus.Counter
+	reqsAccepted      prometheus.Counter
+	reqsServed        prometheus.Counter
 }
 
 func newSCIONServerMetrics() *scionServerMetrics {
 	return &scionServerMetrics{
-		reqsServed: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_reqs_served_scion_total",
-			Help: "The total number of requests served via SCION",
+		pktsReceived: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_pkts_received_scion_total",
+			Help: "The total number of packets received via SCION",
+		}),
+		pktsAuthenticated: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_pkts_authenticated_scion_total",
+			Help: "The total number of packets authenticated via SCION",
 		}),
 		pktsForwarded: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "timeservice_pkts_forwarded_scion_total",
 			Help: "The total number of packets forwarded via SCION",
+		}),
+		reqsAccepted: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_reqs_accepted_scion_total",
+			Help: "The total number of requests accepted via SCION",
+		}),
+		reqsServed: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_reqs_served_scion_total",
+			Help: "The total number of requests served via SCION",
 		}),
 	}
 }
@@ -114,6 +129,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 			log.Error("failed to read packet rx timestamp", zap.Error(err))
 		}
 		buf = buf[:n]
+		mtrcs.pktsReceived.Inc()
 
 		err = parser.DecodeLayers(buf, &decoded)
 		if err != nil {
@@ -249,6 +265,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 									log.Info("failed to authenticate packet")
 									continue
 								}
+								mtrcs.pktsAuthenticated.Inc()
 							}
 						}
 					}
@@ -270,6 +287,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 
 			clientID := scionLayer.SrcIA.String() + "," + srcAddr.String()
 
+			mtrcs.reqsAccepted.Inc()
 			log.Debug("received request",
 				zap.Time("at", rxt),
 				zap.String("from", clientID),

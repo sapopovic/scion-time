@@ -20,11 +20,21 @@ const (
 )
 
 type ipServerMetrics struct {
-	reqsServed prometheus.Counter
+	pktsReceived prometheus.Counter
+	reqsAccepted prometheus.Counter
+	reqsServed   prometheus.Counter
 }
 
 func newIPServerMetrics() *ipServerMetrics {
 	return &ipServerMetrics{
+		pktsReceived: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_pkts_received_ip_total",
+			Help: "The total number of packets received via IP",
+		}),
+		reqsAccepted: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_reqs_accepted_ip_total",
+			Help: "The total number of requests accepted via IP",
+		}),
 		reqsServed: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "timeservice_reqs_served_ip_total",
 			Help: "The total number of requests served via IP",
@@ -62,6 +72,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn) {
 			log.Error("failed to read packet rx timestamp", zap.Error(err))
 		}
 		buf = buf[:n]
+		mtrcs.pktsReceived.Inc()
 
 		var ntpreq ntp.Packet
 		err = ntp.DecodePacket(&ntpreq, buf)
@@ -78,6 +89,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn) {
 
 		clientID := srcAddr.Addr().String()
 
+		mtrcs.reqsAccepted.Inc()
 		log.Debug("received request",
 			zap.Time("at", rxt),
 			zap.String("from", clientID),
