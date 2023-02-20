@@ -34,15 +34,10 @@ var (
 	tss   = make(tssMap)
 	tssQ  = make(tssQueue, 0, tssCap)
 	tssMetrics = struct {
-		reqsAcceptedInterleaved prometheus.Counter
 		reqsServedInterleaved   prometheus.Counter
 	}{
-		reqsAcceptedInterleaved: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_reqs_accepted_interleaved_total",
-			Help: "The total number of requests accepted in interleaved mode",
-		}),
 		reqsServedInterleaved: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_reqs_served_Interleaved_total",
+			Name: "timeservice_reqs_served_interleaved_total",
 			Help: "The total number of requests served in interleaved mode",
 		}),
 	}
@@ -160,10 +155,6 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 			heap.Push(&tssQ, tssi)
 		}
 		o, min, max = -1, -1, -1
-	}
-
-	if req.ReceiveTime != req.TransmitTime {
-		tssMetrics.reqsAcceptedInterleaved.Inc()
 	}
 
 	resp.ReferenceTime = txt64
