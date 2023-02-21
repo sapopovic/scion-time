@@ -80,17 +80,17 @@ type ntpReferenceClockSCION struct {
 type localReferenceClock struct{}
 
 var (
-	log = newLogger()
+	log *zap.Logger
 
 	refClocks       []core.ReferenceClock
 	refClockOffsets []time.Duration
-	refClockClient  = core.ReferenceClockClient{Log: log}
+	refClockClient  core.ReferenceClockClient
 	netClocks       []core.ReferenceClock
 	netClockOffsets []time.Duration
-	netClockClient  = core.ReferenceClockClient{Log: log}
+	netClockClient  core.ReferenceClockClient
 )
 
-func newLogger() *zap.Logger {
+func initLogger(verbose bool) {
 	c := zap.NewDevelopmentConfig()
 	c.DisableStacktrace = true
 	c.EncoderConfig.EncodeCaller = func(
@@ -102,11 +102,16 @@ func newLogger() *zap.Logger {
 		}
 		enc.AppendString(fmt.Sprintf("%30s", p))
 	}
-	l, err := c.Build()
+	if !verbose {
+		c.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	}
+	var err error
+	log, err = c.Build()
 	if err != nil {
 		panic(err)
 	}
-	return l
+	refClockClient.Log = log
+	netClockClient.Log = log
 }
 
 func runMonitor(log *zap.Logger) {
@@ -558,14 +563,17 @@ func exitWithUsage() {
 }
 
 func main() {
-	var configFile string
-	var daemonAddr string
-	var localAddr snet.UDPAddr
-	var remoteAddr snet.UDPAddr
-	var dispatcherMode string
-	var drkeyMode string
-	var drkeyServerAddr snet.UDPAddr
-	var drkeyClientAddr snet.UDPAddr
+	var (
+		verbose bool
+		configFile string
+		daemonAddr string
+		localAddr snet.UDPAddr
+		remoteAddr snet.UDPAddr
+		dispatcherMode string
+		drkeyMode string
+		drkeyServerAddr snet.UDPAddr
+		drkeyClientAddr snet.UDPAddr
+	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	relayFlags := flag.NewFlagSet("relay", flag.ExitOnError)
@@ -574,27 +582,33 @@ func main() {
 	benchmarkFlags := flag.NewFlagSet("benchmark", flag.ExitOnError)
 	drkeyFlags := flag.NewFlagSet("drkey", flag.ExitOnError)
 
+	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
 	serverFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	serverFlags.Var(&localAddr, "local", "Local address")
 
+	relayFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	relayFlags.StringVar(&configFile, "config", "", "Config file")
 	relayFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	relayFlags.Var(&localAddr, "local", "Local address")
 
+	clientFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	clientFlags.StringVar(&configFile, "config", "", "Config file")
 	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	clientFlags.Var(&localAddr, "local", "Local address")
 
+	toolFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	toolFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	toolFlags.StringVar(&dispatcherMode, "dispatcher", "", "Dispatcher mode")
 	toolFlags.Var(&localAddr, "local", "Local address")
 	toolFlags.Var(&remoteAddr, "remote", "Remote address")
 
+	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	benchmarkFlags.Var(&localAddr, "local", "Local address")
 	benchmarkFlags.Var(&remoteAddr, "remote", "Remote address")
 
+	drkeyFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	drkeyFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	drkeyFlags.StringVar(&drkeyMode, "mode", "", "Mode")
 	drkeyFlags.Var(&drkeyServerAddr, "server", "Server address")
@@ -610,18 +624,21 @@ func main() {
 		if err != nil || serverFlags.NArg() != 0 {
 			exitWithUsage()
 		}
+		initLogger(verbose)
 		runServer(configFile, daemonAddr, &localAddr)
 	case relayFlags.Name():
 		err := relayFlags.Parse(os.Args[2:])
 		if err != nil || relayFlags.NArg() != 0 {
 			exitWithUsage()
 		}
+		initLogger(verbose)
 		runRelay(configFile, daemonAddr, &localAddr)
 	case clientFlags.Name():
 		err := clientFlags.Parse(os.Args[2:])
 		if err != nil || clientFlags.NArg() != 0 {
 			exitWithUsage()
 		}
+		initLogger(verbose)
 		runClient(configFile, daemonAddr, &localAddr)
 	case toolFlags.Name():
 		err := toolFlags.Parse(os.Args[2:])
@@ -635,6 +652,7 @@ func main() {
 				dispatcherMode != dispatcherModeInternal {
 				exitWithUsage()
 			}
+			initLogger(verbose)
 			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr)
 		} else {
 			if daemonAddr != "" {
@@ -643,6 +661,7 @@ func main() {
 			if dispatcherMode != "" {
 				exitWithUsage()
 			}
+			initLogger(verbose)
 			runIPTool(&localAddr, &remoteAddr)
 		}
 	case benchmarkFlags.Name():
@@ -651,11 +670,13 @@ func main() {
 			exitWithUsage()
 		}
 		if !remoteAddr.IA.IsZero() {
+			initLogger(verbose)
 			runSCIONBenchmark(daemonAddr, &localAddr, &remoteAddr)
 		} else {
 			if daemonAddr != "" {
 				exitWithUsage()
 			}
+			initLogger(verbose)
 			runIPBenchmark(&localAddr, &remoteAddr)
 		}
 	case drkeyFlags.Name():
@@ -667,6 +688,7 @@ func main() {
 			exitWithUsage()
 		}
 		serverMode := drkeyMode == "server"
+		initLogger(verbose)
 		runDRKeyDemo(daemonAddr, serverMode, &drkeyServerAddr, &drkeyClientAddr)
 	case "x":
 		runX()

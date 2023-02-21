@@ -12,6 +12,7 @@ import (
 )
 
 func runX() {
+	initLogger(true /* verbose */)
 	ctx := context.Background()
 
 	lclk := &core.SystemClock{Log: log}
