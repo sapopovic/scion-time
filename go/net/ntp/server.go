@@ -31,10 +31,10 @@ type tssQueue []*tssItem
 var (
 	errUnexpectedRequest = errors.New("unexpected request structure")
 
-	tss   = make(tssMap)
-	tssQ  = make(tssQueue, 0, tssCap)
+	tss        = make(tssMap)
+	tssQ       = make(tssQueue, 0, tssCap)
 	tssMetrics = struct {
-		reqsServedInterleaved   prometheus.Counter
+		reqsServedInterleaved prometheus.Counter
 	}{
 		reqsServedInterleaved: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "timeservice_reqs_served_interleaved_total",

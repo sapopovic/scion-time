@@ -564,13 +564,13 @@ func exitWithUsage() {
 
 func main() {
 	var (
-		verbose bool
-		configFile string
-		daemonAddr string
-		localAddr snet.UDPAddr
-		remoteAddr snet.UDPAddr
-		dispatcherMode string
-		drkeyMode string
+		verbose         bool
+		configFile      string
+		daemonAddr      string
+		localAddr       snet.UDPAddr
+		remoteAddr      snet.UDPAddr
+		dispatcherMode  string
+		drkeyMode       string
 		drkeyServerAddr snet.UDPAddr
 		drkeyClientAddr snet.UDPAddr
 	)
