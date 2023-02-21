@@ -193,7 +193,7 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 		if err != nil {
 			log.Fatal("failed to load configuration", zap.Error(err))
 		}
-		err = toml.NewDecoder(bytes.NewReader(raw)).Strict(true).Decode(cfg)
+		err = toml.NewDecoder(bytes.NewReader(raw)).Strict(true).Decode(&cfg)
 		if err != nil {
 			log.Fatal("failed to decode configuration", zap.Error(err))
 		}
