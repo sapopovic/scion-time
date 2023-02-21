@@ -16,10 +16,7 @@ import (
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/slayers"
-
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/spao"
-	"github.com/scionproto/scion/private/topology/underlay"
 
 	"go.uber.org/zap"
 
@@ -78,7 +75,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 	}
 
 	var txId uint32
-	buf := make([]byte, common.SupportedMTU)
+	buf := make([]byte, scion.MTU)
 	oob := make([]byte, udp.TimestampLen())
 
 	var (
@@ -210,7 +207,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 			}
 
 			mtrcs.pktsForwarded.Inc()
-		} else if localHostPort != underlay.EndhostPort {
+		} else if localHostPort != scion.EndhostPort {
 			var (
 				authOpt *slayers.EndToEndOption
 				authKey []byte
@@ -407,12 +404,12 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 		zap.Int("port", localHost.Port),
 	)
 
-	if localHost.Port == underlay.EndhostPort {
-		log.Fatal("invalid listener port", zap.Int("port", underlay.EndhostPort))
+	if localHost.Port == scion.EndhostPort {
+		log.Fatal("invalid listener port", zap.Int("port", scion.EndhostPort))
 	}
 
 	localHostPort := localHost.Port
-	localHost.Port = underlay.EndhostPort
+	localHost.Port = scion.EndhostPort
 
 	mtrcs := newSCIONServerMetrics()
 
@@ -439,14 +436,14 @@ func StartSCIONDisptacher(ctx context.Context, log *zap.Logger,
 	localHost *net.UDPAddr) {
 	log.Info("dispatcher listening via SCION",
 		zap.Stringer("ip", localHost.IP),
-		zap.Int("port", underlay.EndhostPort),
+		zap.Int("port", scion.EndhostPort),
 	)
 
-	if localHost.Port == underlay.EndhostPort {
-		log.Fatal("invalid listener port", zap.Int("port", underlay.EndhostPort))
+	if localHost.Port == scion.EndhostPort {
+		log.Fatal("invalid listener port", zap.Int("port", scion.EndhostPort))
 	}
 
-	localHost.Port = underlay.EndhostPort
+	localHost.Port = scion.EndhostPort
 
 	mtrcs := newSCIONServerMetrics()
 

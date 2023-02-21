@@ -13,11 +13,11 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/snet"
-	"github.com/scionproto/scion/private/topology/underlay"
 
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/net/ntp"
+	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
 )
 
@@ -51,7 +51,7 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 	if nextHop == nil && remoteAddr.IA.Equal(localAddr.IA) {
 		nextHop = &net.UDPAddr{
 			IP:   remoteAddr.Host.IP,
-			Port: underlay.EndhostPort,
+			Port: scion.EndhostPort,
 			Zone: remoteAddr.Host.Zone,
 		}
 	}

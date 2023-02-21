@@ -7,13 +7,12 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/snet"
-	"github.com/scionproto/scion/private/topology/underlay"
 )
 
 func runServer(localAddr snet.UDPAddr) {
 	var err error
 
-	localAddr.Host.Port = underlay.EndhostPort
+	localAddr.Host.Port = 30041 /* end host port */
 
 	log.Printf("Listening in %v on %v:%d - %v\n", localAddr.IA, localAddr.Host.IP, localAddr.Host.Port, addr.SvcNone)
 

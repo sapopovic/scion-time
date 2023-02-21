@@ -2,6 +2,7 @@ package drkeyutil
 
 import (
 	"context"
+	"errors"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -11,10 +12,13 @@ import (
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/drkey/specific"
-	"github.com/scionproto/scion/pkg/private/serrors"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	dkpb "github.com/scionproto/scion/pkg/proto/drkey"
 	"github.com/scionproto/scion/pkg/scrypto/cppki"
+)
+
+var (
+	errNoCSAddress = errors.New("failed to look up control service address")
 )
 
 func FetchSecretValue(
@@ -25,16 +29,16 @@ func FetchSecretValue(
 
 	svcs, err := daemon.SVCInfo(ctx, nil)
 	if err != nil {
-		return drkey.SecretValue{}, serrors.WrapStr("obtaining control service address", err)
+		return drkey.SecretValue{}, err
 	}
 	cs := svcs[addr.SvcCS]
 	if len(cs) == 0 {
-		return drkey.SecretValue{}, serrors.New("no control service address found")
+		return drkey.SecretValue{}, errNoCSAddress
 	}
 
 	conn, err := grpc.DialContext(ctx, cs[0], grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return drkey.SecretValue{}, serrors.WrapStr("dialing control service", err)
+		return drkey.SecretValue{}, err
 	}
 	defer conn.Close()
 	client := cppb.NewDRKeyIntraServiceClient(conn)
@@ -44,12 +48,12 @@ func FetchSecretValue(
 		ProtocolId: dkpb.Protocol(meta.ProtoId),
 	})
 	if err != nil {
-		return drkey.SecretValue{}, serrors.WrapStr("requesting drkey secret value", err)
+		return drkey.SecretValue{}, err
 	}
 
 	key, err := getSecretValueFromReply(meta.ProtoId, rep)
 	if err != nil {
-		return drkey.SecretValue{}, serrors.WrapStr("validating drkey secret value reply", err)
+		return drkey.SecretValue{}, err
 	}
 
 	return key, nil
@@ -88,15 +92,15 @@ func DeriveHostHostKey(
 	var deriver specific.Deriver
 	lvl1, err := deriver.DeriveLevel1(meta.DstIA, sv.Key)
 	if err != nil {
-		return drkey.HostHostKey{}, serrors.WrapStr("deriving level 1 key", err)
+		return drkey.HostHostKey{}, err
 	}
 	hostAS, err := deriver.DeriveHostAS(meta.SrcHost, lvl1)
 	if err != nil {
-		return drkey.HostHostKey{}, serrors.WrapStr("deriving host-AS key", err)
+		return drkey.HostHostKey{}, err
 	}
 	hosthost, err := deriver.DeriveHostHost(meta.DstHost, hostAS)
 	if err != nil {
-		return drkey.HostHostKey{}, serrors.WrapStr("deriving host-host key", err)
+		return drkey.HostHostKey{}, err
 	}
 	return drkey.HostHostKey{
 		ProtoId: sv.ProtoId,

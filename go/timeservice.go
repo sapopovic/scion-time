@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"flag"
@@ -12,13 +13,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/pelletier/go-toml"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/snet"
-	"github.com/scionproto/scion/private/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -188,9 +189,13 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 	configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	if configFile != "" {
 		var cfg svcConfig
-		err := config.LoadFile(configFile, &cfg)
+		raw, err := os.ReadFile(configFile)
 		if err != nil {
 			log.Fatal("failed to load configuration", zap.Error(err))
+		}
+		err = toml.NewDecoder(bytes.NewReader(raw)).Strict(true).Decode(cfg)
+		if err != nil {
+			log.Fatal("failed to decode configuration", zap.Error(err))
 		}
 		for _, s := range cfg.MBGReferenceClocks {
 			refClocks = append(refClocks, &mbgReferenceClock{

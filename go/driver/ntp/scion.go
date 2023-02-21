@@ -12,10 +12,7 @@ import (
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/snet"
-
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/spao"
-	"github.com/scionproto/scion/private/topology/underlay"
 
 	"go.uber.org/zap"
 
@@ -103,13 +100,13 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 	if nextHop == (netip.AddrPort{}) && remoteAddr.IA.Equal(localAddr.IA) {
 		nextHop = netip.AddrPortFrom(
 			netip.AddrFrom4(remoteAddr.Host.AddrPort().Addr().As4()),
-			underlay.EndhostPort)
+			scion.EndhostPort)
 	}
 
 	srcAddr := &net.IPAddr{IP: localAddr.Host.IP}
 	dstAddr := &net.IPAddr{IP: remoteAddr.Host.IP}
 
-	buf := make([]byte, common.SupportedMTU)
+	buf := make([]byte, scion.MTU)
 
 	reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
 	cTxTime0 := timebase.Now()

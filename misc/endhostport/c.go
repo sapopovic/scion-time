@@ -10,7 +10,6 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/snet"
-	"github.com/scionproto/scion/private/topology/underlay"
 )
 
 func sendHello(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAddr) {
@@ -72,7 +71,7 @@ func sendHello(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 	if nextHop == nil && remoteAddr.IA.Equal(localAddr.IA) {
 		nextHop = &net.UDPAddr{
 			IP:   remoteAddr.Host.IP,
-			Port: underlay.EndhostPort,
+			Port: 30041 /* end host port */,
 			Zone: remoteAddr.Host.Zone,
 		}
 	}
@@ -82,7 +81,7 @@ func sendHello(daemonAddr string, localAddr snet.UDPAddr, remoteAddr snet.UDPAdd
 		log.Fatalf("Failed to serialize SCION packet: %v\n", err)
 	}
 
-	localAddr.Host.Port = underlay.EndhostPort
+	localAddr.Host.Port = 30041 /* end host port */
 
 	dconn, err := net.ListenUDP("udp", localAddr.Host)
 	if err != nil {
