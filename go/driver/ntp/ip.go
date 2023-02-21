@@ -85,22 +85,25 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		c.Log.Error("failed to read packet tx timestamp", zap.Error(err))
 	}
 
+	numRetries := 0
 	oob := make([]byte, udp.TimestampLen())
 	for {
 		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
 		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
-			if deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.Error("failed to read packet", zap.Error(err))
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.Info("failed to read packet", zap.Error(err))
+				numRetries++
 				continue
 			}
 			return offset, weight, err
 		}
 		if flags != 0 {
 			err = errUnexpectedPacketFlags
-			if deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.Error("failed to read packet", zap.Int("flags", flags))
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.Info("failed to read packet", zap.Int("flags", flags))
+				numRetries++
 				continue
 			}
 			return offset, weight, err
@@ -115,8 +118,9 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 
 		if compareAddrs(srcAddr.Addr(), remoteAddr.AddrPort().Addr()) != 0 {
 			err = errUnexpectedPacketSource
-			if deadlineIsSet && timebase.Now().Before(deadline) {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				c.Log.Info("received packet from unexpected source")
+				numRetries++
 				continue
 			}
 			return offset, weight, err
@@ -125,8 +129,9 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 		var ntpresp ntp.Packet
 		err = ntp.DecodePacket(&ntpresp, buf)
 		if err != nil {
-			if deadlineIsSet && timebase.Now().Before(deadline) {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				c.Log.Info("failed to decode packet payload", zap.Error(err))
+				numRetries++
 				continue
 			}
 			return offset, weight, err
@@ -137,8 +142,9 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, localAddr, remoteAd
 			interleaved = true
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
-			if deadlineIsSet && timebase.Now().Before(deadline) {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				c.Log.Info("received packet with unexpected type or structure")
+				numRetries++
 				continue
 			}
 			return offset, weight, err

@@ -12,6 +12,10 @@ import (
 	"example.com/scion-time/go/core/timemath"
 )
 
+const (
+	maxNumRetries = 1
+)
+
 type filterContext struct {
 	epoch          uint64
 	alo, amid, ahi float64
