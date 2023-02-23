@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/pelletier/go-toml"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/scionproto/scion/pkg/addr"
@@ -301,8 +303,13 @@ func runLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	if maxCorr <= 0 {
 		panic("invalid reference clock max correction")
 	}
+	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "timeservice_global_sync_corr",
+		Help: "The current clock correction applied based on local sync",
+	})
 	pll := core.NewPLL(log, lclk)
 	for {
+		corrGauge.Set(0)
 		corr := measureOffsetToRefClocks(refClockSyncTimeout)
 		if timemath.Abs(corr) > refClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
@@ -310,6 +317,7 @@ func runLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 			}
 			// lclk.Adjust(corr, refClockSyncInterval, 0)
 			pll.Do(corr, 1000.0 /* weight */)
+			corrGauge.Set(float64(corr))
 		}
 		lclk.Sleep(refClockSyncInterval)
 	}
@@ -339,8 +347,13 @@ func runGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	if maxCorr <= 0 {
 		panic("invalid network clock max correction")
 	}
+	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "timeservice_global_sync_corr",
+		Help: "The current clock correction applied based on global sync",
+	})
 	pll := core.NewPLL(log, lclk)
 	for {
+		corrGauge.Set(0)
 		corr := measureOffsetToNetClocks(netClockSyncTimeout)
 		if timemath.Abs(corr) > netClockCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
@@ -348,6 +361,7 @@ func runGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 			}
 			// lclk.Adjust(corr, netClockSyncInterval, 0)
 			pll.Do(corr, 1000.0 /* weight */)
+			corrGauge.Set(float64(corr))
 		}
 		lclk.Sleep(netClockSyncInterval)
 	}
