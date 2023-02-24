@@ -45,6 +45,8 @@ const (
 	dispatcherModeExternal = "external"
 	dispatcherModeInternal = "internal"
 
+	scionRefClockNumClient = 5
+
 	refClockImpact       = 1.25
 	refClockCutoff       = 0
 	refClockSyncTimeout  = 5 * time.Second
@@ -73,7 +75,7 @@ type ntpReferenceClockIP struct {
 }
 
 type ntpReferenceClockSCION struct {
-	ntpcs      [5]*ntpd.SCIONClient
+	ntpcs      [scionRefClockNumClient]*ntpd.SCIONClient
 	localAddr  udp.UDPAddr
 	remoteAddr udp.UDPAddr
 	pather     *core.Pather
