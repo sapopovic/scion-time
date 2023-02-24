@@ -304,7 +304,7 @@ func runLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 		panic("invalid reference clock max correction")
 	}
 	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "timeservice_global_sync_corr",
+		Name: "timeservice_local_sync_corr",
 		Help: "The current clock correction applied based on local sync",
 	})
 	pll := core.NewPLL(log, lclk)
