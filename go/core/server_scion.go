@@ -205,6 +205,15 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				log.Error("failed to write packet", zap.Error(err))
 				continue
 			}
+			_, id, err := udp.ReadTXTimestamp(conn)
+			if err != nil {
+				log.Error("failed to read packet tx timestamp", zap.Error(err))
+			} else if id != txId {
+				log.Error("failed to read packet tx timestamp", zap.Uint32("id", id), zap.Uint32("expected", txId))
+				txId = id + 1
+			} else {
+				txId++
+			}
 
 			mtrcs.pktsForwarded.Inc()
 		} else if localHostPort != scion.EndhostPort {

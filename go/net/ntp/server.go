@@ -35,17 +35,27 @@ var (
 	tssQ       = make(tssQueue, 0, tssCap)
 	tssMetrics = struct {
 		reqsServedInterleaved prometheus.Counter
-		tsIncremented prometheus.Counter
-		tssItemsStored prometheus.Gauge
-		tssValuesStored prometheus.Gauge
+		tsRxIncremented       prometheus.Counter
+		tsTxIncrementedBefore prometheus.Counter
+		tsTxIncrementedAfter  prometheus.Counter
+		tssItemsStored        prometheus.Gauge
+		tssValuesStored       prometheus.Gauge
 	}{
 		reqsServedInterleaved: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "timeservice_reqs_served_interleaved_total",
 			Help: "The total number of requests served in interleaved mode",
 		}),
-		tsIncremented: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_ts_increments_total",
-			Help: "The total number of timestamps incremented to ensure monotonicity",
+		tsRxIncremented: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_ts_rx_increments_total",
+			Help: "The total number of RX timestamps incremented to ensure monotonicity",
+		}),
+		tsTxIncrementedBefore: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_ts_tx_before_increments_total",
+			Help: "The total number of TX timestamps incremented before transfer to ensure monotonicity",
+		}),
+		tsTxIncrementedAfter: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "timeservice_ts_tx_after_increments_total",
+			Help: "The total number of TX timestamps incremented after transfer to ensure monotonicity",
 		}),
 		tssItemsStored: promauto.NewGauge(prometheus.GaugeOpts{
 			Name: "timeservice_tss_items_stored",
@@ -144,12 +154,13 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 				// ensure uniqueness of rx timestamps per clientID
 				*rxt = rxt.Add(1)
 				rxt64 = Time64FromTime(*rxt)
+				tssMetrics.tsRxIncremented.Inc()
 				if !rxt.Before(*txt) {
 					// ensure strict monotonicity of rx/tx timestamps
 					*txt = *rxt
 					*txt = txt.Add(1)
-					tssMetrics.tsIncremented.Inc()
 					txt64 = Time64FromTime(*txt)
+					tssMetrics.tsTxIncrementedBefore.Inc()
 				}
 				continue
 			}
@@ -213,15 +224,15 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 }
 
 func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
+	tssMu.Lock()
+	defer tssMu.Unlock()
+
 	if !rxt.Before(*txt) {
 		// ensure strict monotonicity of rx/tx timestamps
 		*txt = rxt
 		*txt = txt.Add(1)
-		tssMetrics.tsIncremented.Inc()
+		tssMetrics.tsTxIncrementedAfter.Inc()
 	}
-
-	tssMu.Lock()
-	defer tssMu.Unlock()
 
 	tssi, ok := tss[clientID]
 	if ok {
