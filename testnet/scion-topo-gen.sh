@@ -11,7 +11,7 @@ git checkout --quiet tools/topology/net.py
 git checkout --quiet tools/docker-ip
 
 export PYTHONPATH=python/:.
- ~/scion-time/testnet/scion-topo-add-drkey.py
+~/scion-time/testnet/scion-topo-add-drkey.py
 
 gen_delete_crypto () {
 	rm -rf gen/certs
