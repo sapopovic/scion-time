@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"go.uber.org/zap"
 
 	"example.com/scion-time/go/core/timebase"
@@ -86,7 +89,10 @@ func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	if maxCorr <= 0 {
 		panic("invalid reference clock max correction")
 	}
-	corrGauge := metrics.NewLocalSyncCorrGauge()
+	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: metrics.SyncLocalCorrN,
+		Help: metrics.SyncLocalCorrH,
+	})
 	pll := NewPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
@@ -127,7 +133,10 @@ func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	if maxCorr <= 0 {
 		panic("invalid network clock max correction")
 	}
-	corrGauge := metrics.NewGlobalSyncCorrGauge()
+	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: metrics.SyncGlobalCorrN,
+		Help: metrics.SyncGlobalCorrH,
+	})
 	pll := NewPLL(log, lclk)
 	for {
 		corrGauge.Set(0)

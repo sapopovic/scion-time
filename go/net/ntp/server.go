@@ -10,6 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"example.com/scion-time/go/core/timebase"
+
+	"example.com/scion-time/go/metrics"
 )
 
 const tssCap = 1 << 20
@@ -35,35 +37,35 @@ var (
 	tssQ       = make(tssQueue, 0, tssCap)
 	tssMetrics = struct {
 		reqsServedInterleaved prometheus.Counter
-		tsRxIncremented       prometheus.Counter
-		tsTxIncrementedBefore prometheus.Counter
-		tsTxIncrementedAfter  prometheus.Counter
-		tssItemsStored        prometheus.Gauge
-		tssValuesStored       prometheus.Gauge
+		rxtIncrements         prometheus.Counter
+		txtIncrementsBefore   prometheus.Counter
+		txtIncrementsAfter    prometheus.Counter
+		tssItems              prometheus.Gauge
+		tssValues             prometheus.Gauge
 	}{
 		reqsServedInterleaved: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_reqs_served_interleaved_total",
-			Help: "The total number of requests served in interleaved mode",
+			Name: metrics.ServerReqsServedInterleavedN,
+			Help: metrics.ServerReqsServedInterleavedH,
 		}),
-		tsRxIncremented: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_ts_rx_increments_total",
-			Help: "The total number of RX timestamps incremented to ensure monotonicity",
+		rxtIncrements: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.ServerRxtIncrementsN,
+			Help: metrics.ServerRxtIncrementsH,
 		}),
-		tsTxIncrementedBefore: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_ts_tx_before_increments_total",
-			Help: "The total number of TX timestamps incremented before transfer to ensure monotonicity",
+		txtIncrementsBefore: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.ServerTxtIncrementsBeforeN,
+			Help: metrics.ServerTxtIncrementsBeforeH,
 		}),
-		tsTxIncrementedAfter: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_ts_tx_after_increments_total",
-			Help: "The total number of TX timestamps incremented after transfer to ensure monotonicity",
+		txtIncrementsAfter: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.ServerTxtIncrementsAfterN,
+			Help: metrics.ServerTxtIncrementsAfterH,
 		}),
-		tssItemsStored: promauto.NewGauge(prometheus.GaugeOpts{
-			Name: "timeservice_tss_items_stored",
-			Help: "The total number of timestamp store items stored (one item per client)",
+		tssItems: promauto.NewGauge(prometheus.GaugeOpts{
+			Name: metrics.ServerTssItemsN,
+			Help: metrics.ServerTssItemsH,
 		}),
-		tssValuesStored: promauto.NewGauge(prometheus.GaugeOpts{
-			Name: "timeservice_tss_values_stored",
-			Help: "The total number of timestamp store values stored",
+		tssValues: promauto.NewGauge(prometheus.GaugeOpts{
+			Name: metrics.ServerTssValuesN,
+			Help: metrics.ServerTssValuesH,
 		}),
 	}
 	tssMu sync.Mutex
@@ -154,13 +156,13 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 				// ensure uniqueness of rx timestamps per clientID
 				*rxt = rxt.Add(1)
 				rxt64 = Time64FromTime(*rxt)
-				tssMetrics.tsRxIncremented.Inc()
+				tssMetrics.rxtIncrements.Inc()
 				if !rxt.Before(*txt) {
 					// ensure strict monotonicity of rx/tx timestamps
 					*txt = *rxt
 					*txt = txt.Add(1)
 					txt64 = Time64FromTime(*txt)
-					tssMetrics.tsTxIncrementedBefore.Inc()
+					tssMetrics.txtIncrementsBefore.Inc()
 				}
 				continue
 			}
@@ -171,8 +173,8 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 			// remove minimum timestamp queue item
 			x := heap.Pop(&tssQ).(*tssItem)
 			delete(tss, x.key)
-			tssMetrics.tssItemsStored.Dec()
-			tssMetrics.tssValuesStored.Sub(float64(x.len))
+			tssMetrics.tssItems.Dec()
+			tssMetrics.tssValues.Sub(float64(x.len))
 		}
 		if len(tss) == tssCap {
 			tssi = nil
@@ -180,7 +182,7 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 			// add timestamp store item
 			tssi = &tssItem{key: clientID}
 			tss[tssi.key] = tssi
-			tssMetrics.tssItemsStored.Inc()
+			tssMetrics.tssItems.Inc()
 			tssi.qval = rxt64
 			heap.Push(&tssQ, tssi)
 		}
@@ -218,7 +220,7 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 			tssi.buf[tssi.len].rxt = rxt64
 			tssi.buf[tssi.len].txt = txt64
 			tssi.len++
-			tssMetrics.tssValuesStored.Inc()
+			tssMetrics.tssValues.Inc()
 		}
 	}
 }
@@ -231,7 +233,7 @@ func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 		// ensure strict monotonicity of rx/tx timestamps
 		*txt = rxt
 		*txt = txt.Add(1)
-		tssMetrics.tsTxIncrementedAfter.Inc()
+		tssMetrics.txtIncrementsAfter.Inc()
 	}
 
 	tssi, ok := tss[clientID]
@@ -258,8 +260,8 @@ func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 					// remove timestamp store item
 					heap.Remove(&tssQ, tssi.qidx)
 					delete(tss, tssi.key)
-					tssMetrics.tssItemsStored.Dec()
-					tssMetrics.tssValuesStored.Sub(float64(tssi.len))
+					tssMetrics.tssItems.Dec()
+					tssMetrics.tssValues.Sub(float64(tssi.len))
 				} else {
 					// remove timestamp values
 					if tssi.buf[max0].rxt == rxt64 {
@@ -269,7 +271,7 @@ func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 					}
 					tssi.buf[x] = tssi.buf[tssi.len-1]
 					tssi.len--
-					tssMetrics.tssValuesStored.Dec()
+					tssMetrics.tssValues.Dec()
 				}
 			}
 		}

@@ -11,6 +11,9 @@ import (
 	"go.uber.org/zap"
 
 	"example.com/scion-time/go/core/timebase"
+
+	"example.com/scion-time/go/metrics"
+
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/udp"
 )
@@ -28,16 +31,16 @@ type ipServerMetrics struct {
 func newIPServerMetrics() *ipServerMetrics {
 	return &ipServerMetrics{
 		pktsReceived: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_pkts_received_ip_total",
-			Help: "The total number of packets received via IP",
+			Name: metrics.IPServerPktsReceivedN,
+			Help: metrics.IPServerPktsReceivedH,
 		}),
 		reqsAccepted: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_reqs_accepted_ip_total",
-			Help: "The total number of requests accepted via IP",
+			Name: metrics.IPServerReqsAcceptedN,
+			Help: metrics.IPServerReqsAcceptedH,
 		}),
 		reqsServed: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_reqs_served_ip_total",
-			Help: "The total number of requests served via IP",
+			Name: metrics.IPServerReqsServedN,
+			Help: metrics.IPServerReqsServedH,
 		}),
 	}
 }

@@ -23,6 +23,7 @@ import (
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/drkeyutil"
+	"example.com/scion-time/go/metrics"
 
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/scion"
@@ -35,8 +36,8 @@ const (
 
 type scionServerMetrics struct {
 	pktsReceived      prometheus.Counter
-	pktsAuthenticated prometheus.Counter
 	pktsForwarded     prometheus.Counter
+	pktsAuthenticated prometheus.Counter
 	reqsAccepted      prometheus.Counter
 	reqsServed        prometheus.Counter
 }
@@ -44,24 +45,24 @@ type scionServerMetrics struct {
 func newSCIONServerMetrics() *scionServerMetrics {
 	return &scionServerMetrics{
 		pktsReceived: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_pkts_received_scion_total",
-			Help: "The total number of packets received via SCION",
-		}),
-		pktsAuthenticated: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_pkts_authenticated_scion_total",
-			Help: "The total number of packets authenticated via SCION",
+			Name: metrics.SCIONServerPktsReceivedN,
+			Help: metrics.SCIONServerPktsReceivedH,
 		}),
 		pktsForwarded: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_pkts_forwarded_scion_total",
-			Help: "The total number of packets forwarded via SCION",
+			Name: metrics.SCIONServerPktsForwardedN,
+			Help: metrics.SCIONServerPktsForwardedH,
+		}),
+		pktsAuthenticated: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.SCIONServerPktsAuthenticatedN,
+			Help: metrics.SCIONServerPktsAuthenticatedH,
 		}),
 		reqsAccepted: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_reqs_accepted_scion_total",
-			Help: "The total number of requests accepted via SCION",
+			Name: metrics.SCIONServerReqsAcceptedN,
+			Help: metrics.SCIONServerReqsAcceptedH,
 		}),
 		reqsServed: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "timeservice_reqs_served_scion_total",
-			Help: "The total number of requests served via SCION",
+			Name: metrics.SCIONServerReqsServedN,
+			Help: metrics.SCIONServerReqsServedH,
 		}),
 	}
 }
