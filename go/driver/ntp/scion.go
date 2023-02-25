@@ -26,7 +26,6 @@ import (
 )
 
 type SCIONClient struct {
-	Log             *zap.Logger
 	InterleavedMode bool
 	DRKeyFetcher    *drkeyutil.Fetcher
 	auth            struct {
@@ -61,7 +60,8 @@ func (c *SCIONClient) ResetInterleavedMode() {
 	c.prev.reference = ""
 }
 
-func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, remoteAddr udp.UDPAddr,
+func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
+	localAddr, remoteAddr udp.UDPAddr,
 	path snet.Path) (offset time.Duration, weight float64, err error) {
 	if c.DRKeyFetcher != nil && c.auth.opt == nil {
 		c.auth.opt = &slayers.EndToEndOption{}
@@ -85,7 +85,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 	}
 	err = udp.EnableTimestamping(conn)
 	if err != nil {
-		c.Log.Error("failed to enable timestamping", zap.Error(err))
+		log.Error("failed to enable timestamping", zap.Error(err))
 	}
 
 	localPort := conn.LocalAddr().(*net.UDPAddr).Port
@@ -224,7 +224,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
 	if err != nil || id != 0 {
 		cTxTime1 = timebase.Now()
-		c.Log.Error("failed to read packet tx timestamp", zap.Error(err))
+		log.Error("failed to read packet tx timestamp", zap.Error(err))
 	}
 
 	numRetries := 0
@@ -235,7 +235,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.Info("failed to read packet", zap.Error(err))
+				log.Info("failed to read packet", zap.Error(err))
 				numRetries++
 				continue
 			}
@@ -244,7 +244,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		if flags != 0 {
 			err = errUnexpectedPacketFlags
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.Info("failed to read packet", zap.Int("flags", flags))
+				log.Info("failed to read packet", zap.Int("flags", flags))
 				numRetries++
 				continue
 			}
@@ -254,7 +254,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		cRxTime, err := udp.TimestampFromOOBData(oob)
 		if err != nil {
 			cRxTime = timebase.Now()
-			c.Log.Error("failed to read packet rx timestamp", zap.Error(err))
+			log.Error("failed to read packet rx timestamp", zap.Error(err))
 		}
 		buf = buf[:n]
 
@@ -271,7 +271,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		err = parser.DecodeLayers(buf, &decoded)
 		if err != nil {
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.Info("failed to decode packet", zap.Error(err))
+				log.Info("failed to decode packet", zap.Error(err))
 				numRetries++
 				continue
 			}
@@ -282,7 +282,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		if !validType {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.Info("failed to decode packet", zap.String("cause", "unexpected type or structure"))
+				log.Info("failed to decode packet", zap.String("cause", "unexpected type or structure"))
 				numRetries++
 				continue
 			}
@@ -296,10 +296,10 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				if !validSrc {
-					c.Log.Info("received packet from unexpected source")
+					log.Info("received packet from unexpected source")
 				}
 				if !validDst {
-					c.Log.Info("received packet to unexpected destination")
+					log.Info("received packet to unexpected destination")
 				}
 				numRetries++
 				continue
@@ -346,7 +346,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 						}
 						authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], c.auth.mac) != 0
 						if !authenticated {
-							c.Log.Info("failed to authenticate packet")
+							log.Info("failed to authenticate packet")
 							continue
 						}
 					}
@@ -358,7 +358,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		err = ntp.DecodePacket(&ntpresp, udpLayer.Payload)
 		if err != nil {
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.Info("failed to decode packet payload", zap.Error(err))
+				log.Info("failed to decode packet payload", zap.Error(err))
 				numRetries++
 				continue
 			}
@@ -371,7 +371,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.Info("received packet with unexpected type or structure")
+				log.Info("received packet with unexpected type or structure")
 				numRetries++
 				continue
 			}
@@ -383,7 +383,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 			return offset, weight, err
 		}
 
-		c.Log.Debug("received response",
+		log.Debug("received response",
 			zap.Time("at", cRxTime),
 			zap.String("from", reference),
 			zap.Stringer("via", lastHop),
@@ -415,7 +415,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
-		c.Log.Debug("evaluated response",
+		log.Debug("evaluated response",
 			zap.String("from", reference),
 			zap.Bool("interleaved", interleaved),
 			zap.Duration("clock offset", off),
@@ -431,7 +431,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, localAddr, re
 
 		// offset, weight = off, 1000.0
 
-		offset, weight = filter(c.Log, reference, t0, t1, t2, t3)
+		offset, weight = filter(log, reference, t0, t1, t2, t3)
 		break
 	}
 

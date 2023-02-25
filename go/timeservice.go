@@ -14,8 +14,6 @@ import (
 	"time"
 
 	"github.com/pelletier/go-toml"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/scionproto/scion/pkg/addr"
@@ -28,7 +26,6 @@ import (
 
 	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
-	"example.com/scion-time/go/core/timemath"
 
 	"example.com/scion-time/go/drkeyutil"
 
@@ -46,15 +43,6 @@ const (
 	dispatcherModeInternal = "internal"
 
 	scionRefClockNumClient = 5
-
-	refClockImpact       = 1.25
-	refClockCutoff       = 0
-	refClockSyncTimeout  = 5 * time.Second
-	refClockSyncInterval = 10 * time.Second
-	netClockImpact       = 2.5
-	netClockCutoff       = time.Microsecond
-	netClockSyncTimeout  = 5 * time.Second
-	netClockSyncInterval = 60 * time.Second
 )
 
 type svcConfig struct {
@@ -64,7 +52,6 @@ type svcConfig struct {
 }
 
 type mbgReferenceClock struct {
-	log *zap.Logger
 	dev string
 }
 
@@ -81,17 +68,8 @@ type ntpReferenceClockSCION struct {
 	pather     *core.Pather
 }
 
-type localReferenceClock struct{}
-
 var (
 	log *zap.Logger
-
-	refClocks       []core.ReferenceClock
-	refClockOffsets []time.Duration
-	refClockClient  core.ReferenceClockClient
-	netClocks       []core.ReferenceClock
-	netClockOffsets []time.Duration
-	netClockClient  core.ReferenceClockClient
 )
 
 func initLogger(verbose bool) {
@@ -114,8 +92,6 @@ func initLogger(verbose bool) {
 	if err != nil {
 		panic(err)
 	}
-	refClockClient.Log = log
-	netClockClient.Log = log
 }
 
 func runMonitor(log *zap.Logger) {
@@ -124,8 +100,9 @@ func runMonitor(log *zap.Logger) {
 	log.Fatal("failed to serve metrics", zap.Error(err))
 }
 
-func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	return mbgd.MeasureClockOffset(ctx, c.log, c.dev)
+func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
+	time.Duration, error) {
+	return mbgd.MeasureClockOffset(ctx, log, c.dev)
 }
 
 func (c *mbgReferenceClock) String() string {
@@ -138,14 +115,14 @@ func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceCloc
 		remoteAddr: remoteAddr,
 	}
 	c.ntpc = &ntpd.IPClient{
-		Log:             log,
 		InterleavedMode: true,
 	}
 	return c
 }
 
-func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	return core.MeasureClockOffsetIP(ctx, c.ntpc, c.localAddr, c.remoteAddr)
+func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
+	time.Duration, error) {
+	return core.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
 func (c *ntpReferenceClockIP) String() string {
@@ -159,28 +136,20 @@ func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceCl
 	}
 	for i := 0; i != len(c.ntpcs); i++ {
 		c.ntpcs[i] = &ntpd.SCIONClient{
-			Log:             log,
 			InterleavedMode: true,
 		}
 	}
 	return c
 }
 
-func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
+	time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
-	return core.MeasureClockOffsetSCION(ctx, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
+	return core.MeasureClockOffsetSCION(ctx, log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
 }
 
 func (c *ntpReferenceClockSCION) String() string {
 	return fmt.Sprintf("NTP reference clock (SCION) at %s", c.remoteAddr)
-}
-
-func (c *localReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
-	return 0, nil
-}
-
-func (c *localReferenceClock) String() string {
-	return "local reference clock"
 }
 
 func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
@@ -195,7 +164,8 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 }
 
 func loadConfig(ctx context.Context, log *zap.Logger,
-	configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+	configFile, daemonAddr string, localAddr *snet.UDPAddr) (
+	refClocks, netClocks []core.ReferenceClock) {
 	if configFile != "" {
 		var cfg svcConfig
 		raw, err := os.ReadFile(configFile)
@@ -208,7 +178,6 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 		}
 		for _, s := range cfg.MBGReferenceClocks {
 			refClocks = append(refClocks, &mbgReferenceClock{
-				log: log,
 				dev: s,
 			})
 		}
@@ -246,9 +215,6 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 			))
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		}
-		if len(netClocks) != 0 {
-			netClocks = append(netClocks, &localReferenceClock{})
-		}
 		if daemonAddr != "" {
 			dc := newDaemonConnector(ctx, log, daemonAddr)
 			pather := core.StartPather(log, dc, dstIAs)
@@ -272,118 +238,26 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 				}
 			}
 		}
-		refClockOffsets = make([]time.Duration, len(refClocks))
-		netClockOffsets = make([]time.Duration, len(netClocks))
 	}
-}
-
-func measureOffsetToRefClocks(timeout time.Duration) time.Duration {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	refClockClient.MeasureClockOffsets(ctx, refClocks, refClockOffsets)
-	return timemath.Median(refClockOffsets)
-}
-
-func syncToRefClocks(lclk timebase.LocalClock) {
-	corr := measureOffsetToRefClocks(refClockSyncTimeout)
-	if corr != 0 {
-		lclk.Step(corr)
-	}
-}
-
-func runLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
-	if refClockImpact <= 1.0 {
-		panic("invalid reference clock impact factor")
-	}
-	if refClockSyncInterval <= 0 {
-		panic("invalid reference clock sync interval")
-	}
-	if refClockSyncTimeout < 0 || refClockSyncTimeout > refClockSyncInterval/2 {
-		panic("invalid reference clock sync timeout")
-	}
-	maxCorr := refClockImpact * float64(lclk.MaxDrift(refClockSyncInterval))
-	if maxCorr <= 0 {
-		panic("invalid reference clock max correction")
-	}
-	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "timeservice_local_sync_corr",
-		Help: "The current clock correction applied based on local sync",
-	})
-	pll := core.NewPLL(log, lclk)
-	for {
-		corrGauge.Set(0)
-		corr := measureOffsetToRefClocks(refClockSyncTimeout)
-		if timemath.Abs(corr) > refClockCutoff {
-			if float64(timemath.Abs(corr)) > maxCorr {
-				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
-			}
-			// lclk.Adjust(corr, refClockSyncInterval, 0)
-			pll.Do(corr, 1000.0 /* weight */)
-			corrGauge.Set(float64(corr))
-		}
-		lclk.Sleep(refClockSyncInterval)
-	}
-}
-
-func measureOffsetToNetClocks(timeout time.Duration) time.Duration {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	netClockClient.MeasureClockOffsets(ctx, netClocks, netClockOffsets)
-	return timemath.FaultTolerantMidpoint(netClockOffsets)
-}
-
-func runGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
-	if netClockImpact <= 1.0 {
-		panic("invalid network clock impact factor")
-	}
-	if netClockImpact-1.0 <= refClockImpact {
-		panic("invalid network clock impact factor")
-	}
-	if netClockSyncInterval < refClockSyncInterval {
-		panic("invalid network clock sync interval")
-	}
-	if netClockSyncTimeout < 0 || netClockSyncTimeout > netClockSyncInterval/2 {
-		panic("invalid network clock sync timeout")
-	}
-	maxCorr := netClockImpact * float64(lclk.MaxDrift(netClockSyncInterval))
-	if maxCorr <= 0 {
-		panic("invalid network clock max correction")
-	}
-	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "timeservice_global_sync_corr",
-		Help: "The current clock correction applied based on global sync",
-	})
-	pll := core.NewPLL(log, lclk)
-	for {
-		corrGauge.Set(0)
-		corr := measureOffsetToNetClocks(netClockSyncTimeout)
-		if timemath.Abs(corr) > netClockCutoff {
-			if float64(timemath.Abs(corr)) > maxCorr {
-				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
-			}
-			// lclk.Adjust(corr, netClockSyncInterval, 0)
-			pll.Do(corr, 1000.0 /* weight */)
-			corrGauge.Set(float64(corr))
-		}
-		lclk.Sleep(netClockSyncInterval)
-	}
+	return
 }
 
 func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
-	loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	core.RegisterClocks(refClocks, netClocks)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
-		syncToRefClocks(lclk)
-		go runLocalClockSync(log, lclk)
+		core.SyncToRefClocks(log, lclk)
+		go core.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
-		go runGlobalClockSync(log, lclk)
+		go core.RunGlobalClockSync(log, lclk)
 	}
 
 	core.StartIPServer(log, snet.CopyUDPAddr(localAddr.Host))
@@ -395,14 +269,15 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
-	loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	core.RegisterClocks(refClocks, netClocks)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
-		syncToRefClocks(lclk)
-		go runLocalClockSync(log, lclk)
+		core.SyncToRefClocks(log, lclk)
+		go core.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
@@ -418,7 +293,8 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
-	loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	core.RegisterClocks(refClocks, netClocks)
 
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -436,8 +312,8 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	}
 
 	if len(refClocks) != 0 {
-		syncToRefClocks(lclk)
-		go runLocalClockSync(log, lclk)
+		core.SyncToRefClocks(log, lclk)
+		go core.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
@@ -455,11 +331,10 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	timebase.RegisterClock(lclk)
 
 	c := &ntpd.IPClient{
-		Log:             log,
 		InterleavedMode: true,
 	}
 	for i := 0; i != 2; i++ {
-		_, _, err = c.MeasureClockOffsetIP(ctx, localAddr.Host, remoteAddr.Host)
+		_, _, err = c.MeasureClockOffsetIP(ctx, log, localAddr.Host, remoteAddr.Host)
 		if err != nil {
 			log.Fatal("failed to measure clock offset", zap.Stringer("to", remoteAddr.Host), zap.Error(err))
 		}
@@ -493,12 +368,11 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
 	c := &ntpd.SCIONClient{
-		Log:             log,
 		InterleavedMode: true,
 		DRKeyFetcher:    drkeyutil.NewFetcher(dc),
 	}
 	for i := 0; i != 2; i++ {
-		_, _, err = c.MeasureClockOffsetSCION(ctx, laddr, raddr, sp)
+		_, _, err = c.MeasureClockOffsetSCION(ctx, log, laddr, raddr, sp)
 		if err != nil {
 			log.Fatal("failed to measure clock offset",
 				zap.Stringer("remoteIA", raddr.IA),

@@ -1,0 +1,145 @@
+package core
+
+import (
+	"context"
+	"time"
+
+	"go.uber.org/zap"
+
+	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/go/core/timemath"
+
+	"example.com/scion-time/go/metrics"
+)
+
+const (
+	refClkImpact   = 1.25
+	refClkCutoff   = 0
+	refClkTimeout  = 5 * time.Second
+	refClkInterval = 10 * time.Second
+	netClkImpact   = 2.5
+	netClkCutoff   = time.Microsecond
+	netClkTimeout  = 5 * time.Second
+	netClkInterval = 60 * time.Second
+)
+
+type localReferenceClock struct{}
+
+var (
+	refClks       []ReferenceClock
+	refClkOffsets []time.Duration
+	refClkClient  ReferenceClockClient
+	netClks       []ReferenceClock
+	netClkOffsets []time.Duration
+	netClkClient  ReferenceClockClient
+)
+
+func (c *localReferenceClock) MeasureClockOffset(context.Context, *zap.Logger) (
+	time.Duration, error) {
+	return 0, nil
+}
+
+func (c *localReferenceClock) String() string {
+	return "local reference clock"
+}
+
+func RegisterClocks(refClocks, netClocks []ReferenceClock) {
+	if refClks != nil || netClks != nil {
+		panic("reference clocks already registered")
+	}
+
+	refClks = refClocks
+	refClkOffsets = make([]time.Duration, len(refClks))
+
+	netClks = netClocks
+	if len(netClks) != 0 {
+		netClks = append(netClks, &localReferenceClock{})
+	}
+	netClkOffsets = make([]time.Duration, len(netClks))
+}
+
+func measureOffsetToRefClocks(log *zap.Logger, timeout time.Duration) time.Duration {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	refClkClient.MeasureClockOffsets(ctx, log, refClks, refClkOffsets)
+	return timemath.Median(refClkOffsets)
+}
+
+func SyncToRefClocks(log *zap.Logger, lclk timebase.LocalClock) {
+	corr := measureOffsetToRefClocks(log, refClkTimeout)
+	if corr != 0 {
+		lclk.Step(corr)
+	}
+}
+
+func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
+	if refClkImpact <= 1.0 {
+		panic("invalid reference clock impact factor")
+	}
+	if refClkInterval <= 0 {
+		panic("invalid reference clock sync interval")
+	}
+	if refClkTimeout < 0 || refClkTimeout > refClkInterval/2 {
+		panic("invalid reference clock sync timeout")
+	}
+	maxCorr := refClkImpact * float64(lclk.MaxDrift(refClkInterval))
+	if maxCorr <= 0 {
+		panic("invalid reference clock max correction")
+	}
+	corrGauge := metrics.NewLocalSyncCorrGauge()
+	pll := NewPLL(log, lclk)
+	for {
+		corrGauge.Set(0)
+		corr := measureOffsetToRefClocks(log, refClkTimeout)
+		if timemath.Abs(corr) > refClkCutoff {
+			if float64(timemath.Abs(corr)) > maxCorr {
+				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
+			}
+			// lclk.Adjust(corr, refClkInterval, 0)
+			pll.Do(corr, 1000.0 /* weight */)
+			corrGauge.Set(float64(corr))
+		}
+		lclk.Sleep(refClkInterval)
+	}
+}
+
+func measureOffsetToNetClocks(log *zap.Logger, timeout time.Duration) time.Duration {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	netClkClient.MeasureClockOffsets(ctx, log, netClks, netClkOffsets)
+	return timemath.FaultTolerantMidpoint(netClkOffsets)
+}
+
+func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
+	if netClkImpact <= 1.0 {
+		panic("invalid network clock impact factor")
+	}
+	if netClkImpact-1.0 <= refClkImpact {
+		panic("invalid network clock impact factor")
+	}
+	if netClkInterval < refClkInterval {
+		panic("invalid network clock sync interval")
+	}
+	if netClkTimeout < 0 || netClkTimeout > netClkInterval/2 {
+		panic("invalid network clock sync timeout")
+	}
+	maxCorr := netClkImpact * float64(lclk.MaxDrift(netClkInterval))
+	if maxCorr <= 0 {
+		panic("invalid network clock max correction")
+	}
+	corrGauge := metrics.NewGlobalSyncCorrGauge()
+	pll := NewPLL(log, lclk)
+	for {
+		corrGauge.Set(0)
+		corr := measureOffsetToNetClocks(log, netClkTimeout)
+		if timemath.Abs(corr) > netClkCutoff {
+			if float64(timemath.Abs(corr)) > maxCorr {
+				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
+			}
+			// lclk.Adjust(corr, netClkInterval, 0)
+			pll.Do(corr, 1000.0 /* weight */)
+			corrGauge.Set(float64(corr))
+		}
+		lclk.Sleep(netClkInterval)
+	}
+}
