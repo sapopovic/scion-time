@@ -93,7 +93,7 @@ func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 		Name: metrics.SyncLocalCorrN,
 		Help: metrics.SyncLocalCorrH,
 	})
-	pll := NewPLL(log, lclk)
+	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
 		corr := measureOffsetToRefClocks(log, refClkTimeout)
@@ -137,7 +137,7 @@ func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 		Name: metrics.SyncGlobalCorrN,
 		Help: metrics.SyncGlobalCorrH,
 	})
-	pll := NewPLL(log, lclk)
+	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
 		corr := measureOffsetToNetClocks(log, netClkTimeout)

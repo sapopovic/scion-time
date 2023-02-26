@@ -12,7 +12,7 @@ import (
 	"example.com/scion-time/go/core/timemath"
 )
 
-type PLL struct {
+type pll struct {
 	log     *zap.Logger
 	clk     timebase.LocalClock
 	epoch   uint64
@@ -21,11 +21,11 @@ type PLL struct {
 	a, b, i float64
 }
 
-func NewPLL(log *zap.Logger, clk timebase.LocalClock) *PLL {
-	return &PLL{log: log, clk: clk}
+func newPLL(log *zap.Logger, clk timebase.LocalClock) *pll {
+	return &pll{log: log, clk: clk}
 }
 
-func (l *PLL) Do(offset time.Duration, weight float64) {
+func (l *pll) Do(offset time.Duration, weight float64) {
 	offset = timemath.Inv(offset)
 	if l.epoch != l.clk.Epoch() {
 		l.epoch = l.clk.Epoch()
