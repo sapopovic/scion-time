@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"net"
 	"time"
 
@@ -127,7 +128,8 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn) {
 	}
 }
 
-func StartIPServer(log *zap.Logger, localHost *net.UDPAddr) {
+func StartIPServer(ctx context.Context, log *zap.Logger,
+	localHost *net.UDPAddr) {
 	log.Info("server listening via IP",
 		zap.Stringer("ip", localHost.IP),
 		zap.Int("port", localHost.Port),

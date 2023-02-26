@@ -61,8 +61,8 @@ func (c *SCIONClient) ResetInterleavedMode() {
 }
 
 func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
-	localAddr, remoteAddr udp.UDPAddr,
-	path snet.Path) (offset time.Duration, weight float64, err error) {
+	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
+	offset time.Duration, weight float64, err error) {
 	if c.DRKeyFetcher != nil && c.auth.opt == nil {
 		c.auth.opt = &slayers.EndToEndOption{}
 		c.auth.opt.OptData = make([]byte, scion.PacketAuthOptDataLen)

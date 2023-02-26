@@ -27,18 +27,18 @@ func (p *Pather) LocalIA() addr.IA {
 	return p.localIA
 }
 
-func (p *Pather) Paths(ia addr.IA) []snet.Path {
+func (p *Pather) Paths(dst addr.IA) []snet.Path {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	paths, ok := p.paths[ia]
+	paths, ok := p.paths[dst]
 	if !ok {
 		return nil
 	}
 	return append(make([]snet.Path, 0, len(paths)), paths...)
 }
 
-func update(ctx context.Context, p *Pather, c daemon.Connector, dstIAs []addr.IA) {
-	localIA, err := c.LocalIA(ctx)
+func update(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.IA) {
+	localIA, err := dc.LocalIA(ctx)
 	if err != nil {
 		p.log.Info("failed to look up local IA", zap.Error(err))
 		return
@@ -49,7 +49,7 @@ func update(ctx context.Context, p *Pather, c daemon.Connector, dstIAs []addr.IA
 		if dstIA.IsWildcard() {
 			panic("unexpected destination IA: wildcard.")
 		}
-		ps, err := c.Paths(ctx, dstIA, localIA, daemon.PathReqFlags{Refresh: true})
+		ps, err := dc.Paths(ctx, dstIA, localIA, daemon.PathReqFlags{Refresh: true})
 		if err != nil {
 			p.log.Info("failed to look up paths", zap.Stringer("to", dstIA), zap.Error(err))
 		}
@@ -62,15 +62,15 @@ func update(ctx context.Context, p *Pather, c daemon.Connector, dstIAs []addr.IA
 	p.mu.Unlock()
 }
 
-func StartPather(log *zap.Logger, c daemon.Connector, dstIAs []addr.IA) *Pather {
-	ctx := context.Background()
+func StartPather(ctx context.Context, log *zap.Logger, daemonAddr string, dstIAs []addr.IA) *Pather {
 	p := &Pather{log: log}
-	update(ctx, p, c, dstIAs)
-	go func(ctx context.Context, p *Pather, c daemon.Connector, dstIAs []addr.IA) {
+	dc := newDaemonConnector(ctx, log, daemonAddr)
+	update(ctx, p, dc, dstIAs)
+	go func(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.IA) {
 		ticker := time.NewTicker(pathRefreshPeriod)
 		for range ticker.C {
-			update(ctx, p, c, dstIAs)
+			update(ctx, p, dc, dstIAs)
 		}
-	}(ctx, p, c, dstIAs)
+	}(ctx, p, dc, dstIAs)
 	return p
 }

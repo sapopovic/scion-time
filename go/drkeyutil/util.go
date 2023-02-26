@@ -21,12 +21,8 @@ var (
 	errNoCSAddress = errors.New("failed to look up control service address")
 )
 
-func FetchSecretValue(
-	ctx context.Context,
-	daemon daemon.Connector,
-	meta drkey.SecretValueMeta,
-) (drkey.SecretValue, error) {
-
+func FetchSecretValue(ctx context.Context, daemon daemon.Connector, meta drkey.SecretValueMeta) (
+	drkey.SecretValue, error) {
 	svcs, err := daemon.SVCInfo(ctx, nil)
 	if err != nil {
 		return drkey.SecretValue{}, err
@@ -59,11 +55,8 @@ func FetchSecretValue(
 	return key, nil
 }
 
-func getSecretValueFromReply(
-	proto drkey.Protocol,
-	resp *cppb.DRKeySecretValueResponse,
-) (drkey.SecretValue, error) {
-
+func getSecretValueFromReply(proto drkey.Protocol, resp *cppb.DRKeySecretValueResponse) (
+	drkey.SecretValue, error) {
 	if err := resp.EpochBegin.CheckValid(); err != nil {
 		return drkey.SecretValue{}, err
 	}
@@ -84,11 +77,8 @@ func getSecretValueFromReply(
 	return sv, nil
 }
 
-func DeriveHostHostKey(
-	sv drkey.SecretValue,
-	meta drkey.HostHostMeta,
-) (drkey.HostHostKey, error) {
-
+func DeriveHostHostKey(sv drkey.SecretValue, meta drkey.HostHostMeta) (
+	drkey.HostHostKey, error) {
 	var deriver specific.Deriver
 	lvl1, err := deriver.DeriveLevel1(meta.DstIA, sv.Key)
 	if err != nil {

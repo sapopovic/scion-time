@@ -34,6 +34,10 @@ func compareAddrs(x, y netip.Addr) int {
 	return x.Compare(y)
 }
 
+func (c *IPClient) ResetInterleavedMode() {
+	c.prev.reference = ""
+}
+
 func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 	localAddr, remoteAddr *net.UDPAddr) (
 	offset time.Duration, weight float64, err error) {

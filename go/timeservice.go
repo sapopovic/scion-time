@@ -216,9 +216,9 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		}
 		if daemonAddr != "" {
-			dc := newDaemonConnector(ctx, log, daemonAddr)
-			pather := core.StartPather(log, dc, dstIAs)
-			drkeyFetcher := drkeyutil.NewFetcher(dc)
+			ctx := context.Background()
+			pather := core.StartPather(ctx, log, daemonAddr, dstIAs)
+			drkeyFetcher := drkeyutil.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
 			for _, c := range refClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
 				if ok {
@@ -260,8 +260,8 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		go core.RunGlobalClockSync(log, lclk)
 	}
 
-	core.StartIPServer(log, snet.CopyUDPAddr(localAddr.Host))
-	core.StartSCIONServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), daemonAddr)
+	core.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host))
+	core.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host))
 
 	runMonitor(log)
 }
@@ -284,8 +284,8 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		log.Fatal("unexpected configuration", zap.Int("number of peers", len(netClocks)))
 	}
 
-	core.StartIPServer(log, snet.CopyUDPAddr(localAddr.Host))
-	core.StartSCIONServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), daemonAddr)
+	core.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host))
+	core.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host))
 
 	runMonitor(log)
 }
