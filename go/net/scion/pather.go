@@ -1,4 +1,4 @@
-package core
+package scion
 
 import (
 	"context"
@@ -60,6 +60,17 @@ func update(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.I
 	p.localIA = localIA
 	p.paths = paths
 	p.mu.Unlock()
+}
+
+func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
+	s := &daemon.Service{
+		Address: daemonAddr,
+	}
+	c, err := s.Connect(ctx)
+	if err != nil {
+		log.Fatal("failed to create demon connector", zap.Error(err))
+	}
+	return c
 }
 
 func StartPather(ctx context.Context, log *zap.Logger, daemonAddr string, dstIAs []addr.IA) *Pather {

@@ -65,7 +65,7 @@ type ntpReferenceClockSCION struct {
 	ntpcs      [scionRefClockNumClient]*ntpd.SCIONClient
 	localAddr  udp.UDPAddr
 	remoteAddr udp.UDPAddr
-	pather     *core.Pather
+	pather     *scion.Pather
 }
 
 var (
@@ -217,7 +217,7 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 		}
 		if daemonAddr != "" {
 			ctx := context.Background()
-			pather := core.StartPather(ctx, log, daemonAddr, dstIAs)
+			pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
 			drkeyFetcher := drkeyutil.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
 			for _, c := range refClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
