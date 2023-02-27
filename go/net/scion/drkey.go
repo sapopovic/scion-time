@@ -107,4 +107,3 @@ func FetchHostHostKey(ctx context.Context, dc daemon.Connector, meta drkey.HostH
 	drkey.HostHostKey, error) {
 	return dc.DRKeyGetHostHostKey(ctx, meta)
 }
-

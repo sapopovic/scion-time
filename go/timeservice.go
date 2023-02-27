@@ -349,7 +349,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
-	cs := []*core.SCIONClient{&core.SCIONClient{
+	cs := []*core.SCIONClient{{
 		InterleavedMode: true,
 		DRKeyFetcher:    scion.NewFetcher(dc),
 	}}

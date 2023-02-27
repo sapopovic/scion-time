@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	errUnexpectedRequest = errors.New("unexpected request structure")
+	errUnexpectedRequest  = errors.New("unexpected request structure")
 	errUnexpectedResponse = errors.New("unexpected response structure")
 )
 
@@ -56,4 +56,3 @@ func ValidateRequest(req *Packet, srcPort uint16) error {
 	}
 	return nil
 }
-
