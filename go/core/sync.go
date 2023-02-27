@@ -31,19 +31,15 @@ type localReferenceClock struct{}
 var (
 	refClks       []ReferenceClock
 	refClkOffsets []time.Duration
-	refClkClient  ReferenceClockClient
+	refClkClient  referenceClockClient
 	netClks       []ReferenceClock
 	netClkOffsets []time.Duration
-	netClkClient  ReferenceClockClient
+	netClkClient  referenceClockClient
 )
 
 func (c *localReferenceClock) MeasureClockOffset(context.Context, *zap.Logger) (
 	time.Duration, error) {
 	return 0, nil
-}
-
-func (c *localReferenceClock) String() string {
-	return "local reference clock"
 }
 
 func RegisterClocks(refClocks, netClocks []ReferenceClock) {

@@ -1,4 +1,4 @@
-package ntp_test
+package core
 
 import (
 	"testing"
@@ -6,19 +6,24 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/net/ntp"
 )
 
 func init() {
-	lclk := &core.SystemClock{Log: zap.NewNop()}
+	lclk := &SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
 }
 
+func logTSS(t *testing.T, prefix string) {
+	t.Helper()
+	t.Logf("%s:tss = %+v", prefix, tss)
+	t.Logf("%s:tssQ = %+v", prefix, tssQ)
+}
+
 func TestSimpleRequest(t *testing.T) {
-	ntp.LogTSS(t, "pre")
+	logTSS(t, "pre")
 
 	cTxTime := timebase.Now()
 	ntpreq := ntp.Packet{}
@@ -31,7 +36,7 @@ func TestSimpleRequest(t *testing.T) {
 
 	var txt0 time.Time
 	var ntpresp ntp.Packet
-	ntp.HandleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
+	handleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
-	ntp.LogTSS(t, "post")
+	logTSS(t, "post")
 }

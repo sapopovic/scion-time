@@ -10,7 +10,6 @@ const (
 	nanosecondsPerSecond int64 = 1e9
 
 	ServerPort  = 123
-	ServerRefID = 0x58535453
 
 	PacketLen = 48
 

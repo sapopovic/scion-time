@@ -32,8 +32,7 @@ import (
 	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
 
-	mbgd "example.com/scion-time/go/driver/mbg"
-	ntpd "example.com/scion-time/go/driver/ntp"
+	"example.com/scion-time/go/driver/mbg"
 
 	"example.com/scion-time/go/benchmark"
 )
@@ -56,13 +55,13 @@ type mbgReferenceClock struct {
 }
 
 type ntpReferenceClockIP struct {
-	ntpc       *ntpd.IPClient
+	ntpc       *core.IPClient
 	localAddr  *net.UDPAddr
 	remoteAddr *net.UDPAddr
 }
 
 type ntpReferenceClockSCION struct {
-	ntpcs      [scionRefClockNumClient]*ntpd.SCIONClient
+	ntpcs      [scionRefClockNumClient]*core.SCIONClient
 	localAddr  udp.UDPAddr
 	remoteAddr udp.UDPAddr
 	pather     *scion.Pather
@@ -102,11 +101,7 @@ func runMonitor(log *zap.Logger) {
 
 func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
 	time.Duration, error) {
-	return mbgd.MeasureClockOffset(ctx, log, c.dev)
-}
-
-func (c *mbgReferenceClock) String() string {
-	return fmt.Sprintf("mbg reference clock at %s", c.dev)
+	return mbg.MeasureClockOffset(ctx, log, c.dev)
 }
 
 func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceClockIP {
@@ -114,7 +109,7 @@ func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceCloc
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
-	c.ntpc = &ntpd.IPClient{
+	c.ntpc = &core.IPClient{
 		InterleavedMode: true,
 	}
 	return c
@@ -125,17 +120,13 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.L
 	return core.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
-func (c *ntpReferenceClockIP) String() string {
-	return fmt.Sprintf("NTP reference clock (IP) at %s", c.remoteAddr)
-}
-
 func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
 	for i := 0; i != len(c.ntpcs); i++ {
-		c.ntpcs[i] = &ntpd.SCIONClient{
+		c.ntpcs[i] = &core.SCIONClient{
 			InterleavedMode: true,
 		}
 	}
@@ -146,10 +137,6 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context, log *za
 	time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
 	return core.MeasureClockOffsetSCION(ctx, log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
-}
-
-func (c *ntpReferenceClockSCION) String() string {
-	return fmt.Sprintf("NTP reference clock (SCION) at %s", c.remoteAddr)
 }
 
 func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
@@ -330,14 +317,14 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	lclk := &core.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
-	c := &ntpd.IPClient{
+	laddr := localAddr.Host
+	raddr := remoteAddr.Host
+	c := &core.IPClient{
 		InterleavedMode: true,
 	}
-	for i := 0; i != 2; i++ {
-		_, _, err = c.MeasureClockOffsetIP(ctx, log, localAddr.Host, remoteAddr.Host)
-		if err != nil {
-			log.Fatal("failed to measure clock offset", zap.Stringer("to", remoteAddr.Host), zap.Error(err))
-		}
+	_, err = core.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
+	if err != nil {
+		log.Fatal("failed to measure clock offset", zap.Stringer("to", raddr), zap.Error(err))
 	}
 }
 
@@ -362,24 +349,19 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 	log.Debug("available paths", zap.Stringer("to", remoteAddr.IA), zap.Array("via", scion.PathArrayMarshaler{Paths: ps}))
 
-	sp := ps[0]
-	log.Debug("selected path", zap.Stringer("to", remoteAddr.IA), zap.Object("via", scion.PathMarshaler{Path: sp}))
-
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
-	c := &ntpd.SCIONClient{
+	cs := []*core.SCIONClient{&core.SCIONClient{
 		InterleavedMode: true,
 		DRKeyFetcher:    drkeyutil.NewFetcher(dc),
-	}
-	for i := 0; i != 2; i++ {
-		_, _, err = c.MeasureClockOffsetSCION(ctx, log, laddr, raddr, sp)
-		if err != nil {
-			log.Fatal("failed to measure clock offset",
-				zap.Stringer("remoteIA", raddr.IA),
-				zap.Stringer("remoteHost", raddr.Host),
-				zap.Error(err),
-			)
-		}
+	}}
+	_, err = core.MeasureClockOffsetSCION(ctx, log, cs, laddr, raddr, ps)
+	if err != nil {
+		log.Fatal("failed to measure clock offset",
+			zap.Stringer("remoteIA", raddr.IA),
+			zap.Stringer("remoteHost", raddr.Host),
+			zap.Error(err),
+		)
 	}
 }
 

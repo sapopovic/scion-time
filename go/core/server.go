@@ -1,8 +1,7 @@
-package ntp
+package core
 
 import (
 	"container/heap"
-	"errors"
 	"sync"
 	"time"
 
@@ -12,17 +11,23 @@ import (
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/metrics"
+
+	"example.com/scion-time/go/net/ntp"
 )
 
-const tssCap = 1 << 20
+const (
+	serverRefID = 0x58535453
+
+	tssCap = 1 << 20
+)
 
 type tssItem struct {
 	key string
 	buf [8]struct {
-		rxt, txt Time64
+		rxt, txt ntp.Time64
 	}
 	len  int
-	qval Time64
+	qval ntp.Time64
 	qidx int
 }
 
@@ -31,8 +36,6 @@ type tssMap map[string]*tssItem
 type tssQueue []*tssItem
 
 var (
-	errUnexpectedRequest = errors.New("unexpected request structure")
-
 	tss        = make(tssMap)
 	tssQ       = make(tssQueue, 0, tssCap)
 	tssMetrics = struct {
@@ -97,38 +100,19 @@ func (q *tssQueue) Pop() any {
 	return tssi
 }
 
-func ValidateRequest(req *Packet, srcPort uint16) error {
-	li := req.LeapIndicator()
-	if li != LeapIndicatorNoWarning && li != LeapIndicatorUnknown {
-		return errUnexpectedRequest
-	}
-	vn := req.Version()
-	if vn < VersionMin || VersionMax < vn {
-		return errUnexpectedRequest
-	}
-	mode := req.Mode()
-	if vn == 1 && mode != ModeReserved0 || vn != 1 && mode != ModeClient {
-		return errUnexpectedRequest
-	}
-	if vn == 1 && srcPort == ServerPort {
-		return errUnexpectedRequest
-	}
-	return nil
-}
-
-func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Packet) {
-	resp.SetVersion(VersionMax)
-	resp.SetMode(ModeServer)
+func handleRequest(clientID string, req *ntp.Packet, rxt, txt *time.Time, resp *ntp.Packet) {
+	resp.SetVersion(ntp.VersionMax)
+	resp.SetMode(ntp.ModeServer)
 	resp.Stratum = 1
 	resp.Poll = req.Poll
 	resp.Precision = -32
-	resp.RootDispersion = Time32{Seconds: 0, Fraction: 10}
-	resp.ReferenceID = ServerRefID
+	resp.RootDispersion = ntp.Time32{Seconds: 0, Fraction: 10}
+	resp.ReferenceID = serverRefID
 
 	*txt = timebase.Now()
 
-	rxt64 := Time64FromTime(*rxt)
-	txt64 := Time64FromTime(*txt)
+	rxt64 := ntp.Time64FromTime(*rxt)
+	txt64 := ntp.Time64FromTime(*txt)
 
 	tssMu.Lock()
 	defer tssMu.Unlock()
@@ -155,13 +139,13 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 			if i != tssi.len {
 				// ensure uniqueness of rx timestamps per clientID
 				*rxt = rxt.Add(1)
-				rxt64 = Time64FromTime(*rxt)
+				rxt64 = ntp.Time64FromTime(*rxt)
 				tssMetrics.rxtIncrements.Inc()
 				if !rxt.Before(*txt) {
 					// ensure strict monotonicity of rx/tx timestamps
 					*txt = *rxt
 					*txt = txt.Add(1)
-					txt64 = Time64FromTime(*txt)
+					txt64 = ntp.Time64FromTime(*txt)
 					tssMetrics.txtIncrementsBefore.Inc()
 				}
 				continue
@@ -225,7 +209,7 @@ func HandleRequest(clientID string, req *Packet, rxt, txt *time.Time, resp *Pack
 	}
 }
 
-func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
+func updateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 	tssMu.Lock()
 	defer tssMu.Unlock()
 
@@ -238,8 +222,8 @@ func UpdateTXTimestamp(clientID string, rxt time.Time, txt *time.Time) {
 
 	tssi, ok := tss[clientID]
 	if ok {
-		rxt64 := Time64FromTime(rxt)
-		txt64 := Time64FromTime(*txt)
+		rxt64 := ntp.Time64FromTime(rxt)
+		txt64 := ntp.Time64FromTime(*txt)
 		var i, x, max0, max1 int
 		for i, x, max0, max1 = 0, -1, -1, -1; i != tssi.len; i++ {
 			if tssi.buf[i].rxt == rxt64 {

@@ -102,7 +102,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn) {
 
 		var txt0 time.Time
 		var ntpresp ntp.Packet
-		ntp.HandleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
+		handleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
 		ntp.EncodePacket(&buf, &ntpresp)
 
@@ -122,7 +122,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn) {
 		} else {
 			txId++
 		}
-		ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
+		updateTXTimestamp(clientID, rxt, &txt1)
 
 		mtrcs.reqsServed.Inc()
 	}

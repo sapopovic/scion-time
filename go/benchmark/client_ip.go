@@ -87,7 +87,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 					return
 				}
 
-				err = ntp.ValidateMetadata(&ntpresp)
+				err = ntp.ValidateResponseMetadata(&ntpresp)
 				if err != nil {
 					log.Printf("Unexpected packet received: %v", err)
 					return
@@ -96,7 +96,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 				sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
 				sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
 
-				err = ntp.ValidateTimestamps(cTxTime, sRxTime, sTxTime, cRxTime)
+				err = ntp.ValidateResponseTimestamps(cTxTime, sRxTime, sTxTime, cRxTime)
 				if err != nil {
 					log.Printf("Unexpected packet received: %v", err)
 					return

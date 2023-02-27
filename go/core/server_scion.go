@@ -304,7 +304,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 
 			var txt0 time.Time
 			var ntpresp ntp.Packet
-			ntp.HandleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
+			handleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
 			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA
 			scionLayer.DstAddrType, scionLayer.SrcAddrType = scionLayer.SrcAddrType, scionLayer.DstAddrType
@@ -389,7 +389,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 			} else {
 				txId++
 			}
-			ntp.UpdateTXTimestamp(clientID, rxt, &txt1)
+			updateTXTimestamp(clientID, rxt, &txt1)
 
 			mtrcs.reqsServed.Inc()
 		}

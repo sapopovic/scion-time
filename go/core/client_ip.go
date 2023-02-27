@@ -1,4 +1,4 @@
-package ntp
+package core
 
 import (
 	"context"
@@ -38,7 +38,7 @@ func (c *IPClient) ResetInterleavedMode() {
 	c.prev.reference = ""
 }
 
-func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
+func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger,
 	localAddr, remoteAddr *net.UDPAddr) (
 	offset time.Duration, weight float64, err error) {
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.IP})
@@ -154,7 +154,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 			return offset, weight, err
 		}
 
-		err = ntp.ValidateMetadata(&ntpresp)
+		err = ntp.ValidateResponseMetadata(&ntpresp)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -181,7 +181,7 @@ func (c *IPClient) MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 			t3 = cRxTime
 		}
 
-		err = ntp.ValidateTimestamps(t0, t1, t1, t3)
+		err = ntp.ValidateResponseTimestamps(t0, t1, t1, t3)
 		if err != nil {
 			return offset, weight, err
 		}

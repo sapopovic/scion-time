@@ -1,4 +1,4 @@
-package ntp
+package core
 
 import (
 	"context"
@@ -60,7 +60,7 @@ func (c *SCIONClient) ResetInterleavedMode() {
 	c.prev.reference = ""
 }
 
-func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
+func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
 	offset time.Duration, weight float64, err error) {
 	if c.DRKeyFetcher != nil && c.auth.opt == nil {
@@ -378,7 +378,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			return offset, weight, err
 		}
 
-		err = ntp.ValidateMetadata(&ntpresp)
+		err = ntp.ValidateResponseMetadata(&ntpresp)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -407,7 +407,7 @@ func (c *SCIONClient) MeasureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			t3 = cRxTime
 		}
 
-		err = ntp.ValidateTimestamps(t0, t1, t1, t3)
+		err = ntp.ValidateResponseTimestamps(t0, t1, t1, t3)
 		if err != nil {
 			return offset, weight, err
 		}
