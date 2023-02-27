@@ -1,4 +1,4 @@
-package drkeyutil
+package scion
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func (f *Fetcher) FetchSecretValue(ctx context.Context, meta drkey.SecretValueMe
 }
 
 func (f *Fetcher) FetchHostHostKey(ctx context.Context, meta drkey.HostHostMeta) (drkey.HostHostKey, error) {
-	return f.dc.DRKeyGetHostHostKey(ctx, meta)
+	return FetchHostHostKey(ctx, f.dc, meta)
 }
 
 func NewFetcher(c daemon.Connector) *Fetcher {

@@ -18,8 +18,6 @@ import (
 
 	"example.com/scion-time/go/core/timebase"
 
-	"example.com/scion-time/go/drkeyutil"
-
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
@@ -27,7 +25,7 @@ import (
 
 type SCIONClient struct {
 	InterleavedMode bool
-	DRKeyFetcher    *drkeyutil.Fetcher
+	DRKeyFetcher    *scion.Fetcher
 	auth            struct {
 		opt *slayers.EndToEndOption
 		buf []byte

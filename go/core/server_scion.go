@@ -22,7 +22,6 @@ import (
 
 	"example.com/scion-time/go/core/timebase"
 
-	"example.com/scion-time/go/drkeyutil"
 	"example.com/scion-time/go/metrics"
 
 	"example.com/scion-time/go/net/ntp"
@@ -68,7 +67,7 @@ func newSCIONServerMetrics() *scionServerMetrics {
 }
 
 func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetrics,
-	conn *net.UDPConn, localHostPort int, f *drkeyutil.Fetcher) {
+	conn *net.UDPConn, localHostPort int, f *scion.Fetcher) {
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn)
 	if err != nil {
@@ -243,7 +242,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 							ProtoId:  scion.DRKeyProtoIdTS,
 						})
 						if err == nil {
-							key, err := drkeyutil.DeriveHostHostKey(sv, drkey.HostHostMeta{
+							key, err := scion.DeriveHostHostKey(sv, drkey.HostHostMeta{
 								ProtoId:  scion.DRKeyProtoIdTS,
 								Validity: rxt,
 								SrcIA:    scionLayer.DstIA,
@@ -424,7 +423,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 	mtrcs := newSCIONServerMetrics()
 
 	if scionServerNumGoroutine == 1 {
-		f := drkeyutil.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
+		f := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
 			log.Fatal("failed to listen for packets", zap.Error(err))
@@ -432,7 +431,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 		go runSCIONServer(ctx, log, mtrcs, conn, localHostPort, f)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
-			f := drkeyutil.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
+			f := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
 			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
 				log.Fatal("failed to listen for packets", zap.Error(err))
