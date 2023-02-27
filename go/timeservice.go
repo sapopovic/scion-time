@@ -24,17 +24,15 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"example.com/scion-time/go/benchmark"
+
 	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
 
-	"example.com/scion-time/go/drkeyutil"
+	"example.com/scion-time/go/driver/mbg"
 
 	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
-
-	"example.com/scion-time/go/driver/mbg"
-
-	"example.com/scion-time/go/benchmark"
 )
 
 const (
@@ -205,7 +203,7 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 		if daemonAddr != "" {
 			ctx := context.Background()
 			pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
-			drkeyFetcher := drkeyutil.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
+			drkeyFetcher := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
 			for _, c := range refClocks {
 				scionclk, ok := c.(*ntpReferenceClockSCION)
 				if ok {
@@ -353,7 +351,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
 	cs := []*core.SCIONClient{&core.SCIONClient{
 		InterleavedMode: true,
-		DRKeyFetcher:    drkeyutil.NewFetcher(dc),
+		DRKeyFetcher:    scion.NewFetcher(dc),
 	}}
 	_, err = core.MeasureClockOffsetSCION(ctx, log, cs, laddr, raddr, ps)
 	if err != nil {
@@ -391,7 +389,7 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *sn
 	}
 
 	if serverMode {
-		sv, err := drkeyutil.FetchSecretValue(ctx, dc, drkey.SecretValueMeta{
+		sv, err := scion.FetchSecretValue(ctx, dc, drkey.SecretValueMeta{
 			Validity: meta.Validity,
 			ProtoId:  meta.ProtoId,
 		})
@@ -400,7 +398,7 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *sn
 			return
 		}
 		t0 := time.Now()
-		serverKey, err := drkeyutil.DeriveHostHostKey(sv, meta)
+		serverKey, err := scion.DeriveHostHostKey(sv, meta)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error deriving key:", err)
 			return
@@ -414,7 +412,7 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *sn
 		)
 	} else {
 		t0 := time.Now()
-		clientKey, err := dc.DRKeyGetHostHostKey(ctx, meta)
+		clientKey, err := scion.FetchHostHostKey(ctx, dc, meta)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error fetching key:", err)
 			return
