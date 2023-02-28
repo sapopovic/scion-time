@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/go/driver/clock"
 	"example.com/scion-time/go/driver/mbg"
 )
 
@@ -15,7 +15,7 @@ func runX() {
 	initLogger(true /* verbose */)
 	ctx := context.Background()
 
-	lclk := &core.SystemClock{Log: log}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	for {

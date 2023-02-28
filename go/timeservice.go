@@ -29,6 +29,7 @@ import (
 	"example.com/scion-time/go/core"
 	"example.com/scion-time/go/core/timebase"
 
+	"example.com/scion-time/go/driver/clock"
 	"example.com/scion-time/go/driver/mbg"
 
 	"example.com/scion-time/go/net/scion"
@@ -233,7 +234,7 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
 	core.RegisterClocks(refClocks, netClocks)
 
-	lclk := &core.SystemClock{Log: log}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
@@ -257,7 +258,7 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
 	core.RegisterClocks(refClocks, netClocks)
 
-	lclk := &core.SystemClock{Log: log}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
@@ -281,7 +282,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
 	core.RegisterClocks(refClocks, netClocks)
 
-	lclk := &core.SystemClock{Log: log}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	scionClocksAvailable := false
@@ -312,7 +313,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	var err error
 	ctx := context.Background()
 
-	lclk := &core.SystemClock{Log: log}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	laddr := localAddr.Host
@@ -330,7 +331,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	var err error
 	ctx := context.Background()
 
-	lclk := &core.SystemClock{Log: log}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if dispatcherMode == dispatcherModeInternal {
@@ -364,13 +365,13 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 }
 
 func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr) {
-	lclk := &core.SystemClock{Log: zap.NewNop()}
+	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host)
 }
 
 func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
-	lclk := &core.SystemClock{Log: zap.NewNop()}
+	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
 	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
 }

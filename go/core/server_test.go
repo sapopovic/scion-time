@@ -8,11 +8,13 @@ import (
 
 	"example.com/scion-time/go/core/timebase"
 
+	"example.com/scion-time/go/driver/clock"
+
 	"example.com/scion-time/go/net/ntp"
 )
 
 func init() {
-	lclk := &SystemClock{Log: zap.NewNop()}
+	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
 }
 
