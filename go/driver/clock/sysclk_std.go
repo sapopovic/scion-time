@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/go/base/timebase"
 )
 
 type SystemClock struct {

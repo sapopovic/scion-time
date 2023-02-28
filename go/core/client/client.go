@@ -1,4 +1,4 @@
-package core
+package client
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/core/crypto"
-	"example.com/scion-time/go/core/timemath"
+	"example.com/scion-time/go/base/crypto"
+	"example.com/scion-time/go/base/timemath"
 	"example.com/scion-time/go/net/scion"
 	"example.com/scion-time/go/net/udp"
 )
@@ -26,7 +26,7 @@ type ReferenceClock interface {
 	MeasureClockOffset(ctx context.Context, log *zap.Logger) (time.Duration, error)
 }
 
-type referenceClockClient struct {
+type ReferenceClockClient struct {
 	numOpsInProgress uint32
 }
 
@@ -145,7 +145,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 	return timemath.Median(off), nil
 }
 
-func (c *referenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap.Logger,
+func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap.Logger,
 	refclks []ReferenceClock, off []time.Duration) {
 	if len(off) != len(refclks) {
 		panic("number of result offsets must be equal to the number of reference clocks")

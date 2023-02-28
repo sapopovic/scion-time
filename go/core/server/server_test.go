@@ -1,4 +1,4 @@
-package core
+package server_test
 
 import (
 	"testing"
@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"example.com/scion-time/go/core/server"
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/driver/clock"
@@ -18,14 +19,8 @@ func init() {
 	timebase.RegisterClock(lclk)
 }
 
-func logTSS(t *testing.T, prefix string) {
-	t.Helper()
-	t.Logf("%s:tss = %+v", prefix, tss)
-	t.Logf("%s:tssQ = %+v", prefix, tssQ)
-}
-
 func TestSimpleRequest(t *testing.T) {
-	logTSS(t, "pre")
+	server.LogTSS(t, "pre")
 
 	cTxTime := timebase.Now()
 	ntpreq := ntp.Packet{}
@@ -38,7 +33,7 @@ func TestSimpleRequest(t *testing.T) {
 
 	var txt0 time.Time
 	var ntpresp ntp.Packet
-	handleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
+	server.HandleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
-	logTSS(t, "post")
+	server.LogTSS(t, "post")
 }

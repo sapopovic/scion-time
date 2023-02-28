@@ -26,7 +26,9 @@ import (
 
 	"example.com/scion-time/go/benchmark"
 
-	"example.com/scion-time/go/core"
+	"example.com/scion-time/go/core/client"
+	"example.com/scion-time/go/core/server"
+	"example.com/scion-time/go/core/sync"
 	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/driver/clock"
@@ -54,13 +56,13 @@ type mbgReferenceClock struct {
 }
 
 type ntpReferenceClockIP struct {
-	ntpc       *core.IPClient
+	ntpc       *client.IPClient
 	localAddr  *net.UDPAddr
 	remoteAddr *net.UDPAddr
 }
 
 type ntpReferenceClockSCION struct {
-	ntpcs      [scionRefClockNumClient]*core.SCIONClient
+	ntpcs      [scionRefClockNumClient]*client.SCIONClient
 	localAddr  udp.UDPAddr
 	remoteAddr udp.UDPAddr
 	pather     *scion.Pather
@@ -108,7 +110,7 @@ func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceCloc
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
-	c.ntpc = &core.IPClient{
+	c.ntpc = &client.IPClient{
 		InterleavedMode: true,
 	}
 	return c
@@ -116,7 +118,7 @@ func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceCloc
 
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
 	time.Duration, error) {
-	return core.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
+	return client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
 func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceClockSCION {
@@ -125,7 +127,7 @@ func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceCl
 		remoteAddr: remoteAddr,
 	}
 	for i := 0; i != len(c.ntpcs); i++ {
-		c.ntpcs[i] = &core.SCIONClient{
+		c.ntpcs[i] = &client.SCIONClient{
 			InterleavedMode: true,
 		}
 	}
@@ -135,7 +137,7 @@ func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceCl
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
 	time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
-	return core.MeasureClockOffsetSCION(ctx, log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
+	return client.MeasureClockOffsetSCION(ctx, log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
 }
 
 func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
@@ -151,7 +153,7 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 
 func loadConfig(ctx context.Context, log *zap.Logger,
 	configFile, daemonAddr string, localAddr *snet.UDPAddr) (
-	refClocks, netClocks []core.ReferenceClock) {
+	refClocks, netClocks []client.ReferenceClock) {
 	if configFile != "" {
 		var cfg svcConfig
 		raw, err := os.ReadFile(configFile)
@@ -232,22 +234,22 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
 	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
-	core.RegisterClocks(refClocks, netClocks)
+	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
-		core.SyncToRefClocks(log, lclk)
-		go core.RunLocalClockSync(log, lclk)
+		sync.SyncToRefClocks(log, lclk)
+		go sync.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
-		go core.RunGlobalClockSync(log, lclk)
+		go sync.RunGlobalClockSync(log, lclk)
 	}
 
-	core.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host))
-	core.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host))
+	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host))
+	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host))
 
 	runMonitor(log)
 }
@@ -256,22 +258,22 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
 	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
-	core.RegisterClocks(refClocks, netClocks)
+	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
-		core.SyncToRefClocks(log, lclk)
-		go core.RunLocalClockSync(log, lclk)
+		sync.SyncToRefClocks(log, lclk)
+		go sync.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
 		log.Fatal("unexpected configuration", zap.Int("number of peers", len(netClocks)))
 	}
 
-	core.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host))
-	core.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host))
+	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host))
+	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host))
 
 	runMonitor(log)
 }
@@ -280,7 +282,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
 	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
-	core.RegisterClocks(refClocks, netClocks)
+	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -294,12 +296,12 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		}
 	}
 	if scionClocksAvailable {
-		core.StartSCIONDisptacher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
+		server.StartSCIONDisptacher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
 	if len(refClocks) != 0 {
-		core.SyncToRefClocks(log, lclk)
-		go core.RunLocalClockSync(log, lclk)
+		sync.SyncToRefClocks(log, lclk)
+		go sync.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
@@ -318,10 +320,10 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 
 	laddr := localAddr.Host
 	raddr := remoteAddr.Host
-	c := &core.IPClient{
+	c := &client.IPClient{
 		InterleavedMode: true,
 	}
-	_, err = core.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
+	_, err = client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 	if err != nil {
 		log.Fatal("failed to measure clock offset", zap.Stringer("to", raddr), zap.Error(err))
 	}
@@ -335,7 +337,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	timebase.RegisterClock(lclk)
 
 	if dispatcherMode == dispatcherModeInternal {
-		core.StartSCIONDisptacher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
+		server.StartSCIONDisptacher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
 	dc := newDaemonConnector(ctx, log, daemonAddr)
@@ -350,11 +352,11 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
-	cs := []*core.SCIONClient{{
+	cs := []*client.SCIONClient{{
 		InterleavedMode: true,
 		DRKeyFetcher:    scion.NewFetcher(dc),
 	}}
-	_, err = core.MeasureClockOffsetSCION(ctx, log, cs, laddr, raddr, ps)
+	_, err = client.MeasureClockOffsetSCION(ctx, log, cs, laddr, raddr, ps)
 	if err != nil {
 		log.Fatal("failed to measure clock offset",
 			zap.Stringer("remoteIA", raddr.IA),

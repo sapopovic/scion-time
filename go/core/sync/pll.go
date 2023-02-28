@@ -1,4 +1,4 @@
-package core
+package sync
 
 // Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/core/timebase"
-	"example.com/scion-time/go/core/timemath"
+	"example.com/scion-time/go/base/timebase"
+	"example.com/scion-time/go/base/timemath"
 )
 
 type pll struct {

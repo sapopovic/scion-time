@@ -1,4 +1,4 @@
-package core
+package sync
 
 import (
 	"context"
@@ -9,10 +9,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/core/timebase"
-	"example.com/scion-time/go/core/timemath"
+	"example.com/scion-time/go/base/metrics"
+	"example.com/scion-time/go/base/timebase"
+	"example.com/scion-time/go/base/timemath"
 
-	"example.com/scion-time/go/metrics"
+	"example.com/scion-time/go/core/client"
 )
 
 const (
@@ -29,12 +30,12 @@ const (
 type localReferenceClock struct{}
 
 var (
-	refClks       []ReferenceClock
+	refClks       []client.ReferenceClock
 	refClkOffsets []time.Duration
-	refClkClient  referenceClockClient
-	netClks       []ReferenceClock
+	refClkClient  client.ReferenceClockClient
+	netClks       []client.ReferenceClock
 	netClkOffsets []time.Duration
-	netClkClient  referenceClockClient
+	netClkClient  client.ReferenceClockClient
 )
 
 func (c *localReferenceClock) MeasureClockOffset(context.Context, *zap.Logger) (
@@ -42,7 +43,7 @@ func (c *localReferenceClock) MeasureClockOffset(context.Context, *zap.Logger) (
 	return 0, nil
 }
 
-func RegisterClocks(refClocks, netClocks []ReferenceClock) {
+func RegisterClocks(refClocks, netClocks []client.ReferenceClock) {
 	if refClks != nil || netClks != nil {
 		panic("reference clocks already registered")
 	}

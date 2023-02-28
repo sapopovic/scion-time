@@ -1,4 +1,4 @@
-package core
+package client
 
 import (
 	"errors"
@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"example.com/scion-time/go/base/timemath"
 	"example.com/scion-time/go/core/timebase"
-	"example.com/scion-time/go/core/timemath"
 )
 
 const (

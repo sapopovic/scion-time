@@ -3,22 +3,15 @@ package timebase
 import (
 	"sync/atomic"
 	"time"
-)
 
-type LocalClock interface {
-	Epoch() uint64
-	Now() time.Time
-	MaxDrift(duration time.Duration) time.Duration
-	Step(offset time.Duration)
-	Adjust(offset, duration time.Duration, frequency float64)
-	Sleep(duration time.Duration)
-}
+	"example.com/scion-time/go/base/timebase"
+)
 
 var (
-	lclk atomic.Pointer[LocalClock]
+	lclk atomic.Pointer[timebase.LocalClock]
 )
 
-func RegisterClock(c LocalClock) {
+func RegisterClock(c timebase.LocalClock) {
 	if c == nil {
 		panic("local clock must not be nil")
 	}

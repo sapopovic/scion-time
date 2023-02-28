@@ -1,4 +1,4 @@
-package core
+package server
 
 import (
 	"context"
@@ -20,9 +20,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/go/base/metrics"
 
-	"example.com/scion-time/go/metrics"
+	"example.com/scion-time/go/core/timebase"
 
 	"example.com/scion-time/go/net/ntp"
 	"example.com/scion-time/go/net/scion"
