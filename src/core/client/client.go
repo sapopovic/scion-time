@@ -11,10 +11,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/base/crypto"
-	"example.com/scion-time/go/base/timemath"
-	"example.com/scion-time/go/net/scion"
-	"example.com/scion-time/go/net/udp"
+	"example.com/scion-time/base/crypto"
+	"example.com/scion-time/base/timemath"
+	"example.com/scion-time/net/scion"
+	"example.com/scion-time/net/udp"
 )
 
 type measurement struct {

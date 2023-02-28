@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/base/timemath"
-	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/base/timemath"
+	"example.com/scion-time/core/timebase"
 )
 
 const (

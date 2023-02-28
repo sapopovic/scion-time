@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"example.com/scion-time/go/base/timemath"
+	"example.com/scion-time/base/timemath"
 )
 
 func TestMedian(t *testing.T) {

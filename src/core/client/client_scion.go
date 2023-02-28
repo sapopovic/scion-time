@@ -16,11 +16,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/go/net/ntp"
-	"example.com/scion-time/go/net/scion"
-	"example.com/scion-time/go/net/udp"
+	"example.com/scion-time/net/ntp"
+	"example.com/scion-time/net/scion"
+	"example.com/scion-time/net/udp"
 )
 
 type SCIONClient struct {

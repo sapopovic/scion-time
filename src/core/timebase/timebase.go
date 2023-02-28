@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"example.com/scion-time/go/base/timebase"
+	"example.com/scion-time/base/timebase"
 )
 
 var (

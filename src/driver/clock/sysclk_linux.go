@@ -15,8 +15,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"example.com/scion-time/go/base/timebase"
-	"example.com/scion-time/go/base/timemath"
+	"example.com/scion-time/base/timebase"
+	"example.com/scion-time/base/timemath"
 )
 
 const (

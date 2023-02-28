@@ -6,9 +6,9 @@ import (
 	"context"
 	"time"
 
-	"example.com/scion-time/go/core/timebase"
-	"example.com/scion-time/go/driver/clock"
-	"example.com/scion-time/go/driver/mbg"
+	"example.com/scion-time/core/timebase"
+	"example.com/scion-time/driver/clock"
+	"example.com/scion-time/driver/mbg"
 )
 
 func runX() {

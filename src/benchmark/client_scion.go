@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -9,17 +10,56 @@ import (
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 
-	"example.com/scion-time/go/core/timebase"
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/daemon"
+	"github.com/scionproto/scion/pkg/snet"
 
-	"example.com/scion-time/go/net/ntp"
-	"example.com/scion-time/go/net/udp"
+	"example.com/scion-time/core/timebase"
+
+	"example.com/scion-time/net/ntp"
+	"example.com/scion-time/net/scion"
+	"example.com/scion-time/net/udp"
 )
 
-func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
+func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
+	ctx := context.Background()
+
+	dc, err := daemon.NewService(daemonAddr).Connect(ctx)
+	if err != nil {
+		log.Fatalf("Failed to create SCION daemon connector: %v", err)
+	}
+
+	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
+	if err != nil {
+		log.Fatalf("Failed to lookup paths: %v:", err)
+	}
+	if len(ps) == 0 {
+		log.Fatalf("No paths to %v available", remoteAddr.IA)
+	}
+
+	log.Printf("Available paths to %v:", remoteAddr.IA)
+	for _, p := range ps {
+		log.Printf("\t%v", p)
+	}
+
+	sp := ps[0]
+
+	log.Printf("Selected path to %v:", remoteAddr.IA)
+	log.Printf("\t%v", sp)
+
+	nextHop := sp.UnderlayNextHop()
+	if nextHop == nil && remoteAddr.IA.Equal(localAddr.IA) {
+		nextHop = &net.UDPAddr{
+			IP:   remoteAddr.Host.IP,
+			Port: scion.EndhostPort,
+			Zone: remoteAddr.Host.Zone,
+		}
+	}
+
 	// const numClientGoroutine = 8
 	// const numRequestPerClient = 10000
 	const numClientGoroutine = 1
-	const numRequestPerClient = 1_000_000
+	const numRequestPerClient = 10000 * 100
 	var mu sync.Mutex
 	sg := make(chan struct{})
 	var wg sync.WaitGroup
@@ -28,7 +68,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 		go func() {
 			hg := hdrhistogram.New(1, 50000, 5)
 
-			conn, err := net.DialUDP("udp", localAddr, remoteAddr)
+			conn, err := net.DialUDP("udp", localAddr.Host, nextHop)
 			if err != nil {
 				log.Printf("Failed to dial UDP connection: %v", err)
 				return
@@ -49,15 +89,41 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 				ntpreq.TransmitTime = ntp.Time64FromTime(cTxTime)
 				ntp.EncodePacket(&buf, &ntpreq)
 
-				_, err = conn.Write(buf)
+				pkt := &snet.Packet{
+					PacketInfo: snet.PacketInfo{
+						Source: snet.SCIONAddress{
+							IA:   localAddr.IA,
+							Host: addr.HostFromIP(localAddr.Host.IP),
+						},
+						Destination: snet.SCIONAddress{
+							IA:   remoteAddr.IA,
+							Host: addr.HostFromIP(remoteAddr.Host.IP),
+						},
+						Path: sp.Dataplane(),
+						Payload: snet.UDPPayload{
+							SrcPort: uint16(localAddr.Host.Port),
+							DstPort: uint16(remoteAddr.Host.Port),
+							Payload: buf,
+						},
+					},
+				}
+
+				err = pkt.Serialize()
+				if err != nil {
+					log.Printf("Failed to serialize packet: %v", err)
+					return
+				}
+
+				_, err = conn.Write(pkt.Bytes)
 				if err != nil {
 					log.Printf("Failed to write packet: %v", err)
 					return
 				}
 
+				pkt.Prepare()
 				oob := make([]byte, udp.TimestampLen())
 
-				n, oobn, flags, _, err := conn.ReadMsgUDPAddrPort(buf, oob)
+				n, oobn, flags, _, err := conn.ReadMsgUDPAddrPort(pkt.Bytes, oob)
 				if err != nil {
 					log.Printf("Failed to read packet: %v", err)
 					return
@@ -73,10 +139,22 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr) {
 					cRxTime = timebase.Now()
 					log.Printf("Failed to read packet timestamp")
 				}
-				buf = buf[:n]
+				pkt.Bytes = pkt.Bytes[:n]
+
+				err = pkt.Decode()
+				if err != nil {
+					log.Printf("Failed to decode packet: %v", err)
+					return
+				}
+
+				udppkt, ok := pkt.Payload.(snet.UDPPayload)
+				if !ok {
+					log.Printf("Failed to read packet payload: not a UDP packet")
+					return
+				}
 
 				var ntpresp ntp.Packet
-				err = ntp.DecodePacket(&ntpresp, buf)
+				err = ntp.DecodePacket(&ntpresp, udppkt.Payload)
 				if err != nil {
 					log.Printf("Failed to decode packet payload: %v", err)
 					return

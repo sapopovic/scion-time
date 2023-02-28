@@ -9,11 +9,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/base/metrics"
-	"example.com/scion-time/go/base/timebase"
-	"example.com/scion-time/go/base/timemath"
+	"example.com/scion-time/base/metrics"
+	"example.com/scion-time/base/timebase"
+	"example.com/scion-time/base/timemath"
 
-	"example.com/scion-time/go/core/client"
+	"example.com/scion-time/core/client"
 )
 
 const (

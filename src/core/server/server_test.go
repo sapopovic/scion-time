@@ -6,12 +6,12 @@ import (
 
 	"go.uber.org/zap"
 
-	"example.com/scion-time/go/core/server"
-	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/core/server"
+	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/go/driver/clock"
+	"example.com/scion-time/driver/clock"
 
-	"example.com/scion-time/go/net/ntp"
+	"example.com/scion-time/net/ntp"
 )
 
 func init() {

@@ -24,18 +24,18 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"example.com/scion-time/go/benchmark"
+	"example.com/scion-time/benchmark"
 
-	"example.com/scion-time/go/core/client"
-	"example.com/scion-time/go/core/server"
-	"example.com/scion-time/go/core/sync"
-	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/core/client"
+	"example.com/scion-time/core/server"
+	"example.com/scion-time/core/sync"
+	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/go/driver/clock"
-	"example.com/scion-time/go/driver/mbg"
+	"example.com/scion-time/driver/clock"
+	"example.com/scion-time/driver/mbg"
 
-	"example.com/scion-time/go/net/scion"
-	"example.com/scion-time/go/net/udp"
+	"example.com/scion-time/net/scion"
+	"example.com/scion-time/net/udp"
 )
 
 const (

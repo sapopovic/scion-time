@@ -8,11 +8,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"example.com/scion-time/go/base/metrics"
+	"example.com/scion-time/base/metrics"
 
-	"example.com/scion-time/go/core/timebase"
+	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/go/net/ntp"
+	"example.com/scion-time/net/ntp"
 )
 
 const (
