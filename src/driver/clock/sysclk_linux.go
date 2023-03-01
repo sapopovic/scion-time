@@ -125,6 +125,7 @@ func (c *SystemClock) Step(offset time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.adjustment != nil {
+		setFrequency(c.Log, c.adjustment.afterFreq)
 		c.adjustment = nil
 	}
 	setTime(c.Log, offset)
