@@ -39,7 +39,7 @@ func FetchSecretValue(ctx context.Context, dc daemon.Connector, meta drkey.Secre
 	defer conn.Close()
 	client := cppb.NewDRKeyIntraServiceClient(conn)
 
-	rep, err := client.DRKeySecretValue(ctx, &cppb.DRKeySecretValueRequest{
+	resp, err := client.DRKeySecretValue(ctx, &cppb.DRKeySecretValueRequest{
 		ValTime:    timestamppb.New(meta.Validity),
 		ProtocolId: dkpb.Protocol(meta.ProtoId),
 	})
@@ -47,12 +47,12 @@ func FetchSecretValue(ctx context.Context, dc daemon.Connector, meta drkey.Secre
 		return drkey.SecretValue{}, err
 	}
 
-	key, err := getSecretValueFromReply(meta.ProtoId, rep)
+	sv, err := getSecretValueFromReply(meta.ProtoId, resp)
 	if err != nil {
 		return drkey.SecretValue{}, err
 	}
 
-	return key, nil
+	return sv, nil
 }
 
 func getSecretValueFromReply(proto drkey.Protocol, resp *cppb.DRKeySecretValueResponse) (
