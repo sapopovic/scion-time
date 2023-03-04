@@ -53,7 +53,7 @@ func TimestampFromOOBData(oob []byte) (time.Time, error) {
 	return time.Time{}, errTimestampNotFound
 }
 
-func EnableTimestamping(conn *net.UDPConn) error {
+func EnableTimestamping(conn *net.UDPConn, iface string) error {
 	sconn, err := conn.SyscallConn()
 	if err != nil {
 		return err

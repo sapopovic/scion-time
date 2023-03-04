@@ -46,9 +46,9 @@ func newIPServerMetrics() *ipServerMetrics {
 	}
 }
 
-func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn) {
+func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, iface string) {
 	defer conn.Close()
-	err := udp.EnableTimestamping(conn)
+	err := udp.EnableTimestamping(conn, iface)
 	if err != nil {
 		log.Error("failed to enable timestamping", zap.Error(err))
 	}
@@ -142,14 +142,14 @@ func StartIPServer(ctx context.Context, log *zap.Logger,
 		if err != nil {
 			log.Fatal("failed to listen for packets", zap.Error(err))
 		}
-		go runIPServer(log, mtrcs, conn)
+		go runIPServer(log, mtrcs, conn, localHost.Zone)
 	} else {
 		for i := ipServerNumGoroutine; i > 0; i-- {
 			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
 				log.Fatal("failed to listen for packets", zap.Error(err))
 			}
-			go runIPServer(log, mtrcs, conn.(*net.UDPConn))
+			go runIPServer(log, mtrcs, conn.(*net.UDPConn), localHost.Zone)
 		}
 	}
 }

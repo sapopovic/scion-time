@@ -67,9 +67,9 @@ func newSCIONServerMetrics() *scionServerMetrics {
 }
 
 func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetrics,
-	conn *net.UDPConn, localHostPort int, f *scion.Fetcher) {
+	conn *net.UDPConn, localHostIface string, localHostPort int, f *scion.Fetcher) {
 	defer conn.Close()
-	err := udp.EnableTimestamping(conn)
+	err := udp.EnableTimestamping(conn, localHostIface)
 	if err != nil {
 		log.Error("failed to enable timestamping", zap.Error(err))
 	}
@@ -428,7 +428,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 		if err != nil {
 			log.Fatal("failed to listen for packets", zap.Error(err))
 		}
-		go runSCIONServer(ctx, log, mtrcs, conn, localHostPort, f)
+		go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHostPort, f)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
 			f := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
@@ -436,7 +436,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 			if err != nil {
 				log.Fatal("failed to listen for packets", zap.Error(err))
 			}
-			go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHostPort, f)
+			go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, localHostPort, f)
 		}
 	}
 }
@@ -460,5 +460,5 @@ func StartSCIONDisptacher(ctx context.Context, log *zap.Logger,
 	if err != nil {
 		log.Fatal("failed to listen for packets", zap.Error(err))
 	}
-	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Port, nil /* DRKey fetcher */)
+	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHost.Port, nil /* DRKey fetcher */)
 }
