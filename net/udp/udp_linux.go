@@ -3,7 +3,9 @@ package udp
 import (
 	"unsafe"
 
+	"errors"
 	"net"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -37,9 +39,14 @@ func TimestampFromOOBData(oob []byte) (time.Time, error) {
 				if h.Len != uint64(unix.CmsgSpace(3*16)) {
 					return time.Time{}, errUnexpectedData
 				}
-				sec := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-				nsec := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(8)]))
-				return time.Unix(sec, nsec), nil
+				sec0 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
+				nsec0 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(8)]))
+				sec1 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(16)]))
+				nsec1 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(24)]))
+				sec2 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(32)]))
+				nsec2 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(40)]))
+				_, _, _, _ = sec1, nsec1, sec2, nsec2
+				return time.Unix(sec0, nsec0), nil
 			} else if h.Type == unix.SCM_TIMESTAMPNS {
 				if h.Len != uint64(unix.CmsgSpace(int(unsafe.Sizeof(unix.Timespec{})))) {
 					return time.Time{}, errUnexpectedData
@@ -53,6 +60,57 @@ func TimestampFromOOBData(oob []byte) (time.Time, error) {
 	return time.Time{}, errTimestampNotFound
 }
 
+// For details on hardware timestamping configuration, see
+// - https://docs.kernel.org/networking/timestamping.html
+// - https://github.com/torvalds/linux/blob/master/include/uapi/linux/net_tstamp.h
+
+const (
+	unixHWTSTAMP_TX_ON = 1
+	unixHWTSTAMP_FILTER_ALL = 1
+	unixHWTSTAMP_FILTER_PTP_V2_EVENT = 12
+)
+
+type hwtstampConfig struct {
+	flags    int32
+	txType   int32
+	rxFilter int32
+}
+
+// See https://man7.org/linux/man-pages/man7/netdevice.7.html
+type ifreq struct {
+	ifrName [unix.IFNAMSIZ]byte
+	ifrData uintptr
+}
+
+func initNetworkInterface(fd int, ifname string, filter int32) error {
+	// Based on Meta's time libraries at https://github.com/facebook/time
+	var req ifreq
+	var cfg hwtstampConfig
+
+	copy(req.ifrName[:cap(req.ifrName)-1], ifname)
+	req.ifrData = uintptr(unsafe.Pointer(&cfg))
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd),
+		unix.SIOCGHWTSTAMP, uintptr(unsafe.Pointer(&req)))
+	if errno != 0 {
+		return errno
+	}
+
+	if cfg.txType == unixHWTSTAMP_TX_ON && cfg.rxFilter == filter {
+		return nil
+	}
+
+	cfg.txType = unixHWTSTAMP_TX_ON
+	cfg.rxFilter = filter
+	_, _, errno = unix.Syscall(unix.SYS_IOCTL, uintptr(fd),
+		unix.SIOCSHWTSTAMP, uintptr(unsafe.Pointer(&req)))
+	if errno != 0 {
+		return errno
+	}
+
+	return nil
+}
+
 func EnableTimestamping(conn *net.UDPConn, iface string) error {
 	sconn, err := conn.SyscallConn()
 	if err != nil {
@@ -61,13 +119,33 @@ func EnableTimestamping(conn *net.UDPConn, iface string) error {
 	var res struct {
 		err error
 	}
+
+	err = sconn.Control(func(fd uintptr) {
+		err := initNetworkInterface(int(fd), iface, unixHWTSTAMP_FILTER_ALL)
+		if err != nil {
+			if errors.Is(err, syscall.EPERM) {
+				return
+			}
+			err = initNetworkInterface(int(fd), iface, unixHWTSTAMP_FILTER_PTP_V2_EVENT)
+			if err != nil {
+				return
+			}
+		}
+	})
+	if err != nil {
+		return err
+	}
+
 	err = sconn.Control(func(fd uintptr) {
 		res.err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_TIMESTAMPING_NEW,
 			unix.SOF_TIMESTAMPING_SOFTWARE|
-				unix.SOF_TIMESTAMPING_RX_SOFTWARE|
-				unix.SOF_TIMESTAMPING_TX_SOFTWARE|
-				unix.SOF_TIMESTAMPING_OPT_TSONLY|
-				unix.SOF_TIMESTAMPING_OPT_ID)
+			unix.SOF_TIMESTAMPING_RAW_HARDWARE|
+			unix.SOF_TIMESTAMPING_RX_SOFTWARE|
+			unix.SOF_TIMESTAMPING_RX_HARDWARE|
+			unix.SOF_TIMESTAMPING_TX_SOFTWARE|
+			unix.SOF_TIMESTAMPING_TX_HARDWARE|
+			unix.SOF_TIMESTAMPING_OPT_TSONLY|
+			unix.SOF_TIMESTAMPING_OPT_ID)
 	})
 	if err != nil {
 		return err
@@ -89,9 +167,14 @@ func timestampFromOOBData(oob []byte) (time.Time, uint32, error) {
 				if h.Len != uint64(unix.CmsgSpace(3*16)) {
 					return time.Time{}, 0, errUnexpectedData
 				}
-				sec := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-				nsec := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(8)]))
-				ts = time.Unix(sec, nsec)
+				sec0 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
+				nsec0 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(8)]))
+				sec1 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(16)]))
+				nsec1 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(24)]))
+				sec2 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(32)]))
+				nsec2 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(40)]))
+				_, _, _, _ = sec1, nsec1, sec2, nsec2
+				ts = time.Unix(sec0, nsec0)
 				tsSet = true
 			}
 		} else if h.Level == unix.SOL_IP && h.Type == unix.IP_RECVERR ||
