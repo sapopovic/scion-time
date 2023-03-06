@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/gopacket"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/slayers"
@@ -37,6 +38,15 @@ type SCIONClient struct {
 		cRxTime   ntp.Time64
 		sRxTime   ntp.Time64
 	}
+}
+
+type scionClientMetrics struct {
+	reqsSent                 prometheus.Counter
+	reqsSentInterleaved      prometheus.Counter
+	pktsReceived             prometheus.Counter
+	pktsAuthenticated        prometheus.Counter
+	respsAccepted            prometheus.Counter
+	respsAcceptedInterleaved prometheus.Counter
 }
 
 func compareIPs(x, y []byte) int {

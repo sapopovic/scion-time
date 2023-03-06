@@ -6,6 +6,8 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"go.uber.org/zap"
 
 	"example.com/scion-time/core/timebase"
@@ -22,6 +24,14 @@ type IPClient struct {
 		cRxTime   ntp.Time64
 		sRxTime   ntp.Time64
 	}
+}
+
+type ipClientMetrics struct {
+	reqsSent                 prometheus.Counter
+	reqsSentInterleaved      prometheus.Counter
+	pktsReceived             prometheus.Counter
+	respsAccepted            prometheus.Counter
+	respsAcceptedInterleaved prometheus.Counter
 }
 
 func compareAddrs(x, y netip.Addr) int {
