@@ -65,8 +65,8 @@ func TimestampFromOOBData(oob []byte) (time.Time, error) {
 // - https://github.com/torvalds/linux/blob/master/include/uapi/linux/net_tstamp.h
 
 const (
-	unixHWTSTAMP_TX_ON = 1
-	unixHWTSTAMP_FILTER_ALL = 1
+	unixHWTSTAMP_TX_ON               = 1
+	unixHWTSTAMP_FILTER_ALL          = 1
 	unixHWTSTAMP_FILTER_PTP_V2_EVENT = 12
 )
 
@@ -139,13 +139,13 @@ func EnableTimestamping(conn *net.UDPConn, iface string) error {
 	err = sconn.Control(func(fd uintptr) {
 		res.err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_TIMESTAMPING_NEW,
 			unix.SOF_TIMESTAMPING_SOFTWARE|
-			unix.SOF_TIMESTAMPING_RAW_HARDWARE|
-			unix.SOF_TIMESTAMPING_RX_SOFTWARE|
-			unix.SOF_TIMESTAMPING_RX_HARDWARE|
-			unix.SOF_TIMESTAMPING_TX_SOFTWARE|
-			unix.SOF_TIMESTAMPING_TX_HARDWARE|
-			unix.SOF_TIMESTAMPING_OPT_TSONLY|
-			unix.SOF_TIMESTAMPING_OPT_ID)
+				unix.SOF_TIMESTAMPING_RAW_HARDWARE|
+				unix.SOF_TIMESTAMPING_RX_SOFTWARE|
+				unix.SOF_TIMESTAMPING_RX_HARDWARE|
+				unix.SOF_TIMESTAMPING_TX_SOFTWARE|
+				unix.SOF_TIMESTAMPING_TX_HARDWARE|
+				unix.SOF_TIMESTAMPING_OPT_TSONLY|
+				unix.SOF_TIMESTAMPING_OPT_ID)
 	})
 	if err != nil {
 		return err
