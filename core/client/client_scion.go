@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/slayers"
@@ -16,6 +17,8 @@ import (
 	"github.com/scionproto/scion/pkg/spao"
 
 	"go.uber.org/zap"
+
+	"example.com/scion-time/base/metrics"
 
 	"example.com/scion-time/core/timebase"
 
@@ -49,6 +52,35 @@ type scionClientMetrics struct {
 	respsAcceptedInterleaved prometheus.Counter
 }
 
+func newSCIONClientMetrics() *scionClientMetrics {
+	return &scionClientMetrics{
+		reqsSent: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.SCIONClientReqsSentN,
+			Help: metrics.SCIONClientReqsSentH,
+		}),
+		reqsSentInterleaved: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.SCIONClientReqsSentInterleavedN,
+			Help: metrics.SCIONClientReqsSentInterleavedH,
+		}),
+		pktsReceived: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.SCIONClientPktsReceivedN,
+			Help: metrics.SCIONClientPktsReceivedH,
+		}),
+		pktsAuthenticated: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.SCIONClientPktsAuthenticatedN,
+			Help: metrics.SCIONClientPktsAuthenticatedH,
+		}),
+		respsAccepted: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.SCIONClientRespsAcceptedN,
+			Help: metrics.SCIONClientRespsAcceptedH,
+		}),
+		respsAcceptedInterleaved: promauto.NewCounter(prometheus.CounterOpts{
+			Name: metrics.SCIONClientRespsAcceptedInterleavedN,
+			Help: metrics.SCIONClientRespsAcceptedInterleavedH,
+		}),
+	}
+}
+
 func compareIPs(x, y []byte) int {
 	addrX, okX := netip.AddrFromSlice(x)
 	addrY, okY := netip.AddrFromSlice(y)
@@ -68,7 +100,7 @@ func (c *SCIONClient) ResetInterleavedMode() {
 	c.prev.reference = ""
 }
 
-func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logger,
+func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logger, mtrcs *scionClientMetrics,
 	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
 	offset time.Duration, weight float64, err error) {
 	if c.DRKeyFetcher != nil && c.auth.opt == nil {
@@ -118,12 +150,14 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 	reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
 	cTxTime0 := timebase.Now()
+	interleaved := false
 
 	ntpreq := ntp.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
 		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= time.Second {
+		interleaved = true
 		ntpreq.OriginTime = c.prev.sRxTime
 		ntpreq.ReceiveTime = c.prev.cRxTime
 		ntpreq.TransmitTime = c.prev.cTxTime
@@ -234,6 +268,10 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		cTxTime1 = timebase.Now()
 		log.Error("failed to read packet tx timestamp", zap.Error(err))
 	}
+	mtrcs.reqsSent.Inc()
+	if interleaved {
+		mtrcs.reqsSentInterleaved.Inc()
+	}
 
 	numRetries := 0
 	oob := make([]byte, udp.TimestampLen())
@@ -265,6 +303,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			log.Error("failed to read packet rx timestamp", zap.Error(err))
 		}
 		buf = buf[:n]
+		mtrcs.pktsReceived.Inc()
 
 		var (
 			hbhLayer  slayers.HopByHopExtnSkipper
@@ -357,6 +396,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 							log.Info("failed to authenticate packet")
 							continue
 						}
+						mtrcs.pktsAuthenticated.Inc()
 					}
 				}
 			}
@@ -373,7 +413,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			return offset, weight, err
 		}
 
-		interleaved := false
+		interleaved = false
 		if c.InterleavedMode && ntpresp.OriginTime == c.prev.cRxTime {
 			interleaved = true
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
@@ -423,6 +463,10 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
+		mtrcs.respsAccepted.Inc()
+		if interleaved {
+			mtrcs.respsAcceptedInterleaved.Inc()
+		}
 		log.Debug("evaluated response",
 			zap.String("from", reference),
 			zap.Bool("interleaved", interleaved),
