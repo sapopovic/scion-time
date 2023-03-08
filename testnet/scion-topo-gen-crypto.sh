@@ -108,3 +108,13 @@ rm -rf gen-cache
 rm -rf gen-certs
 mkdir gen-cache
 mkdir gen-certs
+
+git checkout --quiet gen/ASff00_0_111/cs1-ff00_0_111-1.toml
+echo >> gen/ASff00_0_111/cs1-ff00_0_111-1.toml
+echo '[drkey.delegation]' >> gen/ASff00_0_111/cs1-ff00_0_111-1.toml
+echo 'scmp = ["10.1.1.11"]' >> gen/ASff00_0_111/cs1-ff00_0_111-1.toml
+
+git checkout --quiet gen/ASff00_0_112/cs1-ff00_0_112-1.toml
+echo >> gen/ASff00_0_112/cs1-ff00_0_112-1.toml
+echo '[drkey.delegation]' >> gen/ASff00_0_112/cs1-ff00_0_112-1.toml
+echo 'scmp = ["10.1.1.12"]' >> gen/ASff00_0_112/cs1-ff00_0_112-1.toml
