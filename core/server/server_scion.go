@@ -241,7 +241,9 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 							Validity: rxt,
 							ProtoId:  scion.DRKeyProtoIdTS,
 						})
-						if err == nil {
+						if err != nil {
+							log.Error("failed to fetch DRKey level 0: secret value", zap.Error(err))
+						} else {
 							key, err := scion.DeriveHostHostKey(sv, drkey.HostHostMeta{
 								ProtoId:  scion.DRKeyProtoIdTS,
 								Validity: rxt,
@@ -250,29 +252,30 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 								SrcHost:  dstAddr.String(),
 								DstHost:  srcAddr.String(),
 							})
-							if err == nil {
-								authKey = key.Key[:]
-								_, err = spao.ComputeAuthCMAC(
-									spao.MACInput{
-										Key:        authKey,
-										Header:     slayers.PacketAuthOption{EndToEndOption: authOpt},
-										ScionLayer: &scionLayer,
-										PldType:    slayers.L4UDP,
-										Pld:        buf[len(buf)-int(udpLayer.Length):],
-									},
-									authBuf,
-									authMAC,
-								)
-								if err != nil {
-									panic(err)
-								}
-								authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], authMAC) != 0
-								if !authenticated {
-									log.Info("failed to authenticate packet")
-									continue
-								}
-								mtrcs.pktsAuthenticated.Inc()
+							if err != nil {
+								panic(err)
 							}
+							authKey = key.Key[:]
+							_, err = spao.ComputeAuthCMAC(
+								spao.MACInput{
+									Key:        authKey,
+									Header:     slayers.PacketAuthOption{EndToEndOption: authOpt},
+									ScionLayer: &scionLayer,
+									PldType:    slayers.L4UDP,
+									Pld:        buf[len(buf)-int(udpLayer.Length):],
+								},
+								authBuf,
+								authMAC,
+							)
+							if err != nil {
+								panic(err)
+							}
+							authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], authMAC) != 0
+							if !authenticated {
+								log.Info("failed to authenticate packet")
+								continue
+							}
+							mtrcs.pktsAuthenticated.Inc()
 						}
 					}
 				}

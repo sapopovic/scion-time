@@ -217,7 +217,9 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			SrcHost:  remoteAddr.Host.IP.String(),
 			DstHost:  localAddr.Host.IP.String(),
 		})
-		if err == nil {
+		if err != nil {
+			log.Info("failed to fetch DRKey level 3: host-host key", zap.Error(err))
+		} else {
 			authKey = key.Key[:]
 
 			scion.PreparePacketAuthOpt(c.auth.opt, scion.PacketAuthSPIClient, scion.PacketAuthAlgorithm)
