@@ -237,25 +237,21 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 						uint32(authOptData[0])<<24
 					algo := uint8(authOptData[4])
 					if spi == scion.PacketAuthSPIClient && algo == scion.PacketAuthAlgorithm {
-						sv, err := f.FetchSecretValue(ctx, drkey.SecretValueMeta{
-							Validity: rxt,
+						hostASKey, err := f.FetchHostASKey(ctx, drkey.HostASMeta{
 							ProtoId:  scion.DRKeyProtoIdTS,
+							Validity: rxt,
+							SrcIA:    scionLayer.DstIA,
+							DstIA:    scionLayer.SrcIA,
+							SrcHost:  dstAddr.String(),
 						})
 						if err != nil {
-							log.Error("failed to fetch DRKey level 0: secret value", zap.Error(err))
+							log.Error("failed to fetch DRKey level 2: host-AS", zap.Error(err))
 						} else {
-							key, err := scion.DeriveHostHostKeyFromSV(sv, drkey.HostHostMeta{
-								ProtoId:  scion.DRKeyProtoIdTS,
-								Validity: rxt,
-								SrcIA:    scionLayer.DstIA,
-								DstIA:    scionLayer.SrcIA,
-								SrcHost:  dstAddr.String(),
-								DstHost:  srcAddr.String(),
-							})
+							hostHostKey, err := scion.DeriveHostHostKey(hostASKey, srcAddr.String())
 							if err != nil {
 								panic(err)
 							}
-							authKey = key.Key[:]
+							authKey = hostHostKey.Key[:]
 							_, err = spao.ComputeAuthCMAC(
 								spao.MACInput{
 									Key:        authKey,

@@ -209,7 +209,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	buffer.PushLayer(udpLayer.LayerType())
 
 	if c.DRKeyFetcher != nil {
-		key, err := c.DRKeyFetcher.FetchHostHostKey(ctx, drkey.HostHostMeta{
+		hostHostKey, err := c.DRKeyFetcher.FetchHostHostKey(ctx, drkey.HostHostMeta{
 			ProtoId:  scion.DRKeyProtoIdTS,
 			Validity: cTxTime0,
 			SrcIA:    remoteAddr.IA,
@@ -220,7 +220,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		if err != nil {
 			log.Info("failed to fetch DRKey level 3: host-host key", zap.Error(err))
 		} else {
-			authKey = key.Key[:]
+			authKey = hostHostKey.Key[:]
 
 			scion.PreparePacketAuthOpt(c.auth.opt, scion.PacketAuthSPIClient, scion.PacketAuthAlgorithm)
 			_, err = spao.ComputeAuthCMAC(
