@@ -244,7 +244,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 						if err != nil {
 							log.Error("failed to fetch DRKey level 0: secret value", zap.Error(err))
 						} else {
-							key, err := scion.DeriveHostHostKey(sv, drkey.HostHostMeta{
+							key, err := scion.DeriveHostHostKeyFromSV(sv, drkey.HostHostMeta{
 								ProtoId:  scion.DRKeyProtoIdTS,
 								Validity: rxt,
 								SrcIA:    scionLayer.DstIA,

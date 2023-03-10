@@ -21,8 +21,6 @@ import (
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/snet"
 
-	"github.com/scionproto/scion/pkg/drkey/generic"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -392,26 +390,20 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *sn
 			DstIA:    clientAddr.IA,
 			SrcHost:  serverAddr.Host.IP.String(),
 		}
-		hostASKey, err := dc.DRKeyGetHostASKey(ctx, hostASMeta)
+		hostASKey, err := scion.FetchHostASKey(ctx, dc, hostASMeta)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error fetching host-AS key:", err)
 			return
 		}
 		t0 := time.Now()
-		deriver := generic.Deriver{
-			Proto: hostASKey.ProtoId,
-		}
-		hostHostKey, err := deriver.DeriveHostHost(
-			clientAddr.Host.IP.String(),
-			hostASKey.Key,
-		)
+		serverKey, err := scion.DeriveHostHostKey(hostASKey, clientAddr.Host.IP.String())
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error deriving host-host key:", err)
 		}
 		durationServer := time.Since(t0)
 		fmt.Printf(
-			"Server,\thost key = %s\tduration = %s\n",
-			hex.EncodeToString(hostHostKey[:]),
+			"Server\thost key = %s\tduration = %s\n",
+			hex.EncodeToString(serverKey.Key[:]),
 			durationServer,
 		)
 	} else {
@@ -424,7 +416,7 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *sn
 			DstHost:  clientAddr.Host.IP.String(),
 		}
 		t0 := time.Now()
-		clientKey, err := dc.DRKeyGetHostHostKey(ctx, hostHostMeta)
+		clientKey, err := scion.FetchHostHostKey(ctx, dc, hostHostMeta)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error fetching host-host key:", err)
 			return

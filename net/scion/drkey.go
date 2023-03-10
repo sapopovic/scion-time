@@ -11,6 +11,7 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
+	"github.com/scionproto/scion/pkg/drkey/generic"
 	"github.com/scionproto/scion/pkg/drkey/specific"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	dkpb "github.com/scionproto/scion/pkg/proto/drkey"
@@ -77,7 +78,7 @@ func getSecretValueFromReply(proto drkey.Protocol, resp *cppb.DRKeySecretValueRe
 	return sv, nil
 }
 
-func DeriveHostHostKey(sv drkey.SecretValue, meta drkey.HostHostMeta) (
+func DeriveHostHostKeyFromSV(sv drkey.SecretValue, meta drkey.HostHostMeta) (
 	drkey.HostHostKey, error) {
 	var deriver specific.Deriver
 	lvl1, err := deriver.DeriveLevel1(meta.DstIA, sv.Key)
@@ -101,6 +102,34 @@ func DeriveHostHostKey(sv drkey.SecretValue, meta drkey.HostHostMeta) (
 		DstHost: meta.DstHost,
 		Key:     hosthost,
 	}, nil
+}
+
+func DeriveHostHostKey(hostASKey drkey.HostASKey, dstHost string) (
+	drkey.HostHostKey, error) {
+	deriver := generic.Deriver{
+		Proto: hostASKey.ProtoId,
+	}
+	hostHostKey, err := deriver.DeriveHostHost(
+		dstHost,
+		hostASKey.Key,
+	)
+	if err != nil {
+		return drkey.HostHostKey{}, err
+	}
+	return drkey.HostHostKey{
+		ProtoId: hostASKey.ProtoId,
+		Epoch:   hostASKey.Epoch,
+		SrcIA:   hostASKey.SrcIA,
+		DstIA:   hostASKey.DstIA,
+		SrcHost: hostASKey.SrcHost,
+		DstHost: dstHost,
+		Key:     hostHostKey,
+	}, nil
+}
+
+func FetchHostASKey(ctx context.Context, dc daemon.Connector, meta drkey.HostASMeta) (
+	drkey.HostASKey, error) {
+	return dc.DRKeyGetHostASKey(ctx, meta)
 }
 
 func FetchHostHostKey(ctx context.Context, dc daemon.Connector, meta drkey.HostHostMeta) (
