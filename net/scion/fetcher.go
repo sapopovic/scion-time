@@ -37,7 +37,7 @@ func newFetcherMetrics() *fetcherMetrics {
 	}
 }
 
-var	fetcherMtrcs atomic.Pointer[fetcherMetrics]
+var fetcherMtrcs atomic.Pointer[fetcherMetrics]
 
 func init() {
 	fetcherMtrcs.Store(newFetcherMetrics())

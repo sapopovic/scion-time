@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+
 	"example.com/scion-time/driver/clock"
 )
 
