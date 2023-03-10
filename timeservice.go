@@ -21,6 +21,8 @@ import (
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/snet"
 
+	"github.com/scionproto/scion/pkg/drkey/generic"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -382,46 +384,52 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *sn
 	ctx := context.Background()
 	dc := newDaemonConnector(ctx, log, daemonAddr)
 
-	meta := drkey.HostHostMeta{
-		ProtoId:  scion.DRKeyProtoIdTS,
-		Validity: time.Now(),
-		SrcIA:    serverAddr.IA,
-		DstIA:    clientAddr.IA,
-		SrcHost:  serverAddr.Host.IP.String(),
-		DstHost:  clientAddr.Host.IP.String(),
-	}
-
 	if serverMode {
-		sv, err := scion.FetchSecretValue(ctx, dc, drkey.SecretValueMeta{
-			Validity: meta.Validity,
-			ProtoId:  meta.ProtoId,
-		})
+		hostASMeta := drkey.HostASMeta{
+			ProtoId:  123,
+			Validity: time.Now(),
+			SrcIA:    serverAddr.IA,
+			DstIA:    clientAddr.IA,
+			SrcHost:  serverAddr.Host.IP.String(),
+		}
+		hostASKey, err := dc.DRKeyGetHostASKey(ctx, hostASMeta)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error fetching secret value:", err)
+			fmt.Fprintln(os.Stderr, "Error fetching host-AS key:", err)
 			return
 		}
 		t0 := time.Now()
-		serverKey, err := scion.DeriveHostHostKey(sv, meta)
+		deriver := generic.Deriver{
+			Proto: hostASKey.ProtoId,
+		}
+		hostHostKey, err := deriver.DeriveHostHost(
+			clientAddr.Host.IP.String(),
+			hostASKey.Key,
+		)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error deriving key:", err)
-			return
+			fmt.Fprintln(os.Stderr, "Error deriving host-host key:", err)
 		}
 		durationServer := time.Since(t0)
-
 		fmt.Printf(
 			"Server,\thost key = %s\tduration = %s\n",
-			hex.EncodeToString(serverKey.Key[:]),
+			hex.EncodeToString(hostHostKey[:]),
 			durationServer,
 		)
 	} else {
+		hostHostMeta := drkey.HostHostMeta{
+			ProtoId:  123,
+			Validity: time.Now(),
+			SrcIA:    serverAddr.IA,
+			DstIA:    clientAddr.IA,
+			SrcHost:  serverAddr.Host.IP.String(),
+			DstHost:  clientAddr.Host.IP.String(),
+		}
 		t0 := time.Now()
-		clientKey, err := scion.FetchHostHostKey(ctx, dc, meta)
+		clientKey, err := dc.DRKeyGetHostHostKey(ctx, hostHostMeta)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error fetching key:", err)
+			fmt.Fprintln(os.Stderr, "Error fetching host-host key:", err)
 			return
 		}
 		durationClient := time.Since(t0)
-
 		fmt.Printf(
 			"Client,\thost key = %s\tduration = %s\n",
 			hex.EncodeToString(clientKey.Key[:]),
