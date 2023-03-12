@@ -120,32 +120,38 @@ func EnableTimestamping(conn *net.UDPConn, iface string) error {
 		err error
 	}
 
-	err = sconn.Control(func(fd uintptr) {
-		err := initNetworkInterface(int(fd), iface, unixHWTSTAMP_FILTER_ALL)
-		if err != nil {
-			if errors.Is(err, syscall.EPERM) {
-				return
-			}
-			err = initNetworkInterface(int(fd), iface, unixHWTSTAMP_FILTER_PTP_V2_EVENT)
+	sockopts := unix.SOF_TIMESTAMPING_OPT_ID |
+		unix.SOF_TIMESTAMPING_OPT_TSONLY
+
+	if iface != "" {
+		sockopts |= unix.SOF_TIMESTAMPING_RAW_HARDWARE |
+			unix.SOF_TIMESTAMPING_RX_HARDWARE |
+			unix.SOF_TIMESTAMPING_TX_HARDWARE
+
+		err = sconn.Control(func(fd uintptr) {
+			err := initNetworkInterface(int(fd), iface, unixHWTSTAMP_FILTER_ALL)
 			if err != nil {
-				return
+				if errors.Is(err, syscall.EPERM) {
+					return
+				}
+				err = initNetworkInterface(int(fd), iface, unixHWTSTAMP_FILTER_PTP_V2_EVENT)
+				if err != nil {
+					return
+				}
 			}
+		})
+		if err != nil {
+			return err
 		}
-	})
-	if err != nil {
-		return err
+	} else {
+		sockopts |= unix.SOF_TIMESTAMPING_SOFTWARE |
+			unix.SOF_TIMESTAMPING_RX_SOFTWARE |
+			unix.SOF_TIMESTAMPING_TX_SOFTWARE
 	}
 
 	err = sconn.Control(func(fd uintptr) {
-		res.err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_TIMESTAMPING_NEW,
-			unix.SOF_TIMESTAMPING_SOFTWARE|
-				unix.SOF_TIMESTAMPING_RAW_HARDWARE|
-				unix.SOF_TIMESTAMPING_RX_SOFTWARE|
-				unix.SOF_TIMESTAMPING_RX_HARDWARE|
-				unix.SOF_TIMESTAMPING_TX_SOFTWARE|
-				unix.SOF_TIMESTAMPING_TX_HARDWARE|
-				unix.SOF_TIMESTAMPING_OPT_TSONLY|
-				unix.SOF_TIMESTAMPING_OPT_ID)
+		res.err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET,
+			unix.SO_TIMESTAMPING_NEW, sockopts)
 	})
 	if err != nil {
 		return err
