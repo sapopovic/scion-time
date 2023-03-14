@@ -45,8 +45,19 @@ func TimestampFromOOBData(oob []byte) (time.Time, error) {
 				nsec1 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(24)]))
 				sec2 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(32)]))
 				nsec2 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(40)]))
-				_, _, _, _ = sec1, nsec1, sec2, nsec2
-				return time.Unix(sec0, nsec0), nil
+				var ts time.Time
+				if sec2 != 0 || nsec2 != 0 {
+					if sec0 != 0 || nsec0 != 0 || sec1 != 0 || nsec1 != 0 {
+						panic("unexpected timestamping behavior")
+					} 
+					ts = time.Unix(sec2, nsec2)
+				} else {
+					if sec1 != 0 || nsec1 != 0 || sec2 != 0 || nsec2 != 0 {
+						panic("unexpected timestamping behavior")
+					} 
+					ts = time.Unix(sec0, nsec0)
+				}
+				return ts, nil
 			} else if h.Type == unix.SCM_TIMESTAMPNS {
 				if h.Len != uint64(unix.CmsgSpace(int(unsafe.Sizeof(unix.Timespec{})))) {
 					return time.Time{}, errUnexpectedData
@@ -179,8 +190,17 @@ func timestampFromOOBData(oob []byte) (time.Time, uint32, error) {
 				nsec1 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(24)]))
 				sec2 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(32)]))
 				nsec2 := *(*int64)(unsafe.Pointer(&oob[unix.CmsgSpace(40)]))
-				_, _, _, _ = sec1, nsec1, sec2, nsec2
-				ts = time.Unix(sec0, nsec0)
+				if sec2 != 0 || nsec2 != 0 {
+					if sec0 != 0 || nsec0 != 0 || sec1 != 0 || nsec1 != 0 {
+						panic("unexpected timestamping behavior")
+					} 
+					ts = time.Unix(sec2, nsec2)
+				} else {
+					if sec1 != 0 || nsec1 != 0 || sec2 != 0 || nsec2 != 0 {
+						panic("unexpected timestamping behavior")
+					} 
+					ts = time.Unix(sec0, nsec0)
+				}
 				tsSet = true
 			}
 		} else if h.Level == unix.SOL_IP && h.Type == unix.IP_RECVERR ||
