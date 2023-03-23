@@ -227,15 +227,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
 				authOpt, err = e2eLayer.FindOption(slayers.OptTypeAuthenticator)
 				if err == nil {
-					if len(authOpt.OptData) != scion.PacketAuthOptDataLen {
-						panic("unexpected authenticator option data")
-					}
-					authOptData := authOpt.OptData
-					spi := uint32(authOptData[3]) |
-						uint32(authOptData[2])<<8 |
-						uint32(authOptData[1])<<16 |
-						uint32(authOptData[0])<<24
-					algo := uint8(authOptData[4])
+					spi, algo := scion.PacketAuthOptMetadata(authOpt)
 					if spi == scion.PacketAuthSPIClient && algo == scion.PacketAuthAlgorithm {
 						hostASKey, err := f.FetchHostASKey(ctx, drkey.HostASMeta{
 							ProtoId:  scion.DRKeyProtoIdTS,
@@ -266,7 +258,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 							if err != nil {
 								panic(err)
 							}
-							authenticated = subtle.ConstantTimeCompare(authOptData[scion.PacketAuthMetadataLen:], authMAC) != 0
+							authenticated = subtle.ConstantTimeCompare(scion.PacketAuthOptMAC(authOpt), authMAC) != 0
 							if !authenticated {
 								log.Info("failed to authenticate packet")
 								continue
@@ -346,7 +338,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 						Pld:        buffer.Bytes(),
 					},
 					authBuf,
-					authOpt.OptData[scion.PacketAuthMetadataLen:],
+					scion.PacketAuthOptMAC(authOpt),
 				)
 				if err != nil {
 					panic(err)
