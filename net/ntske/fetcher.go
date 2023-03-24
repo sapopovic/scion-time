@@ -41,14 +41,14 @@ func (f *Fetcher) exchangeKeys() error {
 	return nil
 }
 
-func (f *Fetcher) FetchData() (data Data, err error) {
-	if len(data.Cookie) == 0 {
-		err = f.exchangeKeys()
+func (f *Fetcher) FetchData() (Data, error) {
+	if len(f.data.Cookie) == 0 {
+		err := f.exchangeKeys()
 		if err != nil {
-			return data, err
+			return Data{}, err
 		}
 	}
-	data = f.data
+	data := f.data
 	f.data.Cookie = f.data.Cookie[1:]
 	return data, nil
 }
