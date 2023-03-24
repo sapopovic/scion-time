@@ -42,7 +42,7 @@ func (f *Fetcher) exchangeKeys() error {
 }
 
 func (f *Fetcher) FetchData() (data Data, err error) {
-	if !isValid(f.data) {
+	if len(data.Cookie) == 0 {
 		err = f.exchangeKeys()
 		if err != nil {
 			return data, err
@@ -51,13 +51,6 @@ func (f *Fetcher) FetchData() (data Data, err error) {
 	data = f.data
 	f.data.Cookie = f.data.Cookie[1:]
 	return data, nil
-}
-
-func isValid(data Data) bool {
-	if len(data.Cookie) == 0 {
-		return false
-	}
-	return true
 }
 
 func (f *Fetcher) StoreCookie(cookie []byte) {
