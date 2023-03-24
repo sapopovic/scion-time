@@ -211,7 +211,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 	if c.Auth.Enabled {
 		hostHostKey, err := c.Auth.DRKeyFetcher.FetchHostHostKey(ctx, drkey.HostHostMeta{
-			ProtoId:  scion.DRKeyProtoIdTS,
+			ProtoId:  scion.DRKeyProtocolTS,
 			Validity: cTxTime0,
 			SrcIA:    remoteAddr.IA,
 			DstIA:    localAddr.IA,

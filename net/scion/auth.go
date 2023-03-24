@@ -8,7 +8,7 @@ const (
 	drkeyTypeHostHost          = 1
 	drkeyDirectionSenderSide   = 0
 	drkeyDirectionReceiverSide = 1
-	DRKeyProtoIdTS             = 123
+	DRKeyProtocolTS            = 123
 
 	PacketAuthMetadataLen = 12
 	PacketAuthMACLen      = 16
@@ -16,10 +16,10 @@ const (
 
 	PacketAuthSPIClient = uint32(drkeyTypeHostHost)<<17 |
 		uint32(drkeyDirectionReceiverSide)<<16 |
-		uint32(DRKeyProtoIdTS)
+		uint32(DRKeyProtocolTS)
 	PacketAuthSPIServer = uint32(drkeyTypeHostHost)<<17 |
 		uint32(drkeyDirectionSenderSide)<<16 |
-		uint32(DRKeyProtoIdTS)
+		uint32(DRKeyProtocolTS)
 	PacketAuthAlgorithm = uint8(0) // AES-CMAC
 )
 
