@@ -122,7 +122,7 @@ func EncodePacket(b *[]byte, pkt *Packet) {
 }
 
 func DecodePacket(pkt *Packet, b []byte) error {
-	if len(b) != PacketLen {
+	if len(b) < PacketLen {
 		return errUnexpectedPacketSize
 	}
 
@@ -143,6 +143,7 @@ func DecodePacket(pkt *Packet, b []byte) error {
 	pkt.ReceiveTime.Fraction = binary.BigEndian.Uint32(b[36:])
 	pkt.TransmitTime.Seconds = binary.BigEndian.Uint32(b[40:])
 	pkt.TransmitTime.Fraction = binary.BigEndian.Uint32(b[44:])
+
 	return nil
 }
 

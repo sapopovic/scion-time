@@ -13,8 +13,12 @@ require (
 	github.com/scionproto/scion v0.8.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/sys v0.6.0
-	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.29.0
+)
+
+require (
+	github.com/aead/cmac v0.0.0-20160719120800-7af84192f0b1 // indirect
+	google.golang.org/grpc v1.53.0 // indirect
+	google.golang.org/protobuf v1.29.0 // indirect
 )
 
 require (
@@ -30,6 +34,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/secure-io/siv-go v0.0.0-20180922214919-5ff40651e2c4
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	go.uber.org/atomic v1.10.0 // indirect

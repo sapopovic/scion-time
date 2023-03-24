@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -41,6 +42,7 @@ import (
 const (
 	dispatcherModeExternal = "external"
 	dispatcherModeInternal = "internal"
+	authModeNTS            = "nts"
 
 	scionRefClockNumClient = 5
 )
@@ -313,7 +315,7 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	runMonitor(log)
 }
 
-func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
+func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServerName string, ntskeInsecureSkipVerify bool) {
 	var err error
 	ctx := context.Background()
 
@@ -325,6 +327,18 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr) {
 	c := &client.IPClient{
 		InterleavedMode: true,
 	}
+	if authMode == authModeNTS {
+		c.Auth.Enabled = true
+		c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+			InsecureSkipVerify: ntskeInsecureSkipVerify,
+			ServerName:         ntskeServerName,
+			MinVersion:         tls.VersionTLS13,
+		}
+		c.Auth.NTSKEFetcher.Log = log
+	} else {
+		c.Auth.Enabled = false
+	}
+
 	_, err = client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 	if err != nil {
 		log.Fatal("failed to measure clock offset", zap.Stringer("to", raddr), zap.Error(err))
@@ -440,15 +454,18 @@ func exitWithUsage() {
 
 func main() {
 	var (
-		verbose         bool
-		configFile      string
-		daemonAddr      string
-		localAddr       snet.UDPAddr
-		remoteAddr      snet.UDPAddr
-		dispatcherMode  string
-		drkeyMode       string
-		drkeyServerAddr snet.UDPAddr
-		drkeyClientAddr snet.UDPAddr
+		verbose                 bool
+		configFile              string
+		daemonAddr              string
+		localAddr               snet.UDPAddr
+		remoteAddr              snet.UDPAddr
+		dispatcherMode          string
+		drkeyMode               string
+		drkeyServerAddr         snet.UDPAddr
+		drkeyClientAddr         snet.UDPAddr
+		authMode                string
+		ntskeServerName         string
+		ntskeInsecureSkipVerify bool
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
@@ -478,6 +495,9 @@ func main() {
 	toolFlags.StringVar(&dispatcherMode, "dispatcher", "", "Dispatcher mode")
 	toolFlags.Var(&localAddr, "local", "Local address")
 	toolFlags.Var(&remoteAddr, "remote", "Remote address")
+	toolFlags.StringVar(&authMode, "auth", "", "Authentication mode")
+	toolFlags.StringVar(&ntskeServerName, "ntske-server", "", "NTSKE server name")
+	toolFlags.BoolVar(&ntskeInsecureSkipVerify, "ntske-insecure-skip-verify", false, "Skip NTSKE verification")
 
 	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -537,8 +557,14 @@ func main() {
 			if dispatcherMode != "" {
 				exitWithUsage()
 			}
+			if authMode != "" && authMode != authModeNTS {
+				exitWithUsage()
+			}
+			if authMode == authModeNTS && ntskeServerName == "" {
+				exitWithUsage()
+			}
 			initLogger(verbose)
-			runIPTool(&localAddr, &remoteAddr)
+			runIPTool(&localAddr, &remoteAddr, authMode, ntskeServerName, ntskeInsecureSkipVerify)
 		}
 	case benchmarkFlags.Name():
 		err := benchmarkFlags.Parse(os.Args[2:])

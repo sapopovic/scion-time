@@ -16,12 +16,18 @@ import (
 	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/net/ntp"
+	"example.com/scion-time/net/nts"
+	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/udp"
 )
 
 type IPClient struct {
 	InterleavedMode bool
-	prev            struct {
+	Auth            struct {
+		Enabled      bool
+		NTSKEFetcher ntske.Fetcher
+	}
+	prev struct {
 		reference string
 		cTxTime   ntp.Time64
 		cRxTime   ntp.Time64
@@ -79,6 +85,7 @@ func (c *IPClient) ResetInterleavedMode() {
 func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mtrcs *ipClientMetrics,
 	localAddr, remoteAddr *net.UDPAddr) (
 	offset time.Duration, weight float64, err error) {
+
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.IP})
 	if err != nil {
 		return offset, weight, err
@@ -94,6 +101,17 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 	err = udp.EnableTimestamping(conn, localAddr.Zone)
 	if err != nil {
 		log.Error("failed to enable timestamping", zap.Error(err))
+	}
+
+	var ntskeData ntske.Data
+	if c.Auth.Enabled {
+		ntskeData, err = c.Auth.NTSKEFetcher.FetchData()
+		if err != nil {
+			log.Info("failed to fetch key exchange data. NTP request will be unauthenticated", zap.Error(err))
+		} else {
+			remoteAddr.Port = int(ntskeData.Port)
+			remoteAddr.IP = net.ParseIP(ntskeData.Server)
+		}
 	}
 
 	buf := make([]byte, ntp.PacketLen)
@@ -114,7 +132,15 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 	} else {
 		ntpreq.TransmitTime = ntp.Time64FromTime(cTxTime0)
 	}
+
 	ntp.EncodePacket(&buf, &ntpreq)
+
+	var requestID []byte
+	var ntsreq nts.NTSPacket
+	if c.Auth.Enabled && ntskeData.Cookie != nil {
+		ntsreq, requestID = nts.NewPacket(buf, ntskeData)
+		nts.EncodePacket(&buf, &ntsreq)
+	}
 
 	n, err := conn.WriteToUDPAddrPort(buf, remoteAddr.AddrPort())
 	if err != nil {
@@ -184,6 +210,29 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 				continue
 			}
 			return offset, weight, err
+		}
+
+		var ntsresp nts.NTSPacket
+		if c.Auth.Enabled && ntskeData.Cookie != nil {
+			cookies, responseID, err := nts.DecodePacket(&ntsresp, buf, ntskeData.S2cKey)
+			if err != nil {
+				if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+					log.Info("failed to decode and authenticate NTS packet", zap.Error(err))
+					numRetries++
+					continue
+				}
+				return offset, weight, err
+			}
+
+			err = nts.ProcessResponse(&c.Auth.NTSKEFetcher, cookies, requestID, responseID)
+			if err != nil {
+				if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+					log.Info("failed to process NTS packet response", zap.Error(err))
+					numRetries++
+					continue
+				}
+				return offset, weight, err
+			}
 		}
 
 		interleaved = false
