@@ -36,7 +36,7 @@ func (f *Fetcher) exchangeKeys() error {
 		return err
 	}
 
-	logNTSKEMetadata(f.Log, ke.Meta)
+	logData(f.Log, ke.Meta)
 	f.data = ke.Meta
 	return nil
 }
