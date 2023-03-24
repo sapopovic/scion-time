@@ -388,8 +388,13 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 						}
 						authenticated = subtle.ConstantTimeCompare(scion.PacketAuthOptMAC(authOpt), c.Auth.mac) != 0
 						if !authenticated {
-							log.Info("failed to authenticate packet")
-							continue
+							err = errInvalidPacketAuthenticator
+							if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+								log.Info("failed to authenticate packet", zap.Error(err))
+								numRetries++
+								continue
+							}
+							return offset, weight, err
 						}
 						mtrcs.pktsAuthenticated.Inc()
 					}
