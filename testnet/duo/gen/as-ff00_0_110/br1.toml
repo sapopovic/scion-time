@@ -1,6 +1,6 @@
 [general]
-id = "br1-ff00_0_110"
-config_dir = "gen/ASff00_0_110"
+id = "br1-ff00_0_110-1"
+config_dir = "gen/as-ff00_0_110/br1.toml"
 
 [metrics]
 prometheus = "127.0.0.1:30442"
