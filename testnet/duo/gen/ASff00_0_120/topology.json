@@ -1,6 +1,9 @@
 {
   "attributes": [
-    "core"
+    "authoritative",
+    "core",
+    "issuing",
+    "voting"
   ],
   "isd_as": "1-ff00:0:120",
   "mtu": 1472,
