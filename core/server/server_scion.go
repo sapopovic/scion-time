@@ -432,7 +432,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 	}
 }
 
-func StartSCIONDisptacher(ctx context.Context, log *zap.Logger,
+func StartSCIONDispatcher(ctx context.Context, log *zap.Logger,
 	localHost *net.UDPAddr) {
 	log.Info("dispatcher listening via SCION",
 		zap.Stringer("ip", localHost.IP),
