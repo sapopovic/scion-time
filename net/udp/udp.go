@@ -37,3 +37,30 @@ func UDPAddrFromSnet(a *snet.UDPAddr) UDPAddr {
 func TimestampLen() int {
 	return unix.CmsgSpace(3 * 16)
 }
+
+func SetDSCP (conn *net.UDPConn, dscp uint8) error {
+	// Based on Meta's time libraries at https://github.com/facebook/time
+	if dscp > 63 {
+		panic("invalid argument: dscp must not be greater than 63")
+	}
+	sconn, err := conn.SyscallConn()
+	if err != nil {
+		return err
+	}
+	var res struct {
+		err error
+	}
+	err = sconn.Control(func(fd uintptr) {
+		ip := conn.LocalAddr().(*net.UDPAddr).IP
+		if ip.To4() == nil {
+			res.err = unix.SetsockoptInt(int(fd), unix.IPPROTO_IPV6, unix.IPV6_TCLASS, int(dscp<<2))
+		} else {
+			res.err = unix.SetsockoptInt(int(fd), unix.IPPROTO_IP, unix.IP_TOS, int(dscp<<2))
+		}
+	})
+	if err != nil {
+		return err
+	}
+	return res.err
+}
+

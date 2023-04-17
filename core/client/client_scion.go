@@ -129,6 +129,10 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	if err != nil {
 		log.Error("failed to enable timestamping", zap.Error(err))
 	}
+	err = udp.SetDSCP(conn, config.DSCP)
+	if err != nil {
+		log.Info("failed to set DSCP", zap.Error(err))
+	}
 
 	localPort := conn.LocalAddr().(*net.UDPAddr).Port
 

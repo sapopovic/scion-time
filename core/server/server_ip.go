@@ -13,6 +13,7 @@ import (
 
 	"example.com/scion-time/base/metrics"
 
+	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/net/ntp"
@@ -51,6 +52,10 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 	err := udp.EnableTimestamping(conn, iface)
 	if err != nil {
 		log.Error("failed to enable timestamping", zap.Error(err))
+	}
+	err = udp.SetDSCP(conn, config.DSCP)
+	if err != nil {
+		log.Info("failed to set DSCP", zap.Error(err))
 	}
 
 	var txID uint32
