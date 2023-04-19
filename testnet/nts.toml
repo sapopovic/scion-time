@@ -1,0 +1,2 @@
+auth_mode = "nts"
+insecure_skip_verify = true
