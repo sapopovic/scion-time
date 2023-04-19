@@ -5,3 +5,5 @@ keys
 trcs
 
 timeservice
+*.key
+*.crt

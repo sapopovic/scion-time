@@ -17,6 +17,8 @@ import (
 	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/net/ntp"
+	"example.com/scion-time/net/nts"
+	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/udp"
 )
 
@@ -47,7 +49,7 @@ func newIPServerMetrics() *ipServerMetrics {
 	}
 }
 
-func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, iface string) {
+func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, iface string, provider *ntske.Provider) {
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn, iface)
 	if err != nil {
@@ -59,7 +61,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 	}
 
 	var txID uint32
-	buf := make([]byte, ntp.PacketLen)
+	buf := make([]byte, 2048)
 	oob := make([]byte, udp.TimestampLen())
 	for {
 		buf = buf[:cap(buf)]
@@ -90,6 +92,43 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 			continue
 		}
 
+		var authenticated bool = false
+		var ntsreq nts.NTSPacket
+		var plaintextCookie ntske.ServerCookie
+		if len(buf) > ntp.PacketLen {
+			cookie, err := nts.ExtractCookie(buf)
+			if err != nil {
+				log.Info("failed to extract cookie", zap.Error(err))
+				continue
+			}
+
+			var encryptedCookie ntske.EncryptedServerCookie
+			err = encryptedCookie.Decode(cookie)
+			if err != nil {
+				log.Info("failed to decode cookie", zap.Error(err))
+				continue
+			}
+
+			key, ok := provider.Get(int(encryptedCookie.ID))
+			if !ok {
+				log.Info("failed to get key", zap.Error(err))
+				continue
+			}
+
+			plaintextCookie, err = encryptedCookie.Decrypt(key.Value)
+			if err != nil {
+				log.Info("failed to decrypt cookie", zap.Error(err))
+				continue
+			}
+
+			err = nts.DecodePacket(&ntsreq, buf, plaintextCookie.C2S)
+			if err != nil {
+				log.Info("failed to decode packet", zap.Error(err))
+				continue
+			}
+			authenticated = true
+		}
+
 		err = ntp.ValidateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
 			log.Info("failed to validate packet payload", zap.Error(err))
@@ -110,6 +149,29 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 		handleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
 		ntp.EncodePacket(&buf, &ntpresp)
+
+		if authenticated {
+			var cookies [][]byte
+			key := provider.Current()
+			addedCookie := false
+			for i := 0; i < len(ntsreq.Cookies)+len(ntsreq.CookiePlaceholders); i++ {
+				encryptedCookie, err := plaintextCookie.EncryptWithNonce(key.Value, key.Id)
+				if err != nil {
+					log.Info("failed to encrypt cookie", zap.Error(err))
+					continue
+				}
+				cookie := encryptedCookie.Encode()
+				cookies = append(cookies, cookie)
+				addedCookie = true
+			}
+			if !addedCookie {
+				log.Info("failed to add at least one cookie")
+				continue
+			}
+
+			ntsresp := nts.NewResponsePacket(buf, cookies, plaintextCookie.S2C, ntsreq.UniqueID.ID)
+			nts.EncodePacket(&buf, &ntsresp)
+		}
 
 		n, err = conn.WriteToUDPAddrPort(buf, srcAddr)
 		if err != nil || n != len(buf) {
@@ -134,7 +196,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 }
 
 func StartIPServer(ctx context.Context, log *zap.Logger,
-	localHost *net.UDPAddr) {
+	localHost *net.UDPAddr, provider *ntske.Provider) {
 	log.Info("server listening via IP",
 		zap.Stringer("ip", localHost.IP),
 		zap.Int("port", localHost.Port),
@@ -147,14 +209,14 @@ func StartIPServer(ctx context.Context, log *zap.Logger,
 		if err != nil {
 			log.Fatal("failed to listen for packets", zap.Error(err))
 		}
-		go runIPServer(log, mtrcs, conn, localHost.Zone)
+		go runIPServer(log, mtrcs, conn, localHost.Zone, provider)
 	} else {
 		for i := ipServerNumGoroutine; i > 0; i-- {
 			conn, err := reuseport.ListenPacket("udp", localHost.String())
 			if err != nil {
 				log.Fatal("failed to listen for packets", zap.Error(err))
 			}
-			go runIPServer(log, mtrcs, conn.(*net.UDPConn), localHost.Zone)
+			go runIPServer(log, mtrcs, conn.(*net.UDPConn), localHost.Zone, provider)
 		}
 	}
 }

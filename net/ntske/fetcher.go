@@ -3,18 +3,21 @@ package ntske
 import (
 	"crypto/tls"
 	"errors"
+	"net"
 
 	"go.uber.org/zap"
 )
 
 type Fetcher struct {
-	TLSConfig tls.Config
 	Log       *zap.Logger
+	TLSConfig tls.Config
+	Port      string
 	data      Data
 }
 
 func (f *Fetcher) exchangeKeys() error {
-	ke, err := Connect(f.TLSConfig.ServerName, &f.TLSConfig, false)
+	serverAddr := net.JoinHostPort(f.TLSConfig.ServerName, f.Port)
+	ke, err := Connect(serverAddr, &f.TLSConfig, true /* debug */)
 	if err != nil {
 		return err
 	}

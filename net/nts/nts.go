@@ -52,31 +52,34 @@ const (
 )
 
 type NTSPacket struct {
-	NTPHeader  []byte
-	Extensions []ExtensionField
+	NTPHeader          []byte
+	UniqueID           UniqueIdentifier
+	Cookies            []Cookie
+	CookiePlaceholders []CookiePlaceholder
+	Auth               Authenticator
 }
 
 func NewPacket(ntpHeader []byte, ntskeData ntske.Data) (pkt NTSPacket, uniqueid []byte) {
 	pkt.NTPHeader = ntpHeader
 	var uid UniqueIdentifier
 	uid.Generate()
-	pkt.AddExt(uid)
+	pkt.UniqueID = uid
 
 	var cookie Cookie
 	cookie.Cookie = ntskeData.Cookie[0]
-	pkt.AddExt(cookie)
+	pkt.Cookies = append(pkt.Cookies, cookie)
 
 	// Add cookie extension fields here s.t. 8 cookies are available after response.
 	cookiePlaceholderData := make([]byte, len(cookie.Cookie))
 	for i := len(ntskeData.Cookie); i < NumStoredCookies; i++ {
 		var cookiePlacholder CookiePlaceholder
 		cookiePlacholder.Cookie = cookiePlaceholderData
-		pkt.AddExt(cookiePlacholder)
+		pkt.CookiePlaceholders = append(pkt.CookiePlaceholders, cookiePlacholder)
 	}
 
 	var auth Authenticator
 	auth.Key = ntskeData.C2sKey
-	pkt.AddExt(auth)
+	pkt.Auth = auth
 
 	return pkt, uid.ID
 }
@@ -88,11 +91,25 @@ func EncodePacket(b *[]byte, pkt *NTSPacket) {
 	}
 	_, _ = buf.Write((pkt.NTPHeader))
 
-	for _, e := range pkt.Extensions {
-		err := e.pack(buf)
+	err := pkt.UniqueID.pack(buf)
+	if err != nil {
+		panic(err)
+	}
+	for _, c := range pkt.Cookies {
+		err = c.pack(buf)
 		if err != nil {
 			panic(err)
 		}
+	}
+	for _, c := range pkt.CookiePlaceholders {
+		err = c.pack(buf)
+		if err != nil {
+			panic(err)
+		}
+	}
+	err = pkt.Auth.pack(buf)
+	if err != nil {
+		panic(err)
 	}
 
 	pktlen := buf.Len()
@@ -105,7 +122,7 @@ func EncodePacket(b *[]byte, pkt *NTSPacket) {
 	copy((*b)[:pktlen], buf.Bytes())
 }
 
-func DecodePacket(pkt *NTSPacket, b []byte, key []byte) (cookies [][]byte, uniqueID []byte, err error) {
+func DecodePacket(pkt *NTSPacket, b []byte, key []byte) (err error) {
 	pos := ntpHeaderLen
 	msgbuf := bytes.NewReader(b[48:])
 	authenticated := false
@@ -114,7 +131,7 @@ func DecodePacket(pkt *NTSPacket, b []byte, key []byte) (cookies [][]byte, uniqu
 		var eh ExtHdr
 		err := eh.unpack(msgbuf)
 		if err != nil {
-			return cookies, uniqueID, fmt.Errorf("unpack extension field: %s", err)
+			return fmt.Errorf("unpack extension field: %s", err)
 		}
 
 		switch eh.Type {
@@ -122,29 +139,28 @@ func DecodePacket(pkt *NTSPacket, b []byte, key []byte) (cookies [][]byte, uniqu
 			u := UniqueIdentifier{ExtHdr: eh}
 			err = u.unpack(msgbuf)
 			if err != nil {
-				return cookies, uniqueID, fmt.Errorf("unpack UniqueIdentifier: %s", err)
+				return fmt.Errorf("unpack UniqueIdentifier: %s", err)
 			}
-			uniqueID = u.ID
-			pkt.AddExt(u)
+			pkt.UniqueID = u
 			unique = true
 
 		case extAuthenticator:
 			a := Authenticator{ExtHdr: eh}
 			err = a.unpack(msgbuf)
 			if err != nil {
-				return cookies, uniqueID, fmt.Errorf("unpack Authenticator: %s", err)
+				return fmt.Errorf("unpack Authenticator: %s", err)
 			}
 
 			aessiv, err := siv.NewCMAC(key)
 			if err != nil {
-				return cookies, uniqueID, err
+				return err
 			}
 
 			decrytedBuf, err := aessiv.Open(nil, a.Nonce, a.CipherText, b[:pos])
 			if err != nil {
-				return cookies, uniqueID, err
+				return err
 			}
-			pkt.AddExt(a)
+			pkt.Auth = a
 
 			//ignore unauthenticated fields and only continue with decrypted
 			msgbuf = bytes.NewReader(decrytedBuf)
@@ -154,39 +170,96 @@ func DecodePacket(pkt *NTSPacket, b []byte, key []byte) (cookies [][]byte, uniqu
 			cookie := Cookie{ExtHdr: eh}
 			err = cookie.unpack(msgbuf)
 			if err != nil {
-				return cookies, uniqueID, fmt.Errorf("unpack Cookie: %s", err)
+				return fmt.Errorf("unpack Cookie: %s", err)
 			}
-			pkt.AddExt(cookie)
-			cookies = append(cookies, cookie.Cookie)
+			pkt.Cookies = append(pkt.Cookies, cookie)
+
+		case extCookiePlaceholder:
+			cookie := CookiePlaceholder{ExtHdr: eh}
+			err = cookie.unpack(msgbuf)
+			if err != nil {
+				return fmt.Errorf("unpack Cookie: %s", err)
+			}
+			pkt.CookiePlaceholders = append(pkt.CookiePlaceholders, cookie)
 
 		default:
 			// Unknown extension field. Skip it.
 			_, err := msgbuf.Seek(int64(eh.Length), io.SeekCurrent)
 			if err != nil {
-				return cookies, uniqueID, err
+				return err
 			}
 		}
 		pos += int(eh.Length)
 	}
 
 	if !authenticated {
-		return cookies, uniqueID, errors.New("packet does not contain a valid authenticator")
+		return errors.New("packet does not contain a valid authenticator")
 	}
 	if !unique {
-		return cookies, uniqueID, errors.New("packet not does not contain a unique identifier")
+		return errors.New("packet does not contain a unique identifier")
 	}
 
-	return cookies, uniqueID, nil
+	return nil
 }
 
-func ProcessResponse(ntskeFetcher *ntske.Fetcher, cookies [][]byte, reqID []byte, respID []byte) error {
-	for _, cookie := range cookies {
-		ntskeFetcher.StoreCookie(cookie)
+func ExtractCookie(b []byte) ([]byte, error) {
+	msgbuf := bytes.NewReader(b[48:])
+	for msgbuf.Len() >= 28 {
+		var eh ExtHdr
+		err := eh.unpack(msgbuf)
+		if err != nil {
+			return nil, fmt.Errorf("unpack extension field: %s", err)
+		}
+
+		switch eh.Type {
+		case extCookie:
+			cookie := Cookie{ExtHdr: eh}
+			err = cookie.unpack(msgbuf)
+			if err != nil {
+				return nil, fmt.Errorf("unpack Cookie: %s", err)
+			}
+			return cookie.Cookie, nil
+
+		default:
+			_, err := msgbuf.Seek(int64(eh.Length-uint16(binary.Size(eh))), io.SeekCurrent)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
-	if !bytes.Equal(reqID, respID) {
+
+	return nil, errors.New("packet does not contain a cookie")
+}
+
+func ProcessResponse(ntskeFetcher *ntske.Fetcher, pkt *NTSPacket, reqID []byte) error {
+	if !bytes.Equal(reqID, pkt.UniqueID.ID) {
 		return errors.New("unexpected response ID")
 	}
+	for _, cookie := range pkt.Cookies {
+		ntskeFetcher.StoreCookie(cookie.Cookie)
+	}
 	return nil
+}
+
+func NewResponsePacket(ntpheader []byte, cookies [][]byte, key []byte, uniqueid []byte) (pkt NTSPacket) {
+	pkt.NTPHeader = ntpheader
+	var uid UniqueIdentifier
+	uid.ID = uniqueid
+	pkt.UniqueID = uid
+
+	buf := new(bytes.Buffer)
+	for _, c := range cookies {
+		var cookie Cookie
+		cookie.Cookie = c
+		cookie.pack(buf)
+	}
+
+	var auth Authenticator
+	auth.Key = key
+	auth.AssociatedData = buf.Bytes()
+	pkt.Auth = auth
+
+	return pkt
 }
 
 type ExtHdr struct {
@@ -208,16 +281,6 @@ func (h ExtHdr) Header() ExtHdr { return h }
 
 func (h ExtHdr) string() string {
 	return fmt.Sprintf("Extension field type: %v, len: %v\n", h.Type, h.Length)
-}
-
-func (packet *NTSPacket) AddExt(ext ExtensionField) {
-	packet.Extensions = append(packet.Extensions, ext)
-}
-
-type ExtensionField interface {
-	Header() ExtHdr
-	string() string
-	pack(*bytes.Buffer) error
 }
 
 type UniqueIdentifier struct {
@@ -385,11 +448,12 @@ type Key []byte
 
 type Authenticator struct {
 	ExtHdr
-	NonceLen      uint16
-	CipherTextLen uint16
-	Nonce         []byte
-	CipherText    []byte
-	Key           Key
+	NonceLen       uint16
+	CipherTextLen  uint16
+	Nonce          []byte
+	AssociatedData []byte
+	CipherText     []byte
+	Key            Key
 }
 
 func (a Authenticator) string() string {
@@ -397,10 +461,12 @@ func (a Authenticator) string() string {
 		"  NonceLen: %v\n"+
 		"  CipherTextLen: %v\n"+
 		"  Nonce: %x\n"+
+		"  AssociatedData %x\n"+
 		"  Ciphertext: %x\n"+
 		"  Key: %x\n",
 		a.NonceLen,
 		a.CipherTextLen,
+		a.AssociatedData,
 		a.Nonce,
 		a.CipherText,
 		a.Key,
@@ -421,7 +487,7 @@ func (a Authenticator) pack(buf *bytes.Buffer) error {
 
 	a.Nonce = bits
 
-	a.CipherText = aessiv.Seal(nil, a.Nonce, nil, buf.Bytes())
+	a.CipherText = aessiv.Seal(nil, a.Nonce, a.AssociatedData, buf.Bytes())
 	a.CipherTextLen = uint16(len(a.CipherText))
 
 	noncebuf := new(bytes.Buffer)
