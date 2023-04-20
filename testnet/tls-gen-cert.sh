@@ -1,1 +1,1 @@
-openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out gen/tls.crt -keyout gen/tls.key -config tls-cert.conf
+openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out testnet/gen/tls.crt -keyout testnet/gen/tls.key -config testnet/tls-cert.conf

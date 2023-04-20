@@ -111,4 +111,6 @@ mkdir gen-certs
 
 rm -f gen/tls.crt
 rm -f gen/tls.key
-sh tls-gen-cert.sh
+
+cd ~/scion-time/
+sh testnet/tls-gen-cert.sh
