@@ -50,14 +50,14 @@ const (
 )
 
 type svcConfig struct {
-	MBGReferenceClocks []string `toml:"mbg_reference_clocks,omitempty"`
-	NTPReferenceClocks []string `toml:"ntp_reference_clocks,omitempty"`
-	SCIONPeers         []string `toml:"scion_peers,omitempty"`
-	NTSKECertFile      string   `toml:"ntske_cert_file,omitempty"`
-	NTSKEKeyFile       string   `toml:"ntske_key_file,omitempty"`
-	NTSKEServerName    string   `toml:"ntske_server_name,omitempty"`
-	AuthMode           string   `toml:"auth_mode,omitempty"`
-	InsecureSkipVerify bool     `toml:"insecure_skip_verify,omitempty"`
+	MBGReferenceClocks      []string `toml:"mbg_reference_clocks,omitempty"`
+	NTPReferenceClocks      []string `toml:"ntp_reference_clocks,omitempty"`
+	SCIONPeers              []string `toml:"scion_peers,omitempty"`
+	NTSKECertFile           string   `toml:"ntske_cert_file,omitempty"`
+	NTSKEKeyFile            string   `toml:"ntske_key_file,omitempty"`
+	NTSKEServerName         string   `toml:"ntske_server_name,omitempty"`
+	AuthMode                string   `toml:"auth_mode,omitempty"`
+	NTSKEInsecureSkipVerify bool     `toml:"ntske_insecure_skip_verify,omitempty"`
 }
 
 type mbgReferenceClock struct {
@@ -184,6 +184,7 @@ func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig,
 			dev: s,
 		})
 	}
+
 	var dstIAs []addr.IA
 	for _, s := range cfg.NTPReferenceClocks {
 		remoteAddr, err := snet.ParseUDPAddr(s)
@@ -204,6 +205,7 @@ func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig,
 			))
 		}
 	}
+
 	for _, s := range cfg.SCIONPeers {
 		remoteAddr, err := snet.ParseUDPAddr(s)
 		if err != nil {
@@ -218,6 +220,7 @@ func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig,
 		))
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
+
 	if daemonAddr != "" {
 		ctx := context.Background()
 		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
@@ -271,7 +274,7 @@ func toolConfig(log *zap.Logger, remoteAddrStr string, cfg svcConfig) (authMode,
 	}
 	ntskeServer = strings.Split(remoteAddrStr, ",")[1]
 
-	return cfg.AuthMode, ntskeServer, cfg.InsecureSkipVerify
+	return cfg.AuthMode, ntskeServer, cfg.NTSKEInsecureSkipVerify
 }
 
 func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
@@ -515,15 +518,15 @@ func exitWithUsage() {
 
 func main() {
 	var (
-		verbose                 bool
-		configFile              string
-		daemonAddr              string
-		localAddr               snet.UDPAddr
-		remoteAddrStr           string
-		dispatcherMode          string
-		drkeyMode               string
-		drkeyServerAddr         snet.UDPAddr
-		drkeyClientAddr         snet.UDPAddr
+		verbose         bool
+		configFile      string
+		daemonAddr      string
+		localAddr       snet.UDPAddr
+		remoteAddrStr   string
+		dispatcherMode  string
+		drkeyMode       string
+		drkeyServerAddr snet.UDPAddr
+		drkeyClientAddr snet.UDPAddr
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
