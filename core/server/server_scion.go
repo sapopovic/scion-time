@@ -288,7 +288,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				continue
 			}
 
-			dscp := scionLayer.TrafficClass>>2
+			dscp := scionLayer.TrafficClass >> 2
 			clientID := scionLayer.SrcIA.String() + "," + srcAddr.String()
 
 			mtrcs.reqsAccepted.Inc()
@@ -304,7 +304,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 			var ntpresp ntp.Packet
 			handleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
-			scionLayer.TrafficClass = config.DSCP<<2
+			scionLayer.TrafficClass = config.DSCP << 2
 			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA
 			scionLayer.DstAddrType, scionLayer.SrcAddrType = scionLayer.SrcAddrType, scionLayer.DstAddrType
 			scionLayer.RawDstAddr, scionLayer.RawSrcAddr = scionLayer.RawSrcAddr, scionLayer.RawDstAddr
