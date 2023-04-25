@@ -27,6 +27,8 @@ import (
 	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/net/ntp"
+	"example.com/scion-time/net/nts"
+	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
 )
@@ -69,7 +71,8 @@ func newSCIONServerMetrics() *scionServerMetrics {
 }
 
 func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetrics,
-	conn *net.UDPConn, localHostIface string, localHostPort int, f *scion.Fetcher) {
+	conn *net.UDPConn, localHostIface string, localHostPort int,
+	fetcher *scion.Fetcher, provider *ntske.Provider) {
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn, localHostIface)
 	if err != nil {
@@ -106,7 +109,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 	}
 
 	var authBuf, authMAC []byte
-	if f != nil {
+	if fetcher != nil {
 		authBuf = make([]byte, spao.MACBufferSize)
 		authMAC = make([]byte, scion.PacketAuthMACLen)
 	}
@@ -229,13 +232,13 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 			)
 			authenticated := false
 
-			if f != nil && len(decoded) >= 3 &&
+			if fetcher != nil && len(decoded) >= 3 &&
 				decoded[len(decoded)-2] == slayers.LayerTypeEndToEndExtn {
 				authOpt, err = e2eLayer.FindOption(slayers.OptTypeAuthenticator)
 				if err == nil {
 					spi, algo := scion.PacketAuthOptMetadata(authOpt)
 					if spi == scion.PacketAuthSPIClient && algo == scion.PacketAuthAlgorithm {
-						hostASKey, err := f.FetchHostASKey(ctx, drkey.HostASMeta{
+						hostASKey, err := fetcher.FetchHostASKey(ctx, drkey.HostASMeta{
 							ProtoId:  scion.DRKeyProtocolTS,
 							Validity: rxt,
 							SrcIA:    scionLayer.DstIA,
@@ -282,6 +285,43 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				continue
 			}
 
+			var ntsAuthenticated bool = false
+			var ntsreq nts.NTSPacket
+			var serverCookie ntske.ServerCookie
+			if len(udpLayer.Payload) > ntp.PacketLen {
+				cookie, err := nts.ExtractCookie(udpLayer.Payload)
+				if err != nil {
+					log.Info("failed to extract cookie", zap.Error(err))
+					continue
+				}
+
+				var encryptedCookie ntske.EncryptedServerCookie
+				err = encryptedCookie.Decode(cookie)
+				if err != nil {
+					log.Info("failed to decode cookie", zap.Error(err))
+					continue
+				}
+
+				key, ok := provider.Get(int(encryptedCookie.ID))
+				if !ok {
+					log.Info("failed to get key", zap.Error(err))
+					continue
+				}
+
+				serverCookie, err = encryptedCookie.Decrypt(key.Value)
+				if err != nil {
+					log.Info("failed to decrypt cookie", zap.Error(err))
+					continue
+				}
+
+				err = nts.DecodePacket(&ntsreq, udpLayer.Payload, serverCookie.C2S)
+				if err != nil {
+					log.Info("failed to decode packet", zap.Error(err))
+					continue
+				}
+				ntsAuthenticated = true
+			}
+
 			err = ntp.ValidateRequest(&ntpreq, udpLayer.SrcPort)
 			if err != nil {
 				log.Info("failed to validate packet payload", zap.Error(err))
@@ -297,6 +337,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				zap.String("from", clientID),
 				zap.Uint8("DSCP", dscp),
 				zap.Bool("auth", authenticated),
+				zap.Bool("ntsauth", ntsAuthenticated),
 				zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq}),
 			)
 
@@ -316,6 +357,29 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 
 			udpLayer.DstPort, udpLayer.SrcPort = udpLayer.SrcPort, udpLayer.DstPort
 			ntp.EncodePacket(&udpLayer.Payload, &ntpresp)
+
+			if ntsAuthenticated {
+				var cookies [][]byte
+				key := provider.Current()
+				addedCookie := false
+				for i := 0; i < len(ntsreq.Cookies)+len(ntsreq.CookiePlaceholders); i++ {
+					encryptedCookie, err := serverCookie.EncryptWithNonce(key.Value, key.ID)
+					if err != nil {
+						log.Info("failed to encrypt cookie", zap.Error(err))
+						continue
+					}
+					cookie := encryptedCookie.Encode()
+					cookies = append(cookies, cookie)
+					addedCookie = true
+				}
+				if !addedCookie {
+					log.Info("failed to add at least one cookie")
+					continue
+				}
+
+				ntsresp := nts.NewResponsePacket(udpLayer.Payload, cookies, serverCookie.S2C, ntsreq.UniqueID.ID)
+				nts.EncodePacket(&udpLayer.Payload, &ntsresp)
+			}
 
 			payload := gopacket.Payload(udpLayer.Payload)
 
@@ -407,7 +471,7 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 }
 
 func StartSCIONServer(ctx context.Context, log *zap.Logger,
-	daemonAddr string, localHost *net.UDPAddr) {
+	daemonAddr string, localHost *net.UDPAddr, provider *ntske.Provider) {
 	log.Info("server listening via SCION",
 		zap.Stringer("ip", localHost.IP),
 		zap.Int("port", localHost.Port),
@@ -423,21 +487,21 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 	mtrcs := newSCIONServerMetrics()
 
 	if scionServerNumGoroutine == 1 {
-		f := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
+		fetcher := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
 			log.Fatal("failed to listen for packets", zap.Error(err))
 		}
-		go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHostPort, f)
+		go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHostPort, fetcher, provider)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
-			f := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
+			fetcher := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
 			conn, err := reuseport.ListenPacket("udp",
 				net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port)))
 			if err != nil {
 				log.Fatal("failed to listen for packets", zap.Error(err))
 			}
-			go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, localHostPort, f)
+			go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, localHostPort, fetcher, provider)
 		}
 	}
 }
@@ -461,5 +525,5 @@ func StartSCIONDispatcher(ctx context.Context, log *zap.Logger,
 	if err != nil {
 		log.Fatal("failed to listen for packets", zap.Error(err))
 	}
-	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHost.Port, nil /* DRKey fetcher */)
+	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHost.Port, nil /* DRKey fetcher */, nil /* NTSKE provider */)
 }

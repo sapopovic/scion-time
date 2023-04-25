@@ -312,7 +312,7 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 
 	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), config, provider)
 	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), provider)
-	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host))
+	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), provider)
 
 	runMonitor(log)
 }
@@ -340,7 +340,7 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 
 	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), config, provider)
 	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), provider)
-	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host))
+	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), provider)
 
 	runMonitor(log)
 }
@@ -393,7 +393,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServer
 
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
-		log.Info("failed to split NTS-KE host and port", zap.Error(err))
+		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
 	}
 
 	if authMode == authModeNTS {
@@ -415,7 +415,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServer
 	}
 }
 
-func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr) {
+func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServer string, ntskeInsecureSkipVerify bool) {
 	var err error
 	ctx := context.Background()
 
@@ -443,6 +443,25 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 	c.Auth.Enabled = true
 	c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
+
+	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
+	if err != nil {
+		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
+	}
+
+	if authMode == authModeNTS {
+		c.Auth.NTSEnabled = true
+		c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+			InsecureSkipVerify: ntskeInsecureSkipVerify,
+			ServerName:         ntskeHost,
+			MinVersion:         tls.VersionTLS13,
+		}
+		c.Auth.NTSKEFetcher.Port = ntskePort
+		c.Auth.NTSKEFetcher.Log = log
+	} else {
+		c.Auth.NTSEnabled = false
+	}
+
 	_, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps)
 	if err != nil {
 		log.Fatal("failed to measure clock offset",
@@ -627,8 +646,12 @@ func main() {
 				dispatcherMode != dispatcherModeInternal {
 				exitWithUsage()
 			}
+			if authMode != "" && authMode != authModeNTS {
+				exitWithUsage()
+			}
 			initLogger(verbose)
-			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr)
+			ntskeServer := strings.Split(remoteAddrStr, ",")[1]
+			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr, authMode, ntskeServer, ntskeInsecureSkipVerify)
 		} else {
 			if daemonAddr != "" {
 				exitWithUsage()
