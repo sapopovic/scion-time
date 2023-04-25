@@ -431,7 +431,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, remoteAddrStr, configFile st
 	}
 }
 
-func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServer string, ntskeInsecureSkipVerify bool) {
+func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr, remoteAddrStr, configFile string) {
 	var err error
 	ctx := context.Background()
 
@@ -459,6 +459,9 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 	c.Auth.Enabled = true
 	c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
+
+	cfg := loadConfig(log, configFile)
+	authMode, ntskeServer, ntskeInsecureSkipVerify := toolConfig(log, remoteAddrStr, cfg)
 
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
@@ -659,12 +662,8 @@ func main() {
 				dispatcherMode != dispatcherModeInternal {
 				exitWithUsage()
 			}
-			if authMode != "" && authMode != authModeNTS {
-				exitWithUsage()
-			}
 			initLogger(verbose)
-			ntskeServer := strings.Split(remoteAddrStr, ",")[1]
-			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr, authMode, ntskeServer, ntskeInsecureSkipVerify)
+			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr, remoteAddrStr, configFile)
 		} else {
 			if daemonAddr != "" {
 				exitWithUsage()
