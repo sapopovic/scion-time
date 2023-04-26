@@ -120,7 +120,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			return offset, weight, err
 		}
 		remoteAddr.Port = int(ntskeData.Port)
-		remoteAddr.IP = net.ParseIP(ntskeData.Server)
+		remoteAddr.IP = net.ParseIP(ntskeData.Server).To4()
 	}
 
 	buf := make([]byte, ntp.PacketLen)

@@ -52,12 +52,17 @@ const (
 )
 
 type svcConfig struct {
-	MBGReferenceClocks []string `toml:"mbg_reference_clocks,omitempty"`
-	NTPReferenceClocks []string `toml:"ntp_reference_clocks,omitempty"`
-	SCIONPeers         []string `toml:"scion_peers,omitempty"`
-	NTSKECertFile      string   `toml:"ntske_cert_file,omitempty"`
-	NTSKEKeyFile       string   `toml:"ntske_key_file,omitempty"`
-	NTSKEServerName    string   `toml:"ntske_server_name,omitempty"`
+	LocalAddress            string   `toml:"local_address,omitempty"`
+	DaemonAddress           string   `toml:"daemon_address,omitempty"`
+	RemoteAddress           string   `toml:"remote_address,omitempty"`
+	MBGReferenceClocks      []string `toml:"mbg_reference_clocks,omitempty"`
+	NTPReferenceClocks      []string `toml:"ntp_reference_clocks,omitempty"`
+	SCIONPeers              []string `toml:"scion_peers,omitempty"`
+	NTSKECertFile           string   `toml:"ntske_cert_file,omitempty"`
+	NTSKEKeyFile            string   `toml:"ntske_key_file,omitempty"`
+	NTSKEServerName         string   `toml:"ntske_server_name,omitempty"`
+	AuthMode                string   `toml:"auth_mode,omitempty"`
+	NTSKEInsecureSkipVerify bool     `toml:"ntske_insecure_skip_verify,omitempty"`
 }
 
 type mbgReferenceClock struct {
@@ -134,13 +139,31 @@ func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Log
 	return mbg.MeasureClockOffset(ctx, log, c.dev)
 }
 
-func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceClockIP {
+func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr, authMode, remoteAddrStr string, ntskeInsecureSkipVerify bool) *ntpReferenceClockIP {
 	c := &ntpReferenceClockIP{
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
 	c.ntpc = &client.IPClient{
 		InterleavedMode: true,
+	}
+	if authMode == authModeNTS {
+		ntskeServer := strings.Split(remoteAddrStr, ",")[1]
+		fmt.Println(ntskeServer)
+		ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
+		if err != nil {
+			log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
+		}
+		c.ntpc.Auth.Enabled = true
+		c.ntpc.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+			InsecureSkipVerify: ntskeInsecureSkipVerify,
+			ServerName:         ntskeHost,
+			MinVersion:         tls.VersionTLS13,
+		}
+		c.ntpc.Auth.NTSKEFetcher.Port = ntskePort
+		c.ntpc.Auth.NTSKEFetcher.Log = log
+	} else {
+		c.ntpc.Auth.Enabled = false
 	}
 	return c
 }
@@ -150,7 +173,7 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.L
 	return client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
-func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceClockSCION {
+func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr, authMode, remoteAddrStr string, ntskeInsecureSkipVerify bool) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
@@ -158,6 +181,23 @@ func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceCl
 	for i := 0; i != len(c.ntpcs); i++ {
 		c.ntpcs[i] = &client.SCIONClient{
 			InterleavedMode: true,
+		}
+		if authMode == authModeNTS {
+			ntskeServer := strings.Split(remoteAddrStr, ",")[1]
+			ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
+			if err != nil {
+				log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
+			}
+			c.ntpcs[i].Auth.NTSEnabled = true
+			c.ntpcs[i].Auth.NTSKEFetcher.TLSConfig = tls.Config{
+				InsecureSkipVerify: ntskeInsecureSkipVerify,
+				ServerName:         ntskeHost,
+				MinVersion:         tls.VersionTLS13,
+			}
+			c.ntpcs[i].Auth.NTSKEFetcher.Port = ntskePort
+			c.ntpcs[i].Auth.NTSKEFetcher.Log = log
+		} else {
+			c.ntpcs[i].Auth.NTSEnabled = false
 		}
 	}
 	return c
@@ -195,6 +235,32 @@ func loadConfig(log *zap.Logger, configFile string) svcConfig {
 	return cfg
 }
 
+func localAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
+	if cfg.LocalAddress == "" {
+		log.Fatal("local_address not specified in config")
+	}
+	var localAddr snet.UDPAddr
+	err := localAddr.Set(cfg.LocalAddress)
+	if err != nil {
+		log.Fatal("failed to parse local address")
+	}
+
+	return &localAddr
+}
+
+func remoteAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
+	if cfg.RemoteAddress == "" {
+		log.Fatal("remote_address not specified in config")
+	}
+	var remoteAddr snet.UDPAddr
+	err := remoteAddr.Set(cfg.RemoteAddress)
+	if err != nil {
+		log.Fatal("failed to parse remote address")
+	}
+
+	return &remoteAddr
+}
+
 func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig,
 	daemonAddr string, localAddr *snet.UDPAddr) (
 	refClocks, netClocks []client.ReferenceClock) {
@@ -216,12 +282,18 @@ func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig,
 			refClocks = append(refClocks, newNTPRefernceClockSCION(
 				udp.UDPAddrFromSnet(localAddr),
 				udp.UDPAddrFromSnet(remoteAddr),
+				cfg.AuthMode,
+				s,
+				cfg.NTSKEInsecureSkipVerify,
 			))
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		} else {
 			refClocks = append(refClocks, newNTPRefernceClockIP(
 				localAddr.Host,
 				remoteAddr.Host,
+				cfg.AuthMode,
+				s,
+				cfg.NTSKEInsecureSkipVerify,
 			))
 		}
 	}
@@ -237,6 +309,9 @@ func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig,
 		netClocks = append(netClocks, newNTPRefernceClockSCION(
 			udp.UDPAddrFromSnet(localAddr),
 			udp.UDPAddrFromSnet(remoteAddr),
+			cfg.AuthMode,
+			s,
+			cfg.NTSKEInsecureSkipVerify,
 		))
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
@@ -288,10 +363,12 @@ func tlsConfig(log *zap.Logger, cfg svcConfig) *tls.Config {
 	}
 }
 
-func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func runServer(configFile string) {
 	ctx := context.Background()
 
 	cfg := loadConfig(log, configFile)
+	localAddr := localAddress(log, cfg)
+	daemonAddr := cfg.DaemonAddress
 	refClocks, netClocks := referenceClocks(ctx, log, cfg, daemonAddr, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
@@ -317,10 +394,12 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	runMonitor(log)
 }
 
-func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func runRelay(configFile string) {
 	ctx := context.Background()
 
 	cfg := loadConfig(log, configFile)
+	localAddr := localAddress(log, cfg)
+	daemonAddr := cfg.DaemonAddress
 	refClocks, netClocks := referenceClocks(ctx, log, cfg, daemonAddr, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
@@ -346,10 +425,12 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	runMonitor(log)
 }
 
-func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func runClient(configFile string) {
 	ctx := context.Background()
 
 	cfg := loadConfig(log, configFile)
+	localAddr := localAddress(log, cfg)
+	daemonAddr := cfg.DaemonAddress
 	refClocks, netClocks := referenceClocks(ctx, log, cfg, daemonAddr, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
@@ -569,18 +650,12 @@ func main() {
 
 	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
-	serverFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	serverFlags.Var(&localAddr, "local", "Local address")
 
 	relayFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	relayFlags.StringVar(&configFile, "config", "", "Config file")
-	relayFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	relayFlags.Var(&localAddr, "local", "Local address")
 
 	clientFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	clientFlags.StringVar(&configFile, "config", "", "Config file")
-	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	clientFlags.Var(&localAddr, "local", "Local address")
 
 	toolFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	toolFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -592,8 +667,8 @@ func main() {
 
 	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	benchmarkFlags.Var(&localAddr, "local", "Local address")
-	benchmarkFlags.StringVar(&remoteAddrStr, "remote", "", "Remote address")
+	// benchmarkFlags.Var(&localAddr, "local", "Local address")
+	// benchmarkFlags.StringVar(&remoteAddrStr, "remote", "", "Remote address")
 
 	drkeyFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	drkeyFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -615,7 +690,7 @@ func main() {
 			exitWithUsage()
 		}
 		initLogger(verbose)
-		runServer(configFile, daemonAddr, &localAddr)
+		runServer(configFile)
 	case relayFlags.Name():
 		err := relayFlags.Parse(os.Args[2:])
 		if err != nil || relayFlags.NArg() != 0 {
@@ -625,14 +700,14 @@ func main() {
 			exitWithUsage()
 		}
 		initLogger(verbose)
-		runRelay(configFile, daemonAddr, &localAddr)
+		runRelay(configFile)
 	case clientFlags.Name():
 		err := clientFlags.Parse(os.Args[2:])
 		if err != nil || clientFlags.NArg() != 0 {
 			exitWithUsage()
 		}
 		initLogger(verbose)
-		runClient(configFile, daemonAddr, &localAddr)
+		runClient(configFile)
 	case toolFlags.Name():
 		err := toolFlags.Parse(os.Args[2:])
 		if err != nil || toolFlags.NArg() != 0 {
