@@ -52,14 +52,12 @@ const (
 )
 
 type svcConfig struct {
-	MBGReferenceClocks      []string `toml:"mbg_reference_clocks,omitempty"`
-	NTPReferenceClocks      []string `toml:"ntp_reference_clocks,omitempty"`
-	SCIONPeers              []string `toml:"scion_peers,omitempty"`
-	NTSKECertFile           string   `toml:"ntske_cert_file,omitempty"`
-	NTSKEKeyFile            string   `toml:"ntske_key_file,omitempty"`
-	NTSKEServerName         string   `toml:"ntske_server_name,omitempty"`
-	AuthMode                string   `toml:"auth_mode,omitempty"`
-	NTSKEInsecureSkipVerify bool     `toml:"ntske_insecure_skip_verify,omitempty"`
+	MBGReferenceClocks []string `toml:"mbg_reference_clocks,omitempty"`
+	NTPReferenceClocks []string `toml:"ntp_reference_clocks,omitempty"`
+	SCIONPeers         []string `toml:"scion_peers,omitempty"`
+	NTSKECertFile      string   `toml:"ntske_cert_file,omitempty"`
+	NTSKEKeyFile       string   `toml:"ntske_key_file,omitempty"`
+	NTSKEServerName    string   `toml:"ntske_server_name,omitempty"`
 }
 
 type mbgReferenceClock struct {
@@ -290,15 +288,6 @@ func tlsConfig(log *zap.Logger, cfg svcConfig) *tls.Config {
 	}
 }
 
-func toolConfig(log *zap.Logger, remoteAddrStr string, cfg svcConfig) (authMode, ntskeServer string, ntskeInsecureSkipVerify bool) {
-	if cfg.AuthMode != "" && cfg.AuthMode != authModeNTS {
-		exitWithUsage()
-	}
-	ntskeServer = strings.Split(remoteAddrStr, ",")[1]
-
-	return cfg.AuthMode, ntskeServer, cfg.NTSKEInsecureSkipVerify
-}
-
 func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
@@ -391,7 +380,8 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	runMonitor(log)
 }
 
-func runIPTool(localAddr, remoteAddr *snet.UDPAddr, remoteAddrStr, configFile string) {
+func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode,
+	ntskeServer string, ntskeInsecureSkipVerify bool) {
 	var err error
 	ctx := context.Background()
 
@@ -403,9 +393,6 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, remoteAddrStr, configFile st
 	c := &client.IPClient{
 		InterleavedMode: true,
 	}
-
-	cfg := loadConfig(log, configFile)
-	authMode, ntskeServer, ntskeInsecureSkipVerify := toolConfig(log, remoteAddrStr, cfg)
 
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
@@ -431,7 +418,8 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, remoteAddrStr, configFile st
 	}
 }
 
-func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr, remoteAddrStr, configFile string) {
+func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr,
+	authMode, ntskeServer string, ntskeInsecureSkipVerify bool) {
 	var err error
 	ctx := context.Background()
 
@@ -459,9 +447,6 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 	c.Auth.Enabled = true
 	c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
-
-	cfg := loadConfig(log, configFile)
-	authMode, ntskeServer, ntskeInsecureSkipVerify := toolConfig(log, remoteAddrStr, cfg)
 
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
@@ -562,15 +547,17 @@ func exitWithUsage() {
 
 func main() {
 	var (
-		verbose         bool
-		configFile      string
-		daemonAddr      string
-		localAddr       snet.UDPAddr
-		remoteAddrStr   string
-		dispatcherMode  string
-		drkeyMode       string
-		drkeyServerAddr snet.UDPAddr
-		drkeyClientAddr snet.UDPAddr
+		verbose                 bool
+		configFile              string
+		daemonAddr              string
+		localAddr               snet.UDPAddr
+		remoteAddrStr           string
+		dispatcherMode          string
+		drkeyMode               string
+		drkeyServerAddr         snet.UDPAddr
+		drkeyClientAddr         snet.UDPAddr
+		authMode                string
+		ntskeInsecureSkipVerify bool
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
@@ -596,11 +583,12 @@ func main() {
 	clientFlags.Var(&localAddr, "local", "Local address")
 
 	toolFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
-	toolFlags.StringVar(&configFile, "config", "", "Config file")
 	toolFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
 	toolFlags.StringVar(&dispatcherMode, "dispatcher", "", "Dispatcher mode")
 	toolFlags.Var(&localAddr, "local", "Local address")
 	toolFlags.StringVar(&remoteAddrStr, "remote", "", "Remote address")
+	toolFlags.StringVar(&authMode, "auth", "", "Authentication mode")
+	toolFlags.BoolVar(&ntskeInsecureSkipVerify, "ntske-insecure-skip-verify", false, "Skip NTSKE verification")
 
 	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -662,8 +650,12 @@ func main() {
 				dispatcherMode != dispatcherModeInternal {
 				exitWithUsage()
 			}
+			if authMode != "" && authMode != authModeNTS {
+				exitWithUsage()
+			}
+			ntskeServer := strings.Split(remoteAddrStr, ",")[1]
 			initLogger(verbose)
-			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr, remoteAddrStr, configFile)
+			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr, authMode, ntskeServer, ntskeInsecureSkipVerify)
 		} else {
 			if daemonAddr != "" {
 				exitWithUsage()
@@ -671,8 +663,12 @@ func main() {
 			if dispatcherMode != "" {
 				exitWithUsage()
 			}
+			if authMode != "" && authMode != authModeNTS {
+				exitWithUsage()
+			}
+			ntskeServer := strings.Split(remoteAddrStr, ",")[1]
 			initLogger(verbose)
-			runIPTool(&localAddr, &remoteAddr, remoteAddrStr, configFile)
+			runIPTool(&localAddr, &remoteAddr, authMode, ntskeServer, ntskeInsecureSkipVerify)
 		}
 	case benchmarkFlags.Name():
 		err := benchmarkFlags.Parse(os.Args[2:])
