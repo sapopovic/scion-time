@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pelletier/go-toml"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/scionproto/scion/pkg/addr"
@@ -189,7 +189,7 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 		if err != nil {
 			log.Fatal("failed to load configuration", zap.Error(err))
 		}
-		err = toml.NewDecoder(bytes.NewReader(raw)).Strict(true).Decode(&cfg)
+		err = toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&cfg)
 		if err != nil {
 			log.Fatal("failed to decode configuration", zap.Error(err))
 		}
@@ -267,7 +267,7 @@ func loadNTSKEConfig(log *zap.Logger, configFile string) *tls.Config {
 	if err != nil {
 		log.Fatal("failed to load configuration", zap.Error(err))
 	}
-	err = toml.NewDecoder(bytes.NewReader(raw)).Strict(true).Decode(&cfg)
+	err = toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&cfg)
 	if err != nil {
 		log.Fatal("failed to decode configuration", zap.Error(err))
 	}
