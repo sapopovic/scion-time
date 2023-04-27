@@ -221,16 +221,15 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 
 func loadConfig(log *zap.Logger, configFile string) svcConfig {
 	var cfg svcConfig
-	if configFile != "" {
-		raw, err := os.ReadFile(configFile)
-		if err != nil {
-			log.Fatal("failed to load configuration", zap.Error(err))
-		}
-		err = toml.NewDecoder(bytes.NewReader(raw)).Strict(true).Decode(&cfg)
-		if err != nil {
-			log.Fatal("failed to decode configuration", zap.Error(err))
-		}
+	raw, err := os.ReadFile(configFile)
+	if err != nil {
+		log.Fatal("failed to load configuration", zap.Error(err))
 	}
+	err = toml.NewDecoder(bytes.NewReader(raw)).Strict(true).Decode(&cfg)
+	if err != nil {
+		log.Fatal("failed to decode configuration", zap.Error(err))
+	}
+
 	return cfg
 }
 
@@ -260,8 +259,7 @@ func remoteAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
 	return &remoteAddr
 }
 
-func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig,
-	daemonAddr string, localAddr *snet.UDPAddr) (
+func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig, localAddr *snet.UDPAddr) (
 	refClocks, netClocks []client.ReferenceClock) {
 
 	for _, s := range cfg.MBGReferenceClocks {
@@ -315,10 +313,10 @@ func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig,
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
 
-	if daemonAddr != "" {
+	if cfg.DaemonAddress != "" {
 		ctx := context.Background()
-		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
-		drkeyFetcher := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
+		pather := scion.StartPather(ctx, log, cfg.DaemonAddress, dstIAs)
+		drkeyFetcher := scion.NewFetcher(newDaemonConnector(ctx, log, cfg.DaemonAddress))
 		for _, c := range refClocks {
 			scionclk, ok := c.(*ntpReferenceClockSCION)
 			if ok {
@@ -368,7 +366,7 @@ func runServer(configFile string) {
 	cfg := loadConfig(log, configFile)
 	localAddr := localAddress(log, cfg)
 	daemonAddr := cfg.DaemonAddress
-	refClocks, netClocks := referenceClocks(ctx, log, cfg, daemonAddr, localAddr)
+	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -399,7 +397,7 @@ func runRelay(configFile string) {
 	cfg := loadConfig(log, configFile)
 	localAddr := localAddress(log, cfg)
 	daemonAddr := cfg.DaemonAddress
-	refClocks, netClocks := referenceClocks(ctx, log, cfg, daemonAddr, localAddr)
+	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -429,8 +427,7 @@ func runClient(configFile string) {
 
 	cfg := loadConfig(log, configFile)
 	localAddr := localAddress(log, cfg)
-	daemonAddr := cfg.DaemonAddress
-	refClocks, netClocks := referenceClocks(ctx, log, cfg, daemonAddr, localAddr)
+	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -719,6 +716,9 @@ func main() {
 		if err != nil || clientFlags.NArg() != 0 {
 			exitWithUsage()
 		}
+		if configFile == "" {
+			exitWithUsage()
+		}
 		initLogger(verbose)
 		runClient(configFile)
 	case toolFlags.Name():
@@ -761,6 +761,9 @@ func main() {
 	case benchmarkFlags.Name():
 		err := benchmarkFlags.Parse(os.Args[2:])
 		if err != nil || benchmarkFlags.NArg() != 0 {
+			exitWithUsage()
+		}
+		if configFile == "" {
 			exitWithUsage()
 		}
 		initLogger(verbose)
