@@ -139,6 +139,36 @@ func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Log
 	return mbg.MeasureClockOffset(ctx, log, c.dev)
 }
 
+func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
+	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
+	if err != nil {
+		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
+	}
+	c.Auth.Enabled = true
+	c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+		InsecureSkipVerify: ntskeInsecureSkipVerify,
+		ServerName:         ntskeHost,
+		MinVersion:         tls.VersionTLS13,
+	}
+	c.Auth.NTSKEFetcher.Port = ntskePort
+	c.Auth.NTSKEFetcher.Log = log
+}
+
+func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
+	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
+	if err != nil {
+		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
+	}
+	c.Auth.NTSEnabled = true
+	c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+		InsecureSkipVerify: ntskeInsecureSkipVerify,
+		ServerName:         ntskeHost,
+		MinVersion:         tls.VersionTLS13,
+	}
+	c.Auth.NTSKEFetcher.Port = ntskePort
+	c.Auth.NTSKEFetcher.Log = log
+}
+
 func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr, authMode, remoteAddrStr string, ntskeInsecureSkipVerify bool) *ntpReferenceClockIP {
 	c := &ntpReferenceClockIP{
 		localAddr:  localAddr,
@@ -149,20 +179,7 @@ func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr, authMode, remoteA
 	}
 	if authMode == authModeNTS {
 		ntskeServer := strings.Split(remoteAddrStr, ",")[1]
-		ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
-		if err != nil {
-			log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
-		}
-		c.ntpc.Auth.Enabled = true
-		c.ntpc.Auth.NTSKEFetcher.TLSConfig = tls.Config{
-			InsecureSkipVerify: ntskeInsecureSkipVerify,
-			ServerName:         ntskeHost,
-			MinVersion:         tls.VersionTLS13,
-		}
-		c.ntpc.Auth.NTSKEFetcher.Port = ntskePort
-		c.ntpc.Auth.NTSKEFetcher.Log = log
-	} else {
-		c.ntpc.Auth.Enabled = false
+		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify)
 	}
 	return c
 }
@@ -183,20 +200,7 @@ func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr, authMode, remot
 		}
 		if authMode == authModeNTS {
 			ntskeServer := strings.Split(remoteAddrStr, ",")[1]
-			ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
-			if err != nil {
-				log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
-			}
-			c.ntpcs[i].Auth.NTSEnabled = true
-			c.ntpcs[i].Auth.NTSKEFetcher.TLSConfig = tls.Config{
-				InsecureSkipVerify: ntskeInsecureSkipVerify,
-				ServerName:         ntskeHost,
-				MinVersion:         tls.VersionTLS13,
-			}
-			c.ntpcs[i].Auth.NTSKEFetcher.Port = ntskePort
-			c.ntpcs[i].Auth.NTSKEFetcher.Log = log
-		} else {
-			c.ntpcs[i].Auth.NTSEnabled = false
+			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify)
 		}
 	}
 	return c
@@ -471,22 +475,8 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode,
 		InterleavedMode: true,
 	}
 
-	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
-	if err != nil {
-		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
-	}
-
 	if authMode == authModeNTS {
-		c.Auth.Enabled = true
-		c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
-			InsecureSkipVerify: ntskeInsecureSkipVerify,
-			ServerName:         ntskeHost,
-			MinVersion:         tls.VersionTLS13,
-		}
-		c.Auth.NTSKEFetcher.Port = ntskePort
-		c.Auth.NTSKEFetcher.Log = log
-	} else {
-		c.Auth.Enabled = false
+		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
 	}
 
 	_, err = client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
@@ -525,22 +515,8 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	c.Auth.Enabled = true
 	c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
 
-	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
-	if err != nil {
-		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
-	}
-
 	if authMode == authModeNTS {
-		c.Auth.NTSEnabled = true
-		c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
-			InsecureSkipVerify: ntskeInsecureSkipVerify,
-			ServerName:         ntskeHost,
-			MinVersion:         tls.VersionTLS13,
-		}
-		c.Auth.NTSKEFetcher.Port = ntskePort
-		c.Auth.NTSKEFetcher.Log = log
-	} else {
-		c.Auth.NTSEnabled = false
+		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
 	}
 
 	_, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps)
