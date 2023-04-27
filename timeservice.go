@@ -149,7 +149,6 @@ func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr, authMode, remoteA
 	}
 	if authMode == authModeNTS {
 		ntskeServer := strings.Split(remoteAddrStr, ",")[1]
-		fmt.Println(ntskeServer)
 		ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 		if err != nil {
 			log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
@@ -557,6 +556,22 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 }
 
+func runBenchmark(configFile string) {
+	cfg := loadConfig(log, configFile)
+	localAddr := localAddress(log, cfg)
+	daemonAddr := cfg.DaemonAddress
+	remoteAddr := remoteAddress(log, cfg)
+
+	if !remoteAddr.IA.IsZero() {
+		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+	} else {
+		if daemonAddr != "" {
+			exitWithUsage()
+		}
+		runIPBenchmark(localAddr, remoteAddr)
+	}
+}
+
 func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr) {
 	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
@@ -667,8 +682,6 @@ func main() {
 
 	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	// benchmarkFlags.Var(&localAddr, "local", "Local address")
-	// benchmarkFlags.StringVar(&remoteAddrStr, "remote", "", "Remote address")
 
 	drkeyFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	drkeyFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -750,21 +763,8 @@ func main() {
 		if err != nil || benchmarkFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-		var remoteAddr snet.UDPAddr
-		err = remoteAddr.Set(remoteAddrStr)
-		if err != nil {
-			exitWithUsage()
-		}
-		if !remoteAddr.IA.IsZero() {
-			initLogger(verbose)
-			runSCIONBenchmark(daemonAddr, &localAddr, &remoteAddr)
-		} else {
-			if daemonAddr != "" {
-				exitWithUsage()
-			}
-			initLogger(verbose)
-			runIPBenchmark(&localAddr, &remoteAddr)
-		}
+		initLogger(verbose)
+		runBenchmark(configFile)
 	case drkeyFlags.Name():
 		err := drkeyFlags.Parse(os.Args[2:])
 		if err != nil || drkeyFlags.NArg() != 0 {
