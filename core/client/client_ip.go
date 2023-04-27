@@ -119,8 +119,11 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			log.Info("failed to fetch key exchange data", zap.Error(err))
 			return offset, weight, err
 		}
+		remoteAddr.IP = net.ParseIP(ntskeData.Server)
+		if remoteAddr.IP.To4() != nil {
+			remoteAddr.IP = remoteAddr.IP.To4()
+		}
 		remoteAddr.Port = int(ntskeData.Port)
-		remoteAddr.IP = net.ParseIP(ntskeData.Server).To4()
 	}
 
 	buf := make([]byte, ntp.PacketLen)
