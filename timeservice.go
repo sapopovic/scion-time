@@ -541,14 +541,15 @@ func runBenchmark(configFile string) {
 		if daemonAddr != "" {
 			exitWithUsage()
 		}
-		runIPBenchmark(localAddr, remoteAddr)
+		ntskeServer := strings.Split(cfg.RemoteAddress, ",")[1]
+		runIPBenchmark(localAddr, remoteAddr, cfg.AuthMode, ntskeServer, log)
 	}
 }
 
-func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr) {
+func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authMode, ntskeServer string, log *zap.Logger) {
 	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
-	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host)
+	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authMode, ntskeServer, log)
 }
 
 func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
@@ -654,7 +655,7 @@ func main() {
 	toolFlags.BoolVar(&ntskeInsecureSkipVerify, "ntske-insecure-skip-verify", false, "Skip NTSKE verification")
 
 	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
-	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	benchmarkFlags.StringVar(&configFile, "config", "", "Config file")
 
 	drkeyFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	drkeyFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
