@@ -29,10 +29,11 @@ cd ~
 
 # build timeservice
 cd ~
-git clone https://github.com/marcfrei/scion-time.git
+git clone -b aws https://github.com/aaronbojarski/scion-time.git
 
 cd ~/scion-time
 go build timeservice.go timeservicex.go
+openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out testnet/gen/tls.crt -keyout testnet/gen/tls.key -config testnet/tls-cert.conf
 
 
 # start bwm-ng
