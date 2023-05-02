@@ -38,7 +38,7 @@ var (
 )
 
 func init() {
-	// ipMetrics.Store(newIPClientMetrics())
+	ipMetrics.Store(newIPClientMetrics())
 	scionMetrics.Store(newSCIONClientMetrics())
 }
 

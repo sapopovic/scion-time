@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -24,6 +25,7 @@ import (
 
 type IPClient struct {
 	InterleavedMode bool
+	Histo           *hdrhistogram.Histogram
 	Auth            struct {
 		Enabled      bool
 		NTSKEFetcher ntske.Fetcher
@@ -321,6 +323,10 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		// offset, weight = off, 1000.0
 
 		offset, weight = filter(log, reference, t0, t1, t2, t3)
+
+		if c.Histo != nil {
+			c.Histo.RecordValue(rtd.Microseconds())
+		}
 
 		break
 	}
