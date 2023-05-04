@@ -14,16 +14,16 @@ func ValidateResponseMetadata(resp *Packet) error {
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
 	if resp.LeapIndicator() == LeapIndicatorUnknown {
-		return errors.New("unexpected response structure 1")
+		return errUnexpectedResponse
 	}
 	if resp.Version() != 3 && resp.Version() != 4 {
-		return errors.New("unexpected response structure 2")
+		return errUnexpectedResponse
 	}
 	if resp.Mode() != ModeServer {
-		return errors.New("unexpected response structure 3")
+		return errUnexpectedResponse
 	}
 	if resp.Stratum == 0 || resp.Stratum > 15 {
-		return errors.New("unexpected response structure 4")
+		return errUnexpectedResponse
 	}
 	return nil
 }
@@ -33,7 +33,7 @@ func ValidateResponseTimestamps(t0, t1, t2, t3 time.Time) error {
 		panic("unexpected local clock behavior")
 	}
 	if t2.Sub(t1) < 0 {
-		return errors.New("unexpected response structure 5")
+		return errUnexpectedResponse
 	}
 	return nil
 }
