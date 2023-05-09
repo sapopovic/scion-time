@@ -4,7 +4,7 @@ sudo killall timeservice
 sudo killall timeservice
 sudo killall timeservice
 
-for c in 1 2 4 8 16 32 64 128 256;
+for c in 1 2 4 8 16 32 64 128 192 256 320 384;
 do 
     for i in $(seq 1 $c)
     do 
@@ -15,3 +15,5 @@ do
     sudo killall timeservice
     sudo killall timeservice
 done
+
+echo "Done"
