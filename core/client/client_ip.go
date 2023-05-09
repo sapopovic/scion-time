@@ -150,7 +150,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 
 	var requestID []byte
 	if c.Auth.Enabled {
-		ntpreq.InitNTS(ntskeData)
+		ntpreq.InitNTSRequestPacket(ntskeData)
 		requestID = ntpreq.UniqueID.ID
 	}
 

@@ -23,7 +23,7 @@ const (
 	extAuthenticator     uint16 = 0x404
 )
 
-func (pkt *Packet) InitNTS(ntskeData ntske.Data) {
+func (pkt *Packet) InitNTSRequestPacket(ntskeData ntske.Data) {
 	var uid UniqueIdentifier
 	uid.Generate()
 	pkt.UniqueID = uid
@@ -48,6 +48,21 @@ func (pkt *Packet) InitNTS(ntskeData ntske.Data) {
 }
 
 func (pkt *Packet) ProcessResponse(ntskeFetcher *ntske.Fetcher, reqID []byte, key []byte) error {
+	err := pkt.Authenticate(key)
+	if err != nil {
+		return err
+	}
+
+	if !bytes.Equal(reqID, pkt.UniqueID.ID) {
+		return errors.New("unexpected response ID")
+	}
+	for _, cookie := range pkt.Cookies {
+		ntskeFetcher.StoreCookie(cookie.Cookie)
+	}
+	return nil
+}
+
+func (pkt *Packet) Authenticate(key []byte) error {
 	if pkt.Auth.CipherText == nil {
 		return errors.New("packet does not contain a valid authenticator")
 	}
@@ -91,13 +106,27 @@ func (pkt *Packet) ProcessResponse(ntskeFetcher *ntske.Fetcher, reqID []byte, ke
 		}
 	}
 
-	if !bytes.Equal(reqID, pkt.UniqueID.ID) {
-		return errors.New("unexpected response ID")
-	}
-	for _, cookie := range pkt.Cookies {
-		ntskeFetcher.StoreCookie(cookie.Cookie)
-	}
 	return nil
+}
+
+func (pkt *Packet) InitNTSResponsePacket(cookies [][]byte, key []byte, uniqueid []byte) {
+	var uid UniqueIdentifier
+	uid.ID = uniqueid
+	pkt.UniqueID = uid
+
+	buf := new(bytes.Buffer)
+	for _, c := range cookies {
+		var cookie Cookie
+		cookie.Cookie = c
+		cookie.pack(buf)
+	}
+
+	var auth Authenticator
+	auth.Key = key
+	auth.AssociatedData = buf.Bytes()
+	pkt.Auth = auth
+
+	pkt.NTSMode = true
 }
 
 type ExtHdr struct {

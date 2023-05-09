@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/gopacket"
 	"github.com/libp2p/go-reuseport"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -17,8 +18,7 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/net/ntp"
-	"example.com/scion-time/net/nts"
+	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/udp"
 )
@@ -86,25 +86,26 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 		buf = buf[:n]
 		mtrcs.pktsReceived.Inc()
 
-		var ntpreq ntp.Packet
-		err = ntp.DecodePacket(&ntpreq, buf)
+		var ntpreq gopacketntp.Packet
+		parser := gopacket.NewDecodingLayerParser(gopacketntp.LayerTypeNTS, &ntpreq)
+		parser.IgnoreUnsupported = true
+		decoded := make([]gopacket.LayerType, 1)
+		err = parser.DecodeLayers(buf, &decoded)
 		if err != nil {
 			log.Info("failed to decode packet payload", zap.Error(err))
 			continue
 		}
 
 		var authenticated bool
-		var ntsreq nts.NTSPacket
 		var serverCookie ntske.ServerCookie
-		if len(buf) > ntp.PacketLen {
-			cookie, err := nts.ExtractCookie(buf)
-			if err != nil {
+		if len(buf) > gopacketntp.PacketLen {
+			if ntpreq.Cookies == nil || len(ntpreq.Cookies) < 1 {
 				log.Info("failed to extract cookie", zap.Error(err))
 				continue
 			}
 
 			var encryptedCookie ntske.EncryptedServerCookie
-			err = encryptedCookie.Decode(cookie)
+			err = encryptedCookie.Decode(ntpreq.Cookies[0].Cookie)
 			if err != nil {
 				log.Info("failed to decode cookie", zap.Error(err))
 				continue
@@ -122,15 +123,15 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 				continue
 			}
 
-			err = nts.DecodePacket(&ntsreq, buf, serverCookie.C2S)
+			err = ntpreq.Authenticate(serverCookie.C2S)
 			if err != nil {
-				log.Info("failed to decode packet", zap.Error(err))
+				log.Info("failed to authenticate packet", zap.Error(err))
 				continue
 			}
 			authenticated = true
 		}
 
-		err = ntp.ValidateRequest(&ntpreq, srcAddr.Port())
+		err = gopacketntp.ValidateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
 			log.Info("failed to validate packet payload", zap.Error(err))
 			continue
@@ -143,20 +144,18 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 			zap.Time("at", rxt),
 			zap.String("from", clientID),
 			zap.Bool("ntsauth", authenticated),
-			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq}),
+			zap.Object("data", gopacketntp.PacketMarshaler{Pkt: &ntpreq}),
 		)
 
 		var txt0 time.Time
-		var ntpresp ntp.Packet
-		handleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
-
-		ntp.EncodePacket(&buf, &ntpresp)
+		var ntpresp gopacketntp.Packet
+		handleRequestGopacket(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
 		if authenticated {
 			var cookies [][]byte
 			key := provider.Current()
 			addedCookie := false
-			for i := 0; i < len(ntsreq.Cookies)+len(ntsreq.CookiePlaceholders); i++ {
+			for i := 0; i < len(ntpreq.Cookies)+len(ntpreq.CookiePlaceholders); i++ {
 				encryptedCookie, err := serverCookie.EncryptWithNonce(key.Value, key.ID)
 				if err != nil {
 					log.Info("failed to encrypt cookie", zap.Error(err))
@@ -171,11 +170,22 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 				continue
 			}
 
-			ntsresp := nts.NewResponsePacket(buf, cookies, serverCookie.S2C, ntsreq.UniqueID.ID)
-			nts.EncodePacket(&buf, &ntsresp)
+			ntpresp.InitNTSResponsePacket(cookies, serverCookie.S2C, ntpreq.UniqueID.ID)
 		}
 
-		n, err = conn.WriteToUDPAddrPort(buf, srcAddr)
+		buffer := gopacket.NewSerializeBuffer()
+		options := gopacket.SerializeOptions{
+			ComputeChecksums: true,
+			FixLengths:       true,
+		}
+
+		err = ntpresp.SerializeTo(buffer, options)
+		if err != nil {
+			panic(err)
+		}
+		buffer.PushLayer(ntpresp.LayerType())
+
+		n, err = conn.WriteToUDPAddrPort(buffer.Bytes(), srcAddr)
 		if err != nil || n != len(buf) {
 			log.Error("failed to write packet", zap.Error(err))
 			continue

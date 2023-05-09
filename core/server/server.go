@@ -12,6 +12,7 @@ import (
 
 	"example.com/scion-time/core/timebase"
 
+	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntp"
 )
 
@@ -101,6 +102,115 @@ func (q *tssQueue) Pop() any {
 }
 
 func handleRequest(clientID string, req *ntp.Packet, rxt, txt *time.Time, resp *ntp.Packet) {
+	resp.SetVersion(ntp.VersionMax)
+	resp.SetMode(ntp.ModeServer)
+	resp.Stratum = 1
+	resp.Poll = req.Poll
+	resp.Precision = -32
+	resp.RootDispersion = ntp.Time32{Seconds: 0, Fraction: 10}
+	resp.ReferenceID = serverRefID
+
+	*txt = timebase.Now()
+
+	rxt64 := ntp.Time64FromTime(*rxt)
+	txt64 := ntp.Time64FromTime(*txt)
+
+	tssMu.Lock()
+	defer tssMu.Unlock()
+
+	var o, min, max int
+	tssi, ok := tss[clientID]
+	if ok {
+		for {
+			var i int
+			for i, o, min, max = 0, -1, -1, -1; i != tssi.len; i++ {
+				if tssi.buf[i].rxt == rxt64 {
+					break
+				}
+				if tssi.buf[i].rxt == req.OriginTime {
+					o = i
+				}
+				if min == -1 || tssi.buf[i].rxt.Before(tssi.buf[min].rxt) {
+					min = i
+				}
+				if max == -1 || !tssi.buf[i].rxt.Before(tssi.buf[max].rxt) {
+					max = i
+				}
+			}
+			if i != tssi.len {
+				// ensure uniqueness of rx timestamps per clientID
+				*rxt = rxt.Add(1)
+				rxt64 = ntp.Time64FromTime(*rxt)
+				tssMetrics.rxtIncrements.Inc()
+				if !rxt.Before(*txt) {
+					// ensure strict monotonicity of rx/tx timestamps
+					*txt = *rxt
+					*txt = txt.Add(1)
+					txt64 = ntp.Time64FromTime(*txt)
+					tssMetrics.txtIncrementsBefore.Inc()
+				}
+				continue
+			}
+			break
+		}
+	} else {
+		if len(tss) == tssCap && !tssQ[0].qval.After(rxt64) {
+			// remove minimum timestamp queue item
+			x := heap.Pop(&tssQ).(*tssItem)
+			delete(tss, x.key)
+			tssMetrics.tssItems.Dec()
+			tssMetrics.tssValues.Sub(float64(x.len))
+		}
+		if len(tss) == tssCap {
+			tssi = nil
+		} else {
+			// add timestamp store item
+			tssi = &tssItem{key: clientID}
+			tss[tssi.key] = tssi
+			tssMetrics.tssItems.Inc()
+			tssi.qval = rxt64
+			heap.Push(&tssQ, tssi)
+		}
+		o, min, max = -1, -1, -1
+	}
+
+	resp.ReferenceTime = txt64
+	resp.ReceiveTime = rxt64
+	if req.ReceiveTime != req.TransmitTime && o != -1 {
+		// interleaved mode: serve from timestamp store
+		resp.OriginTime = req.ReceiveTime
+		resp.TransmitTime = tssi.buf[o].txt
+		tssMetrics.reqsServedInterleaved.Inc()
+	} else {
+		resp.OriginTime = req.TransmitTime
+		resp.TransmitTime = txt64
+	}
+
+	if tssi != nil {
+		if max != -1 && rxt64.After(tssi.buf[max].rxt) {
+			// new maximum rx timestamp, fix queue accordingly
+			tssi.qval = rxt64
+			heap.Fix(&tssQ, tssi.qidx)
+		}
+		if o != -1 {
+			// maintain interleaved mode timestamp values
+			tssi.buf[o].rxt = rxt64
+			tssi.buf[o].txt = txt64
+		} else if tssi.len == cap(tssi.buf) {
+			// replace minimum timestamp values
+			tssi.buf[min].rxt = rxt64
+			tssi.buf[min].txt = txt64
+		} else {
+			// add timestamp values
+			tssi.buf[tssi.len].rxt = rxt64
+			tssi.buf[tssi.len].txt = txt64
+			tssi.len++
+			tssMetrics.tssValues.Inc()
+		}
+	}
+}
+
+func handleRequestGopacket(clientID string, req *gopacketntp.Packet, rxt, txt *time.Time, resp *gopacketntp.Packet) {
 	resp.SetVersion(ntp.VersionMax)
 	resp.SetMode(ntp.ModeServer)
 	resp.Stratum = 1
