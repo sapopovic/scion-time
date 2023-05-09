@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
+	"github.com/google/gopacket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -17,6 +18,7 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
+	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntp"
 	"example.com/scion-time/net/nts"
 	"example.com/scion-time/net/ntske"
@@ -128,7 +130,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		remoteAddr.Port = int(ntskeData.Port)
 	}
 
-	buf := make([]byte, ntp.PacketLen)
+	buf := make([]byte, 512)
 
 	reference := remoteAddr.String()
 	cTxTime0 := timebase.Now()
@@ -215,11 +217,14 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			return offset, weight, err
 		}
 
-		var ntpresp ntp.Packet
-		err = ntp.DecodePacket(&ntpresp, buf)
+		var ntpresp gopacketntp.Packet
+		parser := gopacket.NewDecodingLayerParser(gopacketntp.LayerTypeNTS, &ntpresp)
+		parser.IgnoreUnsupported = true
+		decoded := make([]gopacket.LayerType, 1)
+		err = parser.DecodeLayers(buf, &decoded)
 		if err != nil {
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Info("failed to decode packet payload", zap.Error(err))
+				log.Info("failed to decode packet", zap.Error(err))
 				numRetries++
 				continue
 			}
@@ -227,19 +232,8 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		}
 
 		authenticated := false
-		var ntsresp nts.NTSPacket
 		if c.Auth.Enabled {
-			err = nts.DecodePacket(&ntsresp, buf, ntskeData.S2cKey)
-			if err != nil {
-				if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-					log.Info("failed to decode and authenticate NTS packet", zap.Error(err))
-					numRetries++
-					continue
-				}
-				return offset, weight, err
-			}
-
-			err = nts.ProcessResponse(&c.Auth.NTSKEFetcher, &ntsresp, requestID)
+			err = ntpresp.ProcessResponse(&c.Auth.NTSKEFetcher, requestID, ntskeData.S2cKey)
 			if err != nil {
 				if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 					log.Info("failed to process NTS packet", zap.Error(err))
@@ -266,7 +260,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			return offset, weight, err
 		}
 
-		err = ntp.ValidateResponseMetadata(&ntpresp)
+		err = gopacketntp.ValidateResponseMetadata(&ntpresp)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -275,7 +269,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			zap.Time("at", cRxTime),
 			zap.String("from", reference),
 			zap.Bool("auth", authenticated),
-			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpresp}),
+			zap.Object("data", gopacketntp.PacketMarshaler{Pkt: &ntpresp}),
 		)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
