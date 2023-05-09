@@ -17,7 +17,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authMode, ntskeServer st
 	// const numClientGoroutine = 8
 	// const numRequestPerClient = 10000
 	const numClientGoroutine = 1
-	const numRequestPerClient = 10_000
+	const numRequestPerClient = 20_000
 	var mu sync.Mutex
 	sg := make(chan struct{})
 	var wg sync.WaitGroup

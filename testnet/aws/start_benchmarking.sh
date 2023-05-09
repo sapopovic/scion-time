@@ -14,6 +14,7 @@ do
     sudo killall timeservice
     sudo killall timeservice
     sudo killall timeservice
+    sleep 5
 done
 
 echo "Done"
