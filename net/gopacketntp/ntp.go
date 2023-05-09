@@ -156,11 +156,11 @@ func (pkt *Packet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 			panic(err)
 		}
 
-		ex, err := b.AppendBytes(buf.Len())
+		ex, err := b.AppendBytes(buf.Len() - PacketLen)
 		if err != nil {
 			return err
 		}
-		copy(ex, buf.Bytes())
+		copy(ex, buf.Bytes()[PacketLen:])
 	}
 
 	return nil

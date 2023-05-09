@@ -43,6 +43,8 @@ func (pkt *Packet) InitNTS(ntskeData ntske.Data) {
 	var auth Authenticator
 	auth.Key = ntskeData.C2sKey
 	pkt.Auth = auth
+
+	pkt.NTSMode = true
 }
 
 func (pkt *Packet) ProcessResponse(ntskeFetcher *ntske.Fetcher, reqID []byte, key []byte) error {

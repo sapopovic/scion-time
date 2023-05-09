@@ -20,7 +20,6 @@ import (
 
 	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntp"
-	"example.com/scion-time/net/nts"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/udp"
 )
@@ -136,7 +135,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 	cTxTime0 := timebase.Now()
 	interleaved := false
 
-	ntpreq := ntp.Packet{}
+	ntpreq := gopacketntp.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
@@ -149,20 +148,29 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		ntpreq.TransmitTime = ntp.Time64FromTime(cTxTime0)
 	}
 
-	ntp.EncodePacket(&buf, &ntpreq)
-
 	var requestID []byte
-	var ntsreq nts.NTSPacket
 	if c.Auth.Enabled {
-		ntsreq, requestID = nts.NewPacket(buf, ntskeData)
-		nts.EncodePacket(&buf, &ntsreq)
+		ntpreq.InitNTS(ntskeData)
+		requestID = ntpreq.UniqueID.ID
 	}
 
-	n, err := conn.WriteToUDPAddrPort(buf, remoteAddr.AddrPort())
+	buffer := gopacket.NewSerializeBuffer()
+	options := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+
+	err = ntpreq.SerializeTo(buffer, options)
+	if err != nil {
+		panic(err)
+	}
+	buffer.PushLayer(ntpreq.LayerType())
+
+	n, err := conn.WriteToUDPAddrPort(buffer.Bytes(), remoteAddr.AddrPort())
 	if err != nil {
 		return offset, weight, err
 	}
-	if n != len(buf) {
+	if n != len(buffer.Bytes()) {
 		return offset, weight, errWrite
 	}
 	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
