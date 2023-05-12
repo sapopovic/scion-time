@@ -3,7 +3,9 @@ package ntske
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
+	"fmt"
 
 	"github.com/secure-io/siv-go"
 )
@@ -151,6 +153,9 @@ func (c *EncryptedServerCookie) Decrypt(key []byte) (ServerCookie, error) {
 
 	var dst []byte
 	var additionalData []byte
+
+	fmt.Println("Nonce ", hex.EncodeToString(c.Nonce))
+	fmt.Println("Cipher ", hex.EncodeToString(c.Ciphertext))
 
 	b, err := aessiv.Open(dst /* dst */, c.Nonce, c.Ciphertext, additionalData /* additionalData */)
 	if err != nil {
