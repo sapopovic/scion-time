@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/mmcloughlin/profile"
-
 	"github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -644,6 +643,7 @@ func main() {
 		drkeyClientAddr         snet.UDPAddr
 		authMode                string
 		ntskeInsecureSkipVerify bool
+		profileCPU bool
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
@@ -655,6 +655,7 @@ func main() {
 
 	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
+	serverFlags.BoolVar(&profileCPU, "profileCPU", false, "Enable profiling")
 
 	relayFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	relayFlags.StringVar(&configFile, "config", "", "Config file")
@@ -692,8 +693,9 @@ func main() {
 		if configFile == "" {
 			exitWithUsage()
 		}
-
-		defer profile.Start(profile.CPUProfile).Stop()
+		if profileCPU {
+			defer profile.Start(profile.CPUProfile).Stop()
+		}
 
 		initLogger(verbose)
 		runServer(configFile)
