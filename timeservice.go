@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mmcloughlin/profile"
+
 	"github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -676,6 +678,9 @@ func main() {
 		if configFile == "" {
 			exitWithUsage()
 		}
+
+		defer profile.Start(profile.CPUProfile).Stop()
+
 		initLogger(verbose)
 		runServer(configFile)
 	case relayFlags.Name():
