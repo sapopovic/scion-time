@@ -22,6 +22,7 @@ import (
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/snet"
+	"github.com/scionproto/scion/pkg/snet/path"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -213,6 +214,9 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context, log *za
 }
 
 func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
+	if daemonAddr == "" {
+		return nil
+	}
 	s := &daemon.Service{
 		Address: daemonAddr,
 	}
@@ -498,12 +502,22 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 
 	dc := newDaemonConnector(ctx, log, daemonAddr)
-	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
-	if err != nil {
-		log.Fatal("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))
-	}
-	if len(ps) == 0 {
-		log.Fatal("no paths available", zap.Stringer("to", remoteAddr.IA))
+
+	var ps []snet.Path
+	if remoteAddr.IA.Equal(localAddr.IA) {
+		ps = []snet.Path{path.Path{
+			Src:           remoteAddr.IA,
+			Dst:           remoteAddr.IA,
+			DataplanePath: path.Empty{},
+		}}
+	} else {
+		ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
+		if err != nil {
+			log.Fatal("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))
+		}
+		if len(ps) == 0 {
+			log.Fatal("no paths available", zap.Stringer("to", remoteAddr.IA))
+		}
 	}
 	log.Debug("available paths", zap.Stringer("to", remoteAddr.IA), zap.Array("via", scion.PathArrayMarshaler{Paths: ps}))
 
