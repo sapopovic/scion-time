@@ -108,10 +108,13 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 		FixLengths:       true,
 	}
 
-	var authBuf, authMAC []byte
+	var authBuf, authMAC, authMockKey []byte
 	if fetcher != nil {
 		authBuf = make([]byte, spao.MACBufferSize)
 		authMAC = make([]byte, scion.PacketAuthMACLen)
+		if scion.UseMockKeys() {
+			authMockKey = new(drkey.Key)[:]
+		}
 	}
 	tsOpt := &slayers.EndToEndOption{}
 
@@ -253,6 +256,9 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 								panic(err)
 							}
 							authKey = hostHostKey.Key[:]
+							if authMockKey != nil {
+								authKey = authMockKey
+							}
 							_, err = spao.ComputeAuthCMAC(
 								spao.MACInput{
 									Key:        authKey,
@@ -460,6 +466,9 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 }
 
 func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
+	if daemonAddr == "" {
+		return nil
+	}
 	s := &daemon.Service{
 		Address: daemonAddr,
 	}
