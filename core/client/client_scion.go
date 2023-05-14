@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/google/gopacket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -32,6 +33,7 @@ import (
 
 type SCIONClient struct {
 	InterleavedMode bool
+	Histo           *hdrhistogram.Histogram
 	Auth            struct {
 		Enabled      bool
 		NTSEnabled   bool
@@ -544,6 +546,11 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		// offset, weight = off, 1000.0
 
 		offset, weight = filter(log, reference, t0, t1, t2, t3)
+
+		if c.Histo != nil {
+			c.Histo.RecordValue(rtd.Microseconds())
+		}
+
 		break
 	}
 

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/mmcloughlin/profile"
-
 	"github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -550,14 +549,14 @@ func runBenchmark(configFile string) {
 	localAddr := localAddress(log, cfg)
 	daemonAddr := cfg.DaemonAddress
 	remoteAddr := remoteAddress(log, cfg)
+	ntskeServer := strings.Split(cfg.RemoteAddress, ",")[1]
 
 	if !remoteAddr.IA.IsZero() {
-		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr, cfg.AuthMode, ntskeServer, log)
 	} else {
 		if daemonAddr != "" {
 			exitWithUsage()
 		}
-		ntskeServer := strings.Split(cfg.RemoteAddress, ",")[1]
 		runIPBenchmark(localAddr, remoteAddr, cfg.AuthMode, ntskeServer, log)
 	}
 }
@@ -568,10 +567,10 @@ func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authMode, ntskeServer s
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authMode, ntskeServer, log)
 }
 
-func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
+func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authMode, ntskeServer string, log *zap.Logger) {
 	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
-	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr, authMode, ntskeServer, log)
 }
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
@@ -644,6 +643,7 @@ func main() {
 		drkeyClientAddr         snet.UDPAddr
 		authMode                string
 		ntskeInsecureSkipVerify bool
+		profileCPU bool
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
@@ -655,6 +655,7 @@ func main() {
 
 	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
+	serverFlags.BoolVar(&profileCPU, "profileCPU", false, "Enable profiling")
 
 	relayFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	relayFlags.StringVar(&configFile, "config", "", "Config file")
@@ -692,8 +693,9 @@ func main() {
 		if configFile == "" {
 			exitWithUsage()
 		}
-
-		defer profile.Start(profile.CPUProfile).Stop()
+		if profileCPU {
+			defer profile.Start(profile.CPUProfile).Stop()
+		}
 
 		initLogger(verbose)
 		runServer(configFile)
