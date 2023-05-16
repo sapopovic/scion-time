@@ -284,7 +284,11 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 			}
 
 			p := gopacket.NewPacket(udpLayer.Payload, gopacketntp.LayerTypeNTS, gopacket.Default)
-			ntpreq, _ := p.ApplicationLayer().(*gopacketntp.Packet)
+			ntpreq, ok := p.ApplicationLayer().(*gopacketntp.Packet)
+			if !ok {
+				log.Info("failed to decode NTP packet", zap.Error(err))
+				continue
+			}
 
 			ntsAuthenticated := false
 			var serverCookie ntske.ServerCookie

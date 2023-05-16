@@ -431,7 +431,16 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			}
 		}
 		p := gopacket.NewPacket(udpLayer.Payload, gopacketntp.LayerTypeNTS, gopacket.Default)
-		ntpresp, _ := p.ApplicationLayer().(*gopacketntp.Packet)
+		ntpresp, ok := p.ApplicationLayer().(*gopacketntp.Packet)
+		if !ok {
+			err = errUnexpectedPacket
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				log.Info("failed to decode NTP packet", zap.Error(err))
+				numRetries++
+				continue
+			}
+			return offset, weight, err
+		}
 
 		ntsAuthenticated := false
 		if c.Auth.NTSEnabled {
