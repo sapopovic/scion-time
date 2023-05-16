@@ -135,7 +135,7 @@ func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Log
 	return mbg.MeasureClockOffset(ctx, log, c.dev)
 }
 
-func newNTPRefernceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceClockIP {
+func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceClockIP {
 	c := &ntpReferenceClockIP{
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
@@ -151,7 +151,7 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.L
 	return client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
-func newNTPRefernceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceClockSCION {
+func newNTPReferenceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
@@ -210,13 +210,13 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 					zap.String("address", s), zap.Error(err))
 			}
 			if !remoteAddr.IA.IsZero() {
-				refClocks = append(refClocks, newNTPRefernceClockSCION(
+				refClocks = append(refClocks, newNTPReferenceClockSCION(
 					udp.UDPAddrFromSnet(localAddr),
 					udp.UDPAddrFromSnet(remoteAddr),
 				))
 				dstIAs = append(dstIAs, remoteAddr.IA)
 			} else {
-				refClocks = append(refClocks, newNTPRefernceClockIP(
+				refClocks = append(refClocks, newNTPReferenceClockIP(
 					localAddr.Host,
 					remoteAddr.Host,
 				))
@@ -230,7 +230,7 @@ func loadConfig(ctx context.Context, log *zap.Logger,
 			if remoteAddr.IA.IsZero() {
 				log.Fatal("unexpected peer address", zap.String("address", s), zap.Error(err))
 			}
-			netClocks = append(netClocks, newNTPRefernceClockSCION(
+			netClocks = append(netClocks, newNTPReferenceClockSCION(
 				udp.UDPAddrFromSnet(localAddr),
 				udp.UDPAddrFromSnet(remoteAddr),
 			))
