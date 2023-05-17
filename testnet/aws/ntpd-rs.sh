@@ -1,6 +1,7 @@
 cd ~
-curl -LO https://github.com/pendulum-project/ntpd-rs/releases/download/v0.3.2/ntpd-rs_0.3.2-1jammy_amd64.deb
-sudo dpkg -i ntpd-rs_0.3.2-1jammy_amd64.deb
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+cargo install ntpd
 
 sudo systemctl stop chronyd
 sudo systemctl stop ntpd-rs
