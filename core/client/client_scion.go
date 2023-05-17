@@ -192,7 +192,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	}
 
 	var requestID []byte
-	if c.Auth.Enabled {
+	if c.Auth.NTSEnabled {
 		ntpreq.InitNTSRequestPacket(ntskeData)
 		requestID = ntpreq.UniqueID.ID
 	}
