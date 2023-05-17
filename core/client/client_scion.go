@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/google/gopacket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -23,8 +24,8 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
+	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntp"
-	"example.com/scion-time/net/nts"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
@@ -32,6 +33,7 @@ import (
 
 type SCIONClient struct {
 	InterleavedMode bool
+	Histo           *hdrhistogram.Histogram
 	Auth            struct {
 		Enabled      bool
 		NTSEnabled   bool
@@ -176,7 +178,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	cTxTime0 := timebase.Now()
 	interleaved := false
 
-	ntpreq := ntp.Packet{}
+	ntpreq := gopacketntp.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
@@ -188,13 +190,11 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	} else {
 		ntpreq.TransmitTime = ntp.Time64FromTime(cTxTime0)
 	}
-	ntp.EncodePacket(&buf, &ntpreq)
 
 	var requestID []byte
-	var ntsreq nts.NTSPacket
-	if c.Auth.NTSEnabled {
-		ntsreq, requestID = nts.NewPacket(buf, ntskeData)
-		nts.EncodePacket(&buf, &ntsreq)
+	if c.Auth.Enabled {
+		ntpreq.InitNTSRequestPacket(ntskeData)
+		requestID = ntpreq.UniqueID.ID
 	}
 
 	var scionLayer slayers.SCION
@@ -220,19 +220,17 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	udpLayer.DstPort = uint16(remoteAddr.Host.Port)
 	udpLayer.SetNetworkLayerForChecksum(&scionLayer)
 
-	payload := gopacket.Payload(buf)
-
 	buffer := gopacket.NewSerializeBuffer()
 	options := gopacket.SerializeOptions{
 		ComputeChecksums: true,
 		FixLengths:       true,
 	}
 
-	err = payload.SerializeTo(buffer, options)
+	err = ntpreq.SerializeTo(buffer, options)
 	if err != nil {
 		panic(err)
 	}
-	buffer.PushLayer(payload.LayerType())
+	buffer.PushLayer(ntpreq.LayerType())
 
 	err = udpLayer.SerializeTo(buffer, options)
 	if err != nil {
@@ -432,12 +430,12 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				}
 			}
 		}
-
-		var ntpresp ntp.Packet
-		err = ntp.DecodePacket(&ntpresp, udpLayer.Payload)
-		if err != nil {
+		p := gopacket.NewPacket(udpLayer.Payload, gopacketntp.LayerTypeNTS, gopacket.Default)
+		ntpresp, ok := p.ApplicationLayer().(*gopacketntp.Packet)
+		if !ok {
+			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Info("failed to decode packet payload", zap.Error(err))
+				log.Info("failed to decode NTP packet", zap.Error(err))
 				numRetries++
 				continue
 			}
@@ -445,19 +443,8 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		}
 
 		ntsAuthenticated := false
-		var ntsresp nts.NTSPacket
 		if c.Auth.NTSEnabled {
-			err = nts.DecodePacket(&ntsresp, udpLayer.Payload, ntskeData.S2cKey)
-			if err != nil {
-				if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-					log.Info("failed to decode and authenticate NTS packet", zap.Error(err))
-					numRetries++
-					continue
-				}
-				return offset, weight, err
-			}
-
-			err = nts.ProcessResponse(&c.Auth.NTSKEFetcher, &ntsresp, requestID)
+			err = ntpresp.ProcessResponse(&c.Auth.NTSKEFetcher, requestID, ntskeData.S2cKey)
 			if err != nil {
 				if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 					log.Info("failed to process NTS packet", zap.Error(err))
@@ -482,7 +469,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			return offset, weight, err
 		}
 
-		err = ntp.ValidateResponseMetadata(&ntpresp)
+		err = gopacketntp.ValidateResponseMetadata(ntpresp)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -496,7 +483,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			zap.Uint8("DSCP", dscp),
 			zap.Bool("auth", authenticated),
 			zap.Bool("ntsauth", ntsAuthenticated),
-			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpresp}),
+			zap.Object("data", gopacketntp.PacketMarshaler{Pkt: ntpresp}),
 		)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
@@ -544,6 +531,11 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		// offset, weight = off, 1000.0
 
 		offset, weight = filter(log, reference, t0, t1, t2, t3)
+
+		if c.Histo != nil {
+			c.Histo.RecordValue(rtd.Microseconds())
+		}
+
 		break
 	}
 

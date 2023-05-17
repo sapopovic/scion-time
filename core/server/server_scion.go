@@ -26,8 +26,7 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/net/ntp"
-	"example.com/scion-time/net/nts"
+	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
@@ -108,10 +107,13 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 		FixLengths:       true,
 	}
 
-	var authBuf, authMAC []byte
+	var authBuf, authMAC, authMockKey []byte
 	if fetcher != nil {
 		authBuf = make([]byte, spao.MACBufferSize)
 		authMAC = make([]byte, scion.PacketAuthMACLen)
+		if scion.UseMockKeys() {
+			authMockKey = new(drkey.Key)[:]
+		}
 	}
 	tsOpt := &slayers.EndToEndOption{}
 
@@ -253,6 +255,9 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 								panic(err)
 							}
 							authKey = hostHostKey.Key[:]
+							if authMockKey != nil {
+								authKey = authMockKey
+							}
 							_, err = spao.ComputeAuthCMAC(
 								spao.MACInput{
 									Key:        authKey,
@@ -278,25 +283,23 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				}
 			}
 
-			var ntpreq ntp.Packet
-			err = ntp.DecodePacket(&ntpreq, udpLayer.Payload)
-			if err != nil {
-				log.Info("failed to decode packet payload", zap.Error(err))
+			p := gopacket.NewPacket(udpLayer.Payload, gopacketntp.LayerTypeNTS, gopacket.Default)
+			ntpreq, ok := p.ApplicationLayer().(*gopacketntp.Packet)
+			if !ok {
+				log.Info("failed to decode NTP packet", zap.Error(err))
 				continue
 			}
 
 			ntsAuthenticated := false
-			var ntsreq nts.NTSPacket
 			var serverCookie ntske.ServerCookie
-			if len(udpLayer.Payload) > ntp.PacketLen {
-				cookie, err := nts.ExtractCookie(udpLayer.Payload)
-				if err != nil {
+			if len(buf) > gopacketntp.PacketLen {
+				if ntpreq.Cookies == nil || len(ntpreq.Cookies) < 1 {
 					log.Info("failed to extract cookie", zap.Error(err))
 					continue
 				}
 
 				var encryptedCookie ntske.EncryptedServerCookie
-				err = encryptedCookie.Decode(cookie)
+				err = encryptedCookie.Decode(ntpreq.Cookies[0].Cookie)
 				if err != nil {
 					log.Info("failed to decode cookie", zap.Error(err))
 					continue
@@ -314,15 +317,15 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 					continue
 				}
 
-				err = nts.DecodePacket(&ntsreq, udpLayer.Payload, serverCookie.C2S)
+				err = ntpreq.Authenticate(serverCookie.C2S)
 				if err != nil {
-					log.Info("failed to decode packet", zap.Error(err))
+					log.Info("failed to authenticate packet", zap.Error(err))
 					continue
 				}
 				ntsAuthenticated = true
 			}
 
-			err = ntp.ValidateRequest(&ntpreq, udpLayer.SrcPort)
+			err = gopacketntp.ValidateRequest(ntpreq, udpLayer.SrcPort)
 			if err != nil {
 				log.Info("failed to validate packet payload", zap.Error(err))
 				continue
@@ -338,12 +341,12 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				zap.Uint8("DSCP", dscp),
 				zap.Bool("auth", authenticated),
 				zap.Bool("ntsauth", ntsAuthenticated),
-				zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq}),
+				zap.Object("data", gopacketntp.PacketMarshaler{Pkt: ntpreq}),
 			)
 
 			var txt0 time.Time
-			var ntpresp ntp.Packet
-			handleRequest(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
+			var ntpresp gopacketntp.Packet
+			handleRequestGopacket(clientID, ntpreq, &rxt, &txt0, &ntpresp)
 
 			scionLayer.TrafficClass = config.DSCP << 2
 			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA
@@ -356,13 +359,12 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 			scionLayer.NextHdr = slayers.L4UDP
 
 			udpLayer.DstPort, udpLayer.SrcPort = udpLayer.SrcPort, udpLayer.DstPort
-			ntp.EncodePacket(&udpLayer.Payload, &ntpresp)
 
 			if ntsAuthenticated {
 				var cookies [][]byte
 				key := provider.Current()
 				addedCookie := false
-				for i := 0; i < len(ntsreq.Cookies)+len(ntsreq.CookiePlaceholders); i++ {
+				for i := 0; i < len(ntpreq.Cookies)+len(ntpreq.CookiePlaceholders); i++ {
 					encryptedCookie, err := serverCookie.EncryptWithNonce(key.Value, key.ID)
 					if err != nil {
 						log.Info("failed to encrypt cookie", zap.Error(err))
@@ -377,22 +379,19 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 					continue
 				}
 
-				ntsresp := nts.NewResponsePacket(udpLayer.Payload, cookies, serverCookie.S2C, ntsreq.UniqueID.ID)
-				nts.EncodePacket(&udpLayer.Payload, &ntsresp)
+				ntpresp.InitNTSResponsePacket(cookies, serverCookie.S2C, ntpreq.UniqueID.ID)
 			}
-
-			payload := gopacket.Payload(udpLayer.Payload)
 
 			err = buffer.Clear()
 			if err != nil {
 				panic(err)
 			}
 
-			err = payload.SerializeTo(buffer, options)
+			err = ntpresp.SerializeTo(buffer, options)
 			if err != nil {
 				panic(err)
 			}
-			buffer.PushLayer(payload.LayerType())
+			buffer.PushLayer(ntpresp.LayerType())
 
 			err = udpLayer.SerializeTo(buffer, options)
 			if err != nil {
@@ -460,6 +459,9 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 }
 
 func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
+	if daemonAddr == "" {
+		return nil
+	}
 	s := &daemon.Service{
 		Address: daemonAddr,
 	}

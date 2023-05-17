@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mmcloughlin/profile"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/snet"
+	"github.com/scionproto/scion/pkg/snet/path"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -213,6 +215,9 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context, log *za
 }
 
 func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
+	if daemonAddr == "" {
+		return nil
+	}
 	s := &daemon.Service{
 		Address: daemonAddr,
 	}
@@ -498,12 +503,22 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 
 	dc := newDaemonConnector(ctx, log, daemonAddr)
-	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
-	if err != nil {
-		log.Fatal("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))
-	}
-	if len(ps) == 0 {
-		log.Fatal("no paths available", zap.Stringer("to", remoteAddr.IA))
+
+	var ps []snet.Path
+	if remoteAddr.IA.Equal(localAddr.IA) {
+		ps = []snet.Path{path.Path{
+			Src:           remoteAddr.IA,
+			Dst:           remoteAddr.IA,
+			DataplanePath: path.Empty{},
+		}}
+	} else {
+		ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
+		if err != nil {
+			log.Fatal("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))
+		}
+		if len(ps) == 0 {
+			log.Fatal("no paths available", zap.Stringer("to", remoteAddr.IA))
+		}
 	}
 	log.Debug("available paths", zap.Stringer("to", remoteAddr.IA), zap.Array("via", scion.PathArrayMarshaler{Paths: ps}))
 
@@ -534,14 +549,14 @@ func runBenchmark(configFile string) {
 	localAddr := localAddress(log, cfg)
 	daemonAddr := cfg.DaemonAddress
 	remoteAddr := remoteAddress(log, cfg)
+	ntskeServer := strings.Split(cfg.RemoteAddress, ",")[1]
 
 	if !remoteAddr.IA.IsZero() {
-		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr, cfg.AuthMode, ntskeServer, log)
 	} else {
 		if daemonAddr != "" {
 			exitWithUsage()
 		}
-		ntskeServer := strings.Split(cfg.RemoteAddress, ",")[1]
 		runIPBenchmark(localAddr, remoteAddr, cfg.AuthMode, ntskeServer, log)
 	}
 }
@@ -552,10 +567,10 @@ func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authMode, ntskeServer s
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authMode, ntskeServer, log)
 }
 
-func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
+func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authMode, ntskeServer string, log *zap.Logger) {
 	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
-	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr, authMode, ntskeServer, log)
 }
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
@@ -628,6 +643,7 @@ func main() {
 		drkeyClientAddr         snet.UDPAddr
 		authMode                string
 		ntskeInsecureSkipVerify bool
+		profileCPU bool
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
@@ -639,6 +655,7 @@ func main() {
 
 	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
+	serverFlags.BoolVar(&profileCPU, "profileCPU", false, "Enable profiling")
 
 	relayFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	relayFlags.StringVar(&configFile, "config", "", "Config file")
@@ -676,6 +693,10 @@ func main() {
 		if configFile == "" {
 			exitWithUsage()
 		}
+		if profileCPU {
+			defer profile.Start(profile.CPUProfile).Stop()
+		}
+
 		initLogger(verbose)
 		runServer(configFile)
 	case relayFlags.Name():
