@@ -17,9 +17,9 @@ We are currently building out the first end-to-end implementation of G-SINC whic
 
 ## Publication
 
-G-SINC: Global Synchronization Infrastructure for Network Clocks.  
-Marc Frei, Jonghoon Kwon, Seyedali Tabaeiaghdaei, Marc Wyss, Christoph Lenzen, and Adrian Perrig.  
-In Proceedings of the Symposium on Reliable Distributed Systems (SRDS) 2022.  
+G-SINC: Global Synchronization Infrastructure for Network Clocks.
+Marc Frei, Jonghoon Kwon, Seyedali Tabaeiaghdaei, Marc Wyss, Christoph Lenzen, and Adrian Perrig.
+In Proceedings of the Symposium on Reliable Distributed Systems (SRDS) 2022.
 \[[pdf](https://netsec.ethz.ch/publications/papers/G-SINC.pdf)\], \[[doi](https://doi.org/10.1109/SRDS55811.2022.00021)\], \[[arXiv](https://arxiv.org/abs/2207.06116)\]
 
 
@@ -34,7 +34,7 @@ git clone https://github.com/marcfrei/scion-time.git
 cd ~/scion-time
 go build timeservice.go timeservicex.go
 
-~/scion-time/timeservice server -verbose -config testnet/server.toml
+sudo ~/scion-time/timeservice server -verbose -config testnet/test-server.toml
 ```
 
 ## Querying an IP-based server
@@ -162,7 +162,7 @@ And in session no. 2, synchronize node `1-ff00:0:112,10.1.1.12` with server at `
 
 ```
 cd ~/scion-time
-sudo ip netns exec netns1 ./timeservice client -verbose -config testnet/test-ff00_0_111-1.toml
+sudo ip netns exec netns1 ./timeservice client -verbose --config testnet/gen-eh/ASff00_0_112/test-client.toml
 ```
 
 ## Stopping the SCION test network
