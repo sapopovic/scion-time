@@ -76,7 +76,7 @@ func (f *Fetcher) FetchHostASKey(ctx context.Context, meta drkey.HostASMeta) (
 				ProtoId: meta.ProtoId,
 				SrcIA:   meta.SrcIA,
 				DstIA:   meta.DstIA,
-				Epoch:   drkey.Epoch{
+				Epoch: drkey.Epoch{
 					Validity: cppki.Validity{
 						NotBefore: now.Add(-6 * time.Hour),
 						NotAfter:  now.Add(6 * time.Hour),
@@ -111,7 +111,7 @@ func (f *Fetcher) FetchHostHostKey(ctx context.Context, meta drkey.HostHostMeta)
 			ProtoId: meta.ProtoId,
 			SrcIA:   meta.SrcIA,
 			DstIA:   meta.DstIA,
-			Epoch:   drkey.Epoch{
+			Epoch: drkey.Epoch{
 				Validity: cppki.Validity{
 					NotBefore: now.Add(-6 * time.Hour),
 					NotAfter:  now.Add(6 * time.Hour),

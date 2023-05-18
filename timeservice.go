@@ -90,19 +90,6 @@ type tlsCertCache struct {
 	keyFile    string
 }
 
-func (c *tlsCertCache) loadCert(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	now := time.Now()
-	if now.Before(c.reloadedAt) || !now.Before(c.reloadedAt.Add(tlsCertReloadInterval)) {
-		cert, err := tls.LoadX509KeyPair(c.certFile, c.keyFile)
-		if err != nil {
-			return &tls.Certificate{}, err
-		}
-		c.cert = &cert
-		c.reloadedAt = now
-	}
-	return c.cert, nil
-}
-
 var (
 	log *zap.Logger
 )
@@ -141,6 +128,19 @@ func ntskeServerFromRemoteAddr(remoteAddr string) string {
 		panic("remote address has wrong format")
 	}
 	return split[1]
+}
+
+func (c *tlsCertCache) loadCert(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	now := time.Now()
+	if now.Before(c.reloadedAt) || !now.Before(c.reloadedAt.Add(tlsCertReloadInterval)) {
+		cert, err := tls.LoadX509KeyPair(c.certFile, c.keyFile)
+		if err != nil {
+			return &tls.Certificate{}, err
+		}
+		c.cert = &cert
+		c.reloadedAt = now
+	}
+	return c.cert, nil
 }
 
 func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
@@ -219,7 +219,7 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context, log *za
 	return client.MeasureClockOffsetSCION(ctx, log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
 }
 
-func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
+func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
 	if daemonAddr == "" {
 		return nil
 	}
@@ -233,7 +233,7 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 	return c
 }
 
-func loadConfig(log *zap.Logger, configFile string) svcConfig {
+func loadConfig(configFile string) svcConfig {
 	raw, err := os.ReadFile(configFile)
 	if err != nil {
 		log.Fatal("failed to load configuration", zap.Error(err))
@@ -246,7 +246,7 @@ func loadConfig(log *zap.Logger, configFile string) svcConfig {
 	return cfg
 }
 
-func localAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
+func localAddress(cfg svcConfig) *snet.UDPAddr {
 	if cfg.LocalAddr == "" {
 		log.Fatal("local_address not specified in config")
 	}
@@ -258,7 +258,7 @@ func localAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
 	return &localAddr
 }
 
-func remoteAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
+func remoteAddress(cfg svcConfig) *snet.UDPAddr {
 	if cfg.RemoteAddr == "" {
 		log.Fatal("remote_address not specified in config")
 	}
@@ -270,11 +270,27 @@ func remoteAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
 	return &remoteAddr
 }
 
-func daemonAddress(log *zap.Logger, cfg svcConfig) string {
+func daemonAddress(cfg svcConfig) string {
 	return cfg.DaemonAddr
 }
 
-func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig, localAddr *snet.UDPAddr) (
+func tlsConfig(cfg svcConfig) *tls.Config {
+	if cfg.NTSKEServerName == "" || cfg.NTSKECertFile == "" || cfg.NTSKEKeyFile == "" {
+		log.Fatal("missing parameters in configuration for NTSKE server")
+	}
+	certCache := tlsCertCache{
+		certFile: cfg.NTSKECertFile,
+		keyFile:  cfg.NTSKEKeyFile,
+	}
+	return &tls.Config{
+		ServerName:     cfg.NTSKEServerName,
+		NextProtos:     []string{"ntske/1"},
+		GetCertificate: certCache.loadCert,
+		MinVersion:     tls.VersionTLS13,
+	}
+}
+
+func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 	refClocks, netClocks []client.ReferenceClock) {
 
 	for _, s := range cfg.MBGReferenceClocks {
@@ -330,11 +346,11 @@ func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig, localA
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
 
-	daemonAddr := daemonAddress(log, cfg)
+	daemonAddr := daemonAddress(cfg)
 	if daemonAddr != "" {
 		ctx := context.Background()
 		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
-		drkeyFetcher := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
+		drkeyFetcher := scion.NewFetcher(newDaemonConnector(ctx, daemonAddr))
 		for _, c := range refClocks {
 			scionclk, ok := c.(*ntpReferenceClockSCION)
 			if ok {
@@ -360,29 +376,13 @@ func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig, localA
 	return
 }
 
-func tlsConfig(log *zap.Logger, cfg svcConfig) *tls.Config {
-	if cfg.NTSKEServerName == "" || cfg.NTSKECertFile == "" || cfg.NTSKEKeyFile == "" {
-		log.Fatal("missing parameters in configuration for NTSKE server")
-	}
-	certCache := tlsCertCache{
-		certFile: cfg.NTSKECertFile,
-		keyFile:  cfg.NTSKEKeyFile,
-	}
-	return &tls.Config{
-		ServerName:     cfg.NTSKEServerName,
-		NextProtos:     []string{"ntske/1"},
-		GetCertificate: certCache.loadCert,
-		MinVersion:     tls.VersionTLS13,
-	}
-}
-
 func runServer(configFile string) {
 	ctx := context.Background()
 
-	cfg := loadConfig(log, configFile)
-	localAddr := localAddress(log, cfg)
-	daemonAddr := daemonAddress(log, cfg)
-	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
+	cfg := loadConfig(configFile)
+	localAddr := localAddress(cfg)
+	daemonAddr := daemonAddress(cfg)
+	refClocks, netClocks := createClocks(cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -397,7 +397,7 @@ func runServer(configFile string) {
 		go sync.RunGlobalClockSync(log, lclk)
 	}
 
-	tlsConfig := tlsConfig(log, cfg)
+	tlsConfig := tlsConfig(cfg)
 	provider := ntske.NewProvider()
 
 	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), tlsConfig, provider)
@@ -410,10 +410,10 @@ func runServer(configFile string) {
 func runRelay(configFile string) {
 	ctx := context.Background()
 
-	cfg := loadConfig(log, configFile)
-	localAddr := localAddress(log, cfg)
-	daemonAddr := daemonAddress(log, cfg)
-	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
+	cfg := loadConfig(configFile)
+	localAddr := localAddress(cfg)
+	daemonAddr := daemonAddress(cfg)
+	refClocks, netClocks := createClocks(cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -428,7 +428,7 @@ func runRelay(configFile string) {
 		log.Fatal("unexpected configuration", zap.Int("number of peers", len(netClocks)))
 	}
 
-	tlsConfig := tlsConfig(log, cfg)
+	tlsConfig := tlsConfig(cfg)
 	provider := ntske.NewProvider()
 
 	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), tlsConfig, provider)
@@ -441,9 +441,9 @@ func runRelay(configFile string) {
 func runClient(configFile string) {
 	ctx := context.Background()
 
-	cfg := loadConfig(log, configFile)
-	localAddr := localAddress(log, cfg)
-	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
+	cfg := loadConfig(configFile)
+	localAddr := localAddress(cfg)
+	refClocks, netClocks := createClocks(cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -509,7 +509,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
-	dc := newDaemonConnector(ctx, log, daemonAddr)
+	dc := newDaemonConnector(ctx, daemonAddr)
 
 	var ps []snet.Path
 	if remoteAddr.IA.Equal(localAddr.IA) {
@@ -552,10 +552,10 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 }
 
 func runBenchmark(configFile string) {
-	cfg := loadConfig(log, configFile)
-	localAddr := localAddress(log, cfg)
-	daemonAddr := daemonAddress(log, cfg)
-	remoteAddr := remoteAddress(log, cfg)
+	cfg := loadConfig(configFile)
+	localAddr := localAddress(cfg)
+	daemonAddr := daemonAddress(cfg)
+	remoteAddr := remoteAddress(cfg)
 
 	if !remoteAddr.IA.IsZero() {
 		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
@@ -581,7 +581,7 @@ func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
 	ctx := context.Background()
-	dc := newDaemonConnector(ctx, log, daemonAddr)
+	dc := newDaemonConnector(ctx, daemonAddr)
 
 	if serverMode {
 		hostASMeta := drkey.HostASMeta{

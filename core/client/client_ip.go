@@ -122,7 +122,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		remoteAddr.IP = net.ParseIP(ntskeData.Server)
 		remoteAddr.Port = int(ntskeData.Port)
 	}
-	ip4 := remoteAddr.IP.To4(); 
+	ip4 := remoteAddr.IP.To4()
 	if ip4 != nil {
 		remoteAddr.IP = ip4
 	}
