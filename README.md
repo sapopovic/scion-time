@@ -34,7 +34,7 @@ git clone https://github.com/marcfrei/scion-time.git
 cd ~/scion-time
 go build timeservice.go timeservicex.go
 
-~/scion-time/timeservice server -verbose -local 0-0,0.0.0.0:10123
+~/scion-time/timeservice server -verbose -config testnet/server.toml
 ```
 
 ## Querying an IP-based server
@@ -125,14 +125,14 @@ In session no. 1, run server at `1-ff00:0:111,10.1.1.11:123`:
 
 ```
 cd ~/scion-time
-sudo ip netns exec netns0 ./timeservice server -verbose -config testnet/gen-eh/ASff00_0_111/ts1-ff00_0_111-1.toml -daemon 10.1.1.11:30255 -local 1-ff00:0:111,10.1.1.11:123
+sudo ip netns exec netns0 ./timeservice server -verbose -config testnet/gen-eh/ASff00_0_111/ts1-ff00_0_111-1.toml
 ```
 
 In session no. 2, run server at `1-ff00:0:112,10.1.1.12:123`:
 
 ```
 cd ~/scion-time
-sudo ip netns exec netns1 ./timeservice server -verbose -config testnet/gen-eh/ASff00_0_112/ts1-ff00_0_112-1.toml -daemon 10.1.1.12:30255 -local 1-ff00:0:112,10.1.1.12:123
+sudo ip netns exec netns1 ./timeservice server -verbose -config testnet/gen-eh/ASff00_0_112/ts1-ff00_0_112-1.toml
 ```
 
 ## Querying SCION-based servers
@@ -155,14 +155,14 @@ In session no. 1, run server at `1-ff00:0:111,10.1.1.11:123`:
 
 ```
 cd ~/scion-time
-sudo ip netns exec netns0 ./timeservice server -verbose -config testnet/gen-eh/ASff00_0_111/ts1-ff00_0_111-1.toml -daemon 10.1.1.11:30255 -local 1-ff00:0:111,10.1.1.11:123
+sudo ip netns exec netns0 ./timeservice server -verbose -config testnet/gen-eh/ASff00_0_111/ts1-ff00_0_111-1.toml
 ```
 
 And in session no. 2, synchronize node `1-ff00:0:112,10.1.1.12` with server at `1-ff00:0:111,10.1.1.11:123`:
 
 ```
 cd ~/scion-time
-sudo ip netns exec netns1 ./timeservice client -verbose -config testnet/test-ff00_0_111-1.toml -daemon 10.1.1.12:30255 -local 1-ff00:0:112,10.1.1.12:0
+sudo ip netns exec netns1 ./timeservice client -verbose -config testnet/test-ff00_0_111-1.toml
 ```
 
 ## Stopping the SCION test network

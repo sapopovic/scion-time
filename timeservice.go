@@ -53,12 +53,17 @@ const (
 )
 
 type svcConfig struct {
-	MBGReferenceClocks []string `toml:"mbg_reference_clocks,omitempty"`
-	NTPReferenceClocks []string `toml:"ntp_reference_clocks,omitempty"`
-	SCIONPeers         []string `toml:"scion_peers,omitempty"`
-	NTSKECertFile      string   `toml:"ntske_cert_file,omitempty"`
-	NTSKEKeyFile       string   `toml:"ntske_key_file,omitempty"`
-	NTSKEServerName    string   `toml:"ntske_server_name,omitempty"`
+	LocalAddr               string   `toml:"local_address,omitempty"`
+	DaemonAddr              string   `toml:"daemon_address,omitempty"`
+	RemoteAddr              string   `toml:"remote_address,omitempty"`
+	MBGReferenceClocks      []string `toml:"mbg_reference_clocks,omitempty"`
+	NTPReferenceClocks      []string `toml:"ntp_reference_clocks,omitempty"`
+	SCIONPeers              []string `toml:"scion_peers,omitempty"`
+	NTSKECertFile           string   `toml:"ntske_cert_file,omitempty"`
+	NTSKEKeyFile            string   `toml:"ntske_key_file,omitempty"`
+	NTSKEServerName         string   `toml:"ntske_server_name,omitempty"`
+	AuthMode                string   `toml:"auth_mode,omitempty"`
+	NTSKEInsecureSkipVerify bool     `toml:"ntske_insecure_skip_verify,omitempty"`
 }
 
 type mbgReferenceClock struct {
@@ -130,18 +135,44 @@ func runMonitor(log *zap.Logger) {
 	log.Fatal("failed to serve metrics", zap.Error(err))
 }
 
+func ntskeServerFromRemoteAddr(remoteAddr string) string {
+	split := strings.Split(remoteAddr, ",")
+	if len(split) < 2 {
+		panic("remote address has wrong format")
+	}
+	return split[1]
+}
+
 func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
 	time.Duration, error) {
 	return mbg.MeasureClockOffset(ctx, log, c.dev)
 }
 
-func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr) *ntpReferenceClockIP {
+func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
+	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
+	if err != nil {
+		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
+	}
+	c.Auth.Enabled = true
+	c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+		InsecureSkipVerify: ntskeInsecureSkipVerify,
+		ServerName:         ntskeHost,
+		MinVersion:         tls.VersionTLS13,
+	}
+	c.Auth.NTSKEFetcher.Port = ntskePort
+	c.Auth.NTSKEFetcher.Log = log
+}
+
+func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr, authMode, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockIP {
 	c := &ntpReferenceClockIP{
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
 	c.ntpc = &client.IPClient{
 		InterleavedMode: true,
+	}
+	if authMode == authModeNTS {
+		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify)
 	}
 	return c
 }
@@ -151,7 +182,22 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.L
 	return client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
-func newNTPReferenceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceClockSCION {
+func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
+	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
+	if err != nil {
+		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
+	}
+	c.Auth.NTSEnabled = true
+	c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+		InsecureSkipVerify: ntskeInsecureSkipVerify,
+		ServerName:         ntskeHost,
+		MinVersion:         tls.VersionTLS13,
+	}
+	c.Auth.NTSKEFetcher.Port = ntskePort
+	c.Auth.NTSKEFetcher.Log = log
+}
+
+func newNTPReferenceClockSCION(localAddr, remoteAddr udp.UDPAddr, authMode, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
@@ -159,6 +205,9 @@ func newNTPReferenceClockSCION(localAddr, remoteAddr udp.UDPAddr) *ntpReferenceC
 	for i := 0; i != len(c.ntpcs); i++ {
 		c.ntpcs[i] = &client.SCIONClient{
 			InterleavedMode: true,
+		}
+		if authMode == authModeNTS {
+			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify)
 		}
 	}
 	return c
@@ -184,107 +233,141 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 	return c
 }
 
-func loadConfig(ctx context.Context, log *zap.Logger,
-	configFile, daemonAddr string, localAddr *snet.UDPAddr) (
-	refClocks, netClocks []client.ReferenceClock) {
-	if configFile != "" {
-		var cfg svcConfig
-		raw, err := os.ReadFile(configFile)
-		if err != nil {
-			log.Fatal("failed to load configuration", zap.Error(err))
-		}
-		err = toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&cfg)
-		if err != nil {
-			log.Fatal("failed to decode configuration", zap.Error(err))
-		}
-		for _, s := range cfg.MBGReferenceClocks {
-			refClocks = append(refClocks, &mbgReferenceClock{
-				dev: s,
-			})
-		}
-		var dstIAs []addr.IA
-		for _, s := range cfg.NTPReferenceClocks {
-			remoteAddr, err := snet.ParseUDPAddr(s)
-			if err != nil {
-				log.Fatal("failed to parse reference clock address",
-					zap.String("address", s), zap.Error(err))
-			}
-			if !remoteAddr.IA.IsZero() {
-				refClocks = append(refClocks, newNTPReferenceClockSCION(
-					udp.UDPAddrFromSnet(localAddr),
-					udp.UDPAddrFromSnet(remoteAddr),
-				))
-				dstIAs = append(dstIAs, remoteAddr.IA)
-			} else {
-				refClocks = append(refClocks, newNTPReferenceClockIP(
-					localAddr.Host,
-					remoteAddr.Host,
-				))
-			}
-		}
-		for _, s := range cfg.SCIONPeers {
-			remoteAddr, err := snet.ParseUDPAddr(s)
-			if err != nil {
-				log.Fatal("failed to parse peer address", zap.String("address", s), zap.Error(err))
-			}
-			if remoteAddr.IA.IsZero() {
-				log.Fatal("unexpected peer address", zap.String("address", s), zap.Error(err))
-			}
-			netClocks = append(netClocks, newNTPReferenceClockSCION(
-				udp.UDPAddrFromSnet(localAddr),
-				udp.UDPAddrFromSnet(remoteAddr),
-			))
-			dstIAs = append(dstIAs, remoteAddr.IA)
-		}
-		if daemonAddr != "" {
-			ctx := context.Background()
-			pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
-			drkeyFetcher := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
-			for _, c := range refClocks {
-				scionclk, ok := c.(*ntpReferenceClockSCION)
-				if ok {
-					scionclk.pather = pather
-					for i := 0; i != len(scionclk.ntpcs); i++ {
-						scionclk.ntpcs[i].Auth.Enabled = true
-						scionclk.ntpcs[i].Auth.DRKeyFetcher = drkeyFetcher
-					}
-				}
-			}
-			for _, c := range netClocks {
-				scionclk, ok := c.(*ntpReferenceClockSCION)
-				if ok {
-					scionclk.pather = pather
-					for i := 0; i != len(scionclk.ntpcs); i++ {
-						scionclk.ntpcs[i].Auth.Enabled = true
-						scionclk.ntpcs[i].Auth.DRKeyFetcher = drkeyFetcher
-					}
-				}
-			}
-		}
-	}
-	return
-}
-
-func loadNTSKEConfig(log *zap.Logger, configFile string) *tls.Config {
-	var cfg svcConfig
+func loadConfig(log *zap.Logger, configFile string) svcConfig {
 	raw, err := os.ReadFile(configFile)
 	if err != nil {
 		log.Fatal("failed to load configuration", zap.Error(err))
 	}
+	var cfg svcConfig
 	err = toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&cfg)
 	if err != nil {
 		log.Fatal("failed to decode configuration", zap.Error(err))
 	}
+	return cfg
+}
 
+func localAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
+	if cfg.LocalAddr == "" {
+		log.Fatal("local_address not specified in config")
+	}
+	var localAddr snet.UDPAddr
+	err := localAddr.Set(cfg.LocalAddr)
+	if err != nil {
+		log.Fatal("failed to parse local address")
+	}
+	return &localAddr
+}
+
+func remoteAddress(log *zap.Logger, cfg svcConfig) *snet.UDPAddr {
+	if cfg.RemoteAddr == "" {
+		log.Fatal("remote_address not specified in config")
+	}
+	var remoteAddr snet.UDPAddr
+	err := remoteAddr.Set(cfg.RemoteAddr)
+	if err != nil {
+		log.Fatal("failed to parse remote address")
+	}
+	return &remoteAddr
+}
+
+func daemonAddress(log *zap.Logger, cfg svcConfig) string {
+	return cfg.DaemonAddr
+}
+
+func referenceClocks(ctx context.Context, log *zap.Logger, cfg svcConfig, localAddr *snet.UDPAddr) (
+	refClocks, netClocks []client.ReferenceClock) {
+
+	for _, s := range cfg.MBGReferenceClocks {
+		refClocks = append(refClocks, &mbgReferenceClock{
+			dev: s,
+		})
+	}
+
+	var dstIAs []addr.IA
+	for _, s := range cfg.NTPReferenceClocks {
+		remoteAddr, err := snet.ParseUDPAddr(s)
+		if err != nil {
+			log.Fatal("failed to parse reference clock address",
+				zap.String("address", s), zap.Error(err))
+		}
+		ntskeServer := ntskeServerFromRemoteAddr(s)
+		if !remoteAddr.IA.IsZero() {
+			refClocks = append(refClocks, newNTPReferenceClockSCION(
+				udp.UDPAddrFromSnet(localAddr),
+				udp.UDPAddrFromSnet(remoteAddr),
+				cfg.AuthMode,
+				ntskeServer,
+				cfg.NTSKEInsecureSkipVerify,
+			))
+			dstIAs = append(dstIAs, remoteAddr.IA)
+		} else {
+			refClocks = append(refClocks, newNTPReferenceClockIP(
+				localAddr.Host,
+				remoteAddr.Host,
+				cfg.AuthMode,
+				ntskeServer,
+				cfg.NTSKEInsecureSkipVerify,
+			))
+		}
+	}
+
+	for _, s := range cfg.SCIONPeers {
+		remoteAddr, err := snet.ParseUDPAddr(s)
+		if err != nil {
+			log.Fatal("failed to parse peer address", zap.String("address", s), zap.Error(err))
+		}
+		if remoteAddr.IA.IsZero() {
+			log.Fatal("unexpected peer address", zap.String("address", s), zap.Error(err))
+		}
+		ntskeServer := ntskeServerFromRemoteAddr(s)
+		netClocks = append(netClocks, newNTPReferenceClockSCION(
+			udp.UDPAddrFromSnet(localAddr),
+			udp.UDPAddrFromSnet(remoteAddr),
+			cfg.AuthMode,
+			ntskeServer,
+			cfg.NTSKEInsecureSkipVerify,
+		))
+		dstIAs = append(dstIAs, remoteAddr.IA)
+	}
+
+	daemonAddr := daemonAddress(log, cfg)
+	if daemonAddr != "" {
+		ctx := context.Background()
+		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
+		drkeyFetcher := scion.NewFetcher(newDaemonConnector(ctx, log, daemonAddr))
+		for _, c := range refClocks {
+			scionclk, ok := c.(*ntpReferenceClockSCION)
+			if ok {
+				scionclk.pather = pather
+				for i := 0; i != len(scionclk.ntpcs); i++ {
+					scionclk.ntpcs[i].Auth.Enabled = true
+					scionclk.ntpcs[i].Auth.DRKeyFetcher = drkeyFetcher
+				}
+			}
+		}
+		for _, c := range netClocks {
+			scionclk, ok := c.(*ntpReferenceClockSCION)
+			if ok {
+				scionclk.pather = pather
+				for i := 0; i != len(scionclk.ntpcs); i++ {
+					scionclk.ntpcs[i].Auth.Enabled = true
+					scionclk.ntpcs[i].Auth.DRKeyFetcher = drkeyFetcher
+				}
+			}
+		}
+	}
+
+	return
+}
+
+func tlsConfig(log *zap.Logger, cfg svcConfig) *tls.Config {
 	if cfg.NTSKEServerName == "" || cfg.NTSKECertFile == "" || cfg.NTSKEKeyFile == "" {
 		log.Fatal("missing parameters in configuration for NTSKE server")
 	}
-
 	certCache := tlsCertCache{
 		certFile: cfg.NTSKECertFile,
 		keyFile:  cfg.NTSKEKeyFile,
 	}
-
 	return &tls.Config{
 		ServerName:     cfg.NTSKEServerName,
 		NextProtos:     []string{"ntske/1"},
@@ -293,10 +376,13 @@ func loadNTSKEConfig(log *zap.Logger, configFile string) *tls.Config {
 	}
 }
 
-func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func runServer(configFile string) {
 	ctx := context.Background()
 
-	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	cfg := loadConfig(log, configFile)
+	localAddr := localAddress(log, cfg)
+	daemonAddr := daemonAddress(log, cfg)
+	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -311,20 +397,23 @@ func runServer(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		go sync.RunGlobalClockSync(log, lclk)
 	}
 
-	config := loadNTSKEConfig(log, configFile)
+	tlsConfig := tlsConfig(log, cfg)
 	provider := ntske.NewProvider()
 
-	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), config, provider)
+	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), tlsConfig, provider)
 	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), provider)
 	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), provider)
 
 	runMonitor(log)
 }
 
-func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func runRelay(configFile string) {
 	ctx := context.Background()
 
-	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	cfg := loadConfig(log, configFile)
+	localAddr := localAddress(log, cfg)
+	daemonAddr := daemonAddress(log, cfg)
+	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -339,20 +428,22 @@ func runRelay(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 		log.Fatal("unexpected configuration", zap.Int("number of peers", len(netClocks)))
 	}
 
-	config := loadNTSKEConfig(log, configFile)
+	tlsConfig := tlsConfig(log, cfg)
 	provider := ntske.NewProvider()
 
-	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), config, provider)
+	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), tlsConfig, provider)
 	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), provider)
 	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), provider)
 
 	runMonitor(log)
 }
 
-func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
+func runClient(configFile string) {
 	ctx := context.Background()
 
-	refClocks, netClocks := loadConfig(ctx, log, configFile, daemonAddr, localAddr)
+	cfg := loadConfig(log, configFile)
+	localAddr := localAddress(log, cfg)
+	refClocks, netClocks := referenceClocks(ctx, log, cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: log}
@@ -382,7 +473,8 @@ func runClient(configFile, daemonAddr string, localAddr *snet.UDPAddr) {
 	runMonitor(log)
 }
 
-func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServer string, ntskeInsecureSkipVerify bool) {
+func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode,
+	ntskeServer string, ntskeInsecureSkipVerify bool) {
 	var err error
 	ctx := context.Background()
 
@@ -395,22 +487,8 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServer
 		InterleavedMode: true,
 	}
 
-	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
-	if err != nil {
-		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
-	}
-
 	if authMode == authModeNTS {
-		c.Auth.Enabled = true
-		c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
-			InsecureSkipVerify: ntskeInsecureSkipVerify,
-			ServerName:         ntskeHost,
-			MinVersion:         tls.VersionTLS13,
-		}
-		c.Auth.NTSKEFetcher.Port = ntskePort
-		c.Auth.NTSKEFetcher.Log = log
-	} else {
-		c.Auth.Enabled = false
+		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
 	}
 
 	_, err = client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
@@ -419,7 +497,8 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServer
 	}
 }
 
-func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr, authMode string, ntskeServer string, ntskeInsecureSkipVerify bool) {
+func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr,
+	authMode, ntskeServer string, ntskeInsecureSkipVerify bool) {
 	var err error
 	ctx := context.Background()
 
@@ -458,22 +537,8 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	c.Auth.Enabled = true
 	c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
 
-	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
-	if err != nil {
-		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
-	}
-
 	if authMode == authModeNTS {
-		c.Auth.NTSEnabled = true
-		c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
-			InsecureSkipVerify: ntskeInsecureSkipVerify,
-			ServerName:         ntskeHost,
-			MinVersion:         tls.VersionTLS13,
-		}
-		c.Auth.NTSKEFetcher.Port = ntskePort
-		c.Auth.NTSKEFetcher.Log = log
-	} else {
-		c.Auth.NTSEnabled = false
+		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
 	}
 
 	_, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps)
@@ -483,6 +548,22 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 			zap.Stringer("remoteHost", raddr.Host),
 			zap.Error(err),
 		)
+	}
+}
+
+func runBenchmark(configFile string) {
+	cfg := loadConfig(log, configFile)
+	localAddr := localAddress(log, cfg)
+	daemonAddr := daemonAddress(log, cfg)
+	remoteAddr := remoteAddress(log, cfg)
+
+	if !remoteAddr.IA.IsZero() {
+		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+	} else {
+		if daemonAddr != "" {
+			exitWithUsage()
+		}
+		runIPBenchmark(localAddr, remoteAddr)
 	}
 }
 
@@ -579,18 +660,12 @@ func main() {
 
 	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
-	serverFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	serverFlags.Var(&localAddr, "local", "Local address")
 
 	relayFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	relayFlags.StringVar(&configFile, "config", "", "Config file")
-	relayFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	relayFlags.Var(&localAddr, "local", "Local address")
 
 	clientFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	clientFlags.StringVar(&configFile, "config", "", "Config file")
-	clientFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	clientFlags.Var(&localAddr, "local", "Local address")
 
 	toolFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	toolFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -602,8 +677,6 @@ func main() {
 
 	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
-	benchmarkFlags.Var(&localAddr, "local", "Local address")
-	benchmarkFlags.StringVar(&remoteAddrStr, "remote", "", "Remote address")
 
 	drkeyFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	drkeyFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -625,7 +698,7 @@ func main() {
 			exitWithUsage()
 		}
 		initLogger(verbose)
-		runServer(configFile, daemonAddr, &localAddr)
+		runServer(configFile)
 	case relayFlags.Name():
 		err := relayFlags.Parse(os.Args[2:])
 		if err != nil || relayFlags.NArg() != 0 {
@@ -635,14 +708,17 @@ func main() {
 			exitWithUsage()
 		}
 		initLogger(verbose)
-		runRelay(configFile, daemonAddr, &localAddr)
+		runRelay(configFile)
 	case clientFlags.Name():
 		err := clientFlags.Parse(os.Args[2:])
 		if err != nil || clientFlags.NArg() != 0 {
 			exitWithUsage()
 		}
+		if configFile == "" {
+			exitWithUsage()
+		}
 		initLogger(verbose)
-		runClient(configFile, daemonAddr, &localAddr)
+		runClient(configFile)
 	case toolFlags.Name():
 		err := toolFlags.Parse(os.Args[2:])
 		if err != nil || toolFlags.NArg() != 0 {
@@ -663,8 +739,8 @@ func main() {
 			if authMode != "" && authMode != authModeNTS {
 				exitWithUsage()
 			}
+			ntskeServer := ntskeServerFromRemoteAddr(remoteAddrStr)
 			initLogger(verbose)
-			ntskeServer := strings.Split(remoteAddrStr, ",")[1]
 			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr, authMode, ntskeServer, ntskeInsecureSkipVerify)
 		} else {
 			if daemonAddr != "" {
@@ -676,7 +752,7 @@ func main() {
 			if authMode != "" && authMode != authModeNTS {
 				exitWithUsage()
 			}
-			ntskeServer := strings.Split(remoteAddrStr, ",")[1]
+			ntskeServer := ntskeServerFromRemoteAddr(remoteAddrStr)
 			initLogger(verbose)
 			runIPTool(&localAddr, &remoteAddr, authMode, ntskeServer, ntskeInsecureSkipVerify)
 		}
@@ -685,21 +761,11 @@ func main() {
 		if err != nil || benchmarkFlags.NArg() != 0 {
 			exitWithUsage()
 		}
-		var remoteAddr snet.UDPAddr
-		err = remoteAddr.Set(remoteAddrStr)
-		if err != nil {
+		if configFile == "" {
 			exitWithUsage()
 		}
-		if !remoteAddr.IA.IsZero() {
-			initLogger(verbose)
-			runSCIONBenchmark(daemonAddr, &localAddr, &remoteAddr)
-		} else {
-			if daemonAddr != "" {
-				exitWithUsage()
-			}
-			initLogger(verbose)
-			runIPBenchmark(&localAddr, &remoteAddr)
-		}
+		initLogger(verbose)
+		runBenchmark(configFile)
 	case drkeyFlags.Name():
 		err := drkeyFlags.Parse(os.Args[2:])
 		if err != nil || drkeyFlags.NArg() != 0 {
