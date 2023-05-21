@@ -34,7 +34,7 @@ func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string)
 	return c
 }
 
-func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authMode, ntskeServer string, log *zap.Logger) {
+func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
 
 	// const numClientGoroutine = 8
 	// const numRequestPerClient = 10000
@@ -75,12 +75,14 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 			raddr := udp.UDPAddrFromSnet(remoteAddr)
 			c := &client.SCIONClient{
 				InterleavedMode: true,
-				Histo: hg,
+				Histo:           hg,
 			}
-			c.Auth.Enabled = true
-			c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
+			if contains(authModes, "spao") {
+				c.Auth.Enabled = true
+				c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
+			}
 
-			if authMode == "nts" {
+			if contains(authModes, "nts") {
 				ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 				if err != nil {
 					log.Fatal("failed to split NTS-KE host and port", zap.Error(err))

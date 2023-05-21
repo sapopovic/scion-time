@@ -581,25 +581,25 @@ func runBenchmark(configFile string) {
 	ntskeServer := ntskeServerFromRemoteAddr(cfg.RemoteAddr)
 
 	if !remoteAddr.IA.IsZero() {
-		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr, cfg.AuthMode, ntskeServer, log)
+		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
 	} else {
 		if daemonAddr != "" {
 			exitWithUsage()
 		}
-		runIPBenchmark(localAddr, remoteAddr, cfg.AuthMode, ntskeServer, log)
+		runIPBenchmark(localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
 	}
 }
 
-func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authMode, ntskeServer string, log *zap.Logger) {
+func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
 	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
-	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authMode, ntskeServer, log)
+	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authModes, ntskeServer, log)
 }
 
-func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authMode, ntskeServer string, log *zap.Logger) {
+func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
 	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
-	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr, authMode, ntskeServer, log)
+	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr, authModes, ntskeServer, log)
 }
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
