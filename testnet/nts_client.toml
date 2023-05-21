@@ -1,5 +1,0 @@
-local_address = "0-0,10.0.0.1:0"
-ntp_reference_clocks = ["0-0,127.0.0.1:4460"]
-
-auth_mode = "nts"
-ntske_insecure_skip_verify = true
