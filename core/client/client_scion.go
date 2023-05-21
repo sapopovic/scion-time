@@ -150,9 +150,6 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			return offset, weight, err
 		}
 		remoteAddr.Host.IP = net.ParseIP(ntskeData.Server)
-		if remoteAddr.Host.IP.To4() != nil {
-			remoteAddr.Host.IP = remoteAddr.Host.IP.To4()
-		}
 		remoteAddr.Host.Port = int(ntskeData.Port)
 	}
 	ip4 := remoteAddr.Host.IP.To4()
