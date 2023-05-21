@@ -40,7 +40,7 @@ for c in 1 2 4 8 16 32 64 128 192 256 320 384;
 do 
     for i in $(seq 1 $c)
     do 
-        ./timeservice benchmark -config ~/nonauth_benchmark.toml &
+        sudo USE_MOCK_KEYS=TRUE ./timeservice benchmark -config ~/nonauth_benchmark.toml &
     done
     sleep 20
     sudo killall timeservice
@@ -60,7 +60,7 @@ for c in 1 2 4 8 16 32 64 128 192 256 320 384;
 do 
     for i in $(seq 1 $c)
     do 
-        ./timeservice benchmark -config ~/nts_benchmark.toml &
+        sudo USE_MOCK_KEYS=TRUE ./timeservice benchmark -config ~/nts_benchmark.toml &
     done
     sleep 20
     sudo killall timeservice
@@ -95,7 +95,7 @@ for c in 1 2 4 8 16 32 64 128 192 256 320 384;
 do 
     for i in $(seq 1 $c)
     do 
-        ./timeservice benchmark -config ~/nonauth_benchmark.toml &
+        sudo USE_MOCK_KEYS=TRUE ./timeservice benchmark -config ~/nonauth_benchmark.toml &
     done
     sleep 20
     sudo killall timeservice
@@ -115,7 +115,7 @@ for c in 1 2 4 8 16 32 64 128 192 256 320 384;
 do 
     for i in $(seq 1 $c)
     do 
-        ./timeservice benchmark -config ~/nts_benchmark.toml &
+        sudo USE_MOCK_KEYS=TRUE ./timeservice benchmark -config ~/nts_benchmark.toml &
     done
     sleep 20
     sudo killall timeservice
