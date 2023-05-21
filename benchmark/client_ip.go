@@ -13,7 +13,16 @@ import (
 	"go.uber.org/zap"
 )
 
-func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authMode, ntskeServer string, log *zap.Logger) {
+func contains(s []string, v string) bool {
+	for _, x := range s {
+		if x == v {
+			return true
+		}
+	}
+	return false
+}
+
+func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
 	// const numClientGoroutine = 8
 	// const numRequestPerClient = 10000
 	const numClientGoroutine = 1
@@ -34,7 +43,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authMode, ntskeServer st
 				Histo:           hg,
 			}
 
-			if authMode == "nts" {
+			if contains(authModes, "nts") {
 				ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 				if err != nil {
 					log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
