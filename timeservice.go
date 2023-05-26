@@ -7,14 +7,17 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/lucas-clemente/quic-go"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -39,6 +42,7 @@ import (
 
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/scion"
+	"example.com/scion-time/net/tlsutil"
 	"example.com/scion-time/net/udp"
 )
 
@@ -650,6 +654,137 @@ func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *sn
 	}
 }
 
+func handleQUICConnection(conn quic.Connection) error {
+	i := 0
+	for {
+		stream, err := conn.AcceptStream(context.Background())
+		if err != nil {
+			return err
+		}
+		defer quic.SendStream(stream).Close()
+		data, err := io.ReadAll(stream)
+		if err != nil {
+			return err
+		}
+		fmt.Println("received data:", string(data))
+		// if (i+1)%3 == 0 {
+		// 	time.Sleep(10 * time.Second)
+		// }
+		_, err = stream.Write(data)
+		if err != nil {
+			return err
+		}
+		_, err = stream.Write([]byte("!"))
+		if err != nil {
+			return err
+		}
+		quic.SendStream(stream).Close()
+		i++
+	}
+}
+
+func logQUICKeyingMaterial(cs tls.ConnectionState) {
+	label := "EXPORTER-network-time-security"
+	s2cContext := []byte{0x00, 0x00, 0x00, 0x0f, 0x01}
+	c2sContext := []byte{0x00, 0x00, 0x00, 0x0f, 0x00}
+	len := 32
+
+	km0, err0 := cs.ExportKeyingMaterial(label, s2cContext, len)
+	km1, err1 := cs.ExportKeyingMaterial(label, c2sContext, len)
+	fmt.Println("QUIC TLS keying material c2s:", km0, err0)
+	fmt.Println("QUIC TLS keying material s2c:", km1, err1)
+}
+
+func runQUICDemoServer(localAddr *snet.UDPAddr) {
+	ctx := context.Background()
+
+	laddr := udp.UDPAddrFromSnet(localAddr)
+	tlsCfg := &tls.Config{
+		NextProtos:   []string{"hello-quic"},
+		Certificates: tlsutil.MustGenerateSelfSignedCert(),
+		MinVersion:   tls.VersionTLS13,
+	}
+	listener, err := scion.ListenQUIC(ctx, laddr, tlsCfg, nil /* quicCfg */)
+	if err != nil {
+		log.Fatal("failed to start listening", zap.Error(err))
+	}
+	defer listener.Close()
+
+	for {
+		conn, err := listener.Accept(ctx)
+		if err != nil {
+			log.Info("failed to accept connection", zap.Error(err))
+			continue
+		}
+		log.Info("accepted connection", zap.Stringer("remote", conn.RemoteAddr()))
+		logQUICKeyingMaterial(conn.ConnectionState().TLS.ConnectionState)
+		go func() {
+			err := handleQUICConnection(conn)
+			var errApplication *quic.ApplicationError
+			if err != nil && !(errors.As(err, &errApplication) && errApplication.ErrorCode == 0) {
+				log.Info("failed to handle connection",
+					zap.Stringer("remote", conn.RemoteAddr()),
+					zap.Error(err),
+				)
+			}
+		}()
+	}
+}
+
+func runQUICDemoClient(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
+	ctx := context.Background()
+
+	dc := newDaemonConnector(ctx, daemonAddr)
+	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
+	if err != nil {
+		log.Fatal("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))
+	}
+	if len(ps) == 0 {
+		log.Fatal("no paths available", zap.Stringer("to", remoteAddr.IA))
+	}
+	log.Debug("available paths", zap.Stringer("to", remoteAddr.IA), zap.Array("via", scion.PathArrayMarshaler{Paths: ps}))
+	sp := ps[0]
+	log.Debug("selected path", zap.Stringer("to", remoteAddr.IA), zap.Object("via", scion.PathMarshaler{Path: sp}))
+
+	laddr := udp.UDPAddrFromSnet(localAddr)
+	raddr := udp.UDPAddrFromSnet(remoteAddr)
+	tlsCfg := &tls.Config{
+		NextProtos:         []string{"hello-quic"},
+		InsecureSkipVerify: true,
+		MinVersion:         tls.VersionTLS13,
+	}
+	conn, err := scion.DialQUIC(ctx, laddr, raddr, sp,
+		"" /* host*/, tlsCfg, nil /* quicCfg */)
+	if err != nil {
+		log.Fatal("failed to dial connection", zap.Error(err))
+	}
+	defer func() {
+		err := conn.CloseWithError(quic.ApplicationErrorCode(0), "" /* error string */)
+		if err != nil {
+			log.Fatal("failed to close connection", zap.Error(err))
+		}
+	}()
+	logQUICKeyingMaterial(conn.ConnectionState().TLS.ConnectionState)
+
+	for i := 0; i < 3; i++ {
+		stream, err := conn.OpenStream()
+		if err != nil {
+			log.Fatal("failed to open stream", zap.Error(err))
+		}
+		defer quic.SendStream(stream).Close()
+		_, err = stream.Write([]byte(fmt.Sprintf("%d", i)))
+		if err != nil {
+			log.Fatal("failed to write data", zap.Error(err))
+		}
+		quic.SendStream(stream).Close()
+		data, err := io.ReadAll(stream)
+		if err != nil {
+			log.Fatal("failed to read data", zap.Error(err))
+		}
+		fmt.Println("received data:", string(data))
+	}
+}
+
 func exitWithUsage() {
 	fmt.Println("<usage>")
 	os.Exit(1)
@@ -666,6 +801,7 @@ func main() {
 		drkeyMode               string
 		drkeyServerAddr         snet.UDPAddr
 		drkeyClientAddr         snet.UDPAddr
+		quicMode                string
 		authModesStr            string
 		ntskeInsecureSkipVerify bool
 	)
@@ -676,6 +812,7 @@ func main() {
 	toolFlags := flag.NewFlagSet("tool", flag.ExitOnError)
 	benchmarkFlags := flag.NewFlagSet("benchmark", flag.ExitOnError)
 	drkeyFlags := flag.NewFlagSet("drkey", flag.ExitOnError)
+	quicFlags := flag.NewFlagSet("quic", flag.ExitOnError)
 
 	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
@@ -702,6 +839,12 @@ func main() {
 	drkeyFlags.StringVar(&drkeyMode, "mode", "", "Mode")
 	drkeyFlags.Var(&drkeyServerAddr, "server", "Server address")
 	drkeyFlags.Var(&drkeyClientAddr, "client", "Client address")
+
+	quicFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
+	quicFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	quicFlags.StringVar(&quicMode, "mode", "", "Mode")
+	quicFlags.Var(&localAddr, "local", "Local address")
+	quicFlags.StringVar(&remoteAddrStr, "remote", "", "Remote address")
 
 	if len(os.Args) < 2 {
 		exitWithUsage()
@@ -794,6 +937,31 @@ func main() {
 		serverMode := drkeyMode == "server"
 		initLogger(verbose)
 		runDRKeyDemo(daemonAddr, serverMode, &drkeyServerAddr, &drkeyClientAddr)
+	case quicFlags.Name():
+		err := quicFlags.Parse(os.Args[2:])
+		if err != nil || quicFlags.NArg() != 0 {
+			exitWithUsage()
+		}
+		if quicMode == "server" {
+			if daemonAddr != "" {
+				exitWithUsage()
+			}
+			if remoteAddrStr != "" {
+				exitWithUsage()
+			}
+			initLogger(verbose)
+			runQUICDemoServer(&localAddr)
+		} else if quicMode == "client" {
+			var remoteAddr snet.UDPAddr
+			err = remoteAddr.Set(remoteAddrStr)
+			if err != nil {
+				exitWithUsage()
+			}
+			initLogger(verbose)
+			runQUICDemoClient(daemonAddr, &localAddr, &remoteAddr)
+		} else {
+			exitWithUsage()
+		}
 	case "x":
 		runX()
 	default:
