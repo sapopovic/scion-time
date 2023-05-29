@@ -8,9 +8,9 @@ require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2
 	github.com/google/gopacket v1.1.19
 	github.com/libp2p/go-reuseport v0.3.0
-	github.com/lucas-clemente/quic-go v0.31.1
 	github.com/pelletier/go-toml/v2 v2.0.8
 	github.com/prometheus/client_golang v1.15.1
+	github.com/quic-go/quic-go v0.34.0
 	github.com/scionproto/scion v0.8.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/sys v0.8.0
@@ -21,10 +21,10 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/pprof v0.0.0-20230510103437-eeec1cb781c3 // indirect
-	github.com/marten-seemann/qtls-go1-18 v0.1.4 // indirect
-	github.com/marten-seemann/qtls-go1-19 v0.1.2 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/quic-go/qtls-go1-19 v0.3.2 // indirect
+	github.com/quic-go/qtls-go1-20 v0.2.2 // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect

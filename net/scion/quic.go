@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/gopacket"
-	"github.com/lucas-clemente/quic-go"
+	"github.com/quic-go/quic-go"
 
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/snet"

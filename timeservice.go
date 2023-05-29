@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lucas-clemente/quic-go"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/quic-go/quic-go"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
