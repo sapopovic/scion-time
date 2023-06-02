@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mmcloughlin/profile"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/quic-go/quic-go"
@@ -583,27 +584,28 @@ func runBenchmark(configFile string) {
 	localAddr := localAddress(cfg)
 	daemonAddr := daemonAddress(cfg)
 	remoteAddr := remoteAddress(cfg)
+	ntskeServer := ntskeServerFromRemoteAddr(cfg.RemoteAddr)
 
 	if !remoteAddr.IA.IsZero() {
-		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
 	} else {
 		if daemonAddr != "" {
 			exitWithUsage()
 		}
-		runIPBenchmark(localAddr, remoteAddr)
+		runIPBenchmark(localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
 	}
 }
 
-func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr) {
+func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
 	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
-	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host)
+	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authModes, ntskeServer, log)
 }
 
-func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
+func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
 	lclk := &clock.SystemClock{Log: zap.NewNop()}
 	timebase.RegisterClock(lclk)
-	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr)
+	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr, authModes, ntskeServer, log)
 }
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
@@ -808,6 +810,7 @@ func main() {
 		quicMode                string
 		authModesStr            string
 		ntskeInsecureSkipVerify bool
+		profileCPU              bool
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
@@ -820,6 +823,7 @@ func main() {
 
 	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
+	serverFlags.BoolVar(&profileCPU, "profileCPU", false, "Enable profiling")
 
 	relayFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	relayFlags.StringVar(&configFile, "config", "", "Config file")
@@ -836,7 +840,7 @@ func main() {
 	toolFlags.BoolVar(&ntskeInsecureSkipVerify, "ntske-insecure-skip-verify", false, "Skip NTSKE verification")
 
 	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
-	benchmarkFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	benchmarkFlags.StringVar(&configFile, "config", "", "Config file")
 
 	drkeyFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	drkeyFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -862,6 +866,9 @@ func main() {
 		}
 		if configFile == "" {
 			exitWithUsage()
+		}
+		if profileCPU {
+			defer profile.Start(profile.CPUProfile).Stop()
 		}
 		initLogger(verbose)
 		runServer(configFile)
