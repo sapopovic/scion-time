@@ -134,10 +134,10 @@ func EncodePacket(b *[]byte, pkt *Packet) {
 
 func DecodePacket(pkt *Packet, b []byte) (err error) {
 	pos := ntpPacketLen
-	authenticated := false
-	unique := false
+	foundUniqueID := false
+	foundAuthenticator := false
 
-	for len(b)-pos >= 28 {
+	for len(b)-pos >= 28 && !foundAuthenticator {
 		var eh extHdr
 		eh.unpack(b, pos)
 		pos += 4
@@ -150,7 +150,7 @@ func DecodePacket(pkt *Packet, b []byte) (err error) {
 				return err
 			}
 			pkt.UniqueID = u
-			unique = true
+			foundUniqueID = true
 
 		case extAuthenticator:
 			a := Authenticator{extHdr: eh}
@@ -160,7 +160,7 @@ func DecodePacket(pkt *Packet, b []byte) (err error) {
 			}
 			a.pos = pos - 4
 			pkt.Auth = a
-			authenticated = true
+			foundAuthenticator = true
 
 		case extCookie:
 			cookie := Cookie{extHdr: eh}
@@ -179,18 +179,17 @@ func DecodePacket(pkt *Packet, b []byte) (err error) {
 			pkt.CookiePlaceholders = append(pkt.CookiePlaceholders, cookie)
 
 		default:
-			// unknown extension field
-			// do nothing
+			// skip extension field
 		}
 
 		pos += int(eh.Length) - 4
 	}
 
-	if !authenticated {
-		return errNoAuthenticator
-	}
-	if !unique {
+	if !foundUniqueID {
 		return errNoUniqueID
+	}
+	if !foundAuthenticator {
+		return errNoAuthenticator
 	}
 
 	return nil
