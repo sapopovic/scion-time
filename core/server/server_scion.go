@@ -487,7 +487,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 	mtrcs := newSCIONServerMetrics()
 
 	if scionServerNumGoroutine == 1 {
-		fetcher := scion.NewFetcher(scion.NewDaemonConnectorOption(ctx, log, daemonAddr))
+		fetcher := scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
 			log.Fatal("failed to listen for packets", zap.Error(err))
@@ -495,7 +495,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 		go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHostPort, fetcher, provider)
 	} else {
 		for i := scionServerNumGoroutine; i > 0; i-- {
-			fetcher := scion.NewFetcher(scion.NewDaemonConnectorOption(ctx, log, daemonAddr))
+			fetcher := scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
 			conn, err := reuseport.ListenPacket("udp",
 				net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port)))
 			if err != nil {

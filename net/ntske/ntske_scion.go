@@ -23,7 +23,7 @@ func dialQUIC(log *zap.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr str
 	config.NextProtos = []string{alpn}
 	ctx := context.Background()
 
-	dc := scion.NewDaemonConnector(ctx, log, daemonAddr)
+	dc := scion.NewDaemonConnector(ctx, daemonAddr)
 	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 	if err != nil {
 		log.Info("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))

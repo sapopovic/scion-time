@@ -363,7 +363,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
 		var drkeyFetcher *scion.Fetcher
 		if contains(cfg.AuthModes, authModeSPAO) {
-			drkeyFetcher = scion.NewFetcher(scion.NewDaemonConnector(ctx, log, daemonAddr))
+			drkeyFetcher = scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
 		}
 		for _, c := range refClocks {
 			scionclk, ok := c.(*ntpReferenceClockSCION)
@@ -532,7 +532,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
-	dc := scion.NewDaemonConnectorOption(ctx, log, daemonAddr)
+	dc := scion.NewDaemonConnector(ctx, daemonAddr)
 
 	var ps []snet.Path
 	if remoteAddr.IA.Equal(localAddr.IA) {
@@ -606,7 +606,7 @@ func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
 	ctx := context.Background()
-	dc := scion.NewDaemonConnectorOption(ctx, log, daemonAddr)
+	dc := scion.NewDaemonConnector(ctx, daemonAddr)
 
 	if serverMode {
 		hostASMeta := drkey.HostASMeta{
@@ -736,7 +736,7 @@ func runQUICDemoServer(localAddr *snet.UDPAddr) {
 func runQUICDemoClient(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr) {
 	ctx := context.Background()
 
-	dc := scion.NewDaemonConnectorOption(ctx, log, daemonAddr)
+	dc := scion.NewDaemonConnector(ctx, daemonAddr)
 	ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 	if err != nil {
 		log.Fatal("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))

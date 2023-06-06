@@ -64,7 +64,7 @@ func update(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.I
 
 func StartPather(ctx context.Context, log *zap.Logger, daemonAddr string, dstIAs []addr.IA) *Pather {
 	p := &Pather{log: log}
-	dc := NewDaemonConnector(ctx, log, daemonAddr)
+	dc := NewDaemonConnector(ctx, daemonAddr)
 	update(ctx, p, dc, dstIAs)
 	go func(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.IA) {
 		ticker := time.NewTicker(pathRefreshPeriod)
