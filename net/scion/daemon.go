@@ -19,4 +19,3 @@ func NewDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector
 	}
 	return c
 }
-
