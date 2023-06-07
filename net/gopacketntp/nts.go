@@ -23,50 +23,50 @@ const (
 	extAuthenticator     uint16 = 0x404
 )
 
-func (pkt *Packet) InitNTSRequestPacket(ntskeData ntske.Data) {
+func (p *Packet) InitNTSRequestPacket(ntskeData ntske.Data) {
 	var uid UniqueIdentifier
 	uid.Generate()
-	pkt.UniqueID = uid
+	p.UniqueID = uid
 
 	var cookie Cookie
 	cookie.Cookie = ntskeData.Cookie[0]
-	pkt.Cookies = append(pkt.Cookies, cookie)
+	p.Cookies = append(p.Cookies, cookie)
 
 	// Add cookie extension fields here s.t. 8 cookies are available after response.
 	cookiePlaceholderData := make([]byte, len(cookie.Cookie))
 	for i := len(ntskeData.Cookie); i < NumStoredCookies; i++ {
 		var cookiePlacholder CookiePlaceholder
 		cookiePlacholder.Cookie = cookiePlaceholderData
-		pkt.CookiePlaceholders = append(pkt.CookiePlaceholders, cookiePlacholder)
+		p.CookiePlaceholders = append(p.CookiePlaceholders, cookiePlacholder)
 	}
 
 	var auth Authenticator
 	auth.Key = ntskeData.C2sKey
-	pkt.Auth = auth
+	p.Auth = auth
 
-	pkt.NTSMode = true
+	p.NTSMode = true
 }
 
-func (pkt *Packet) ProcessResponse(ntskeFetcher *ntske.Fetcher, reqID []byte, key []byte) error {
-	err := pkt.Authenticate(key)
+func (p *Packet) ProcessResponse(ntskeFetcher *ntske.Fetcher, reqID []byte, key []byte) error {
+	err := p.Authenticate(key)
 	if err != nil {
 		return err
 	}
 
-	if !bytes.Equal(reqID, pkt.UniqueID.ID) {
+	if !bytes.Equal(reqID, p.UniqueID.ID) {
 		return errors.New("unexpected response ID")
 	}
-	for _, cookie := range pkt.Cookies {
+	for _, cookie := range p.Cookies {
 		ntskeFetcher.StoreCookie(cookie.Cookie)
 	}
 	return nil
 }
 
-func (pkt *Packet) Authenticate(key []byte) error {
-	if pkt.Auth.CipherText == nil {
+func (p *Packet) Authenticate(key []byte) error {
+	if p.Auth.CipherText == nil {
 		return errors.New("packet does not contain a valid authenticator")
 	}
-	if pkt.UniqueID.ID == nil {
+	if p.UniqueID.ID == nil {
 		return errors.New("packet does not contain a unique identifier")
 	}
 
@@ -75,7 +75,7 @@ func (pkt *Packet) Authenticate(key []byte) error {
 		return err
 	}
 
-	decrytedBuf, err := aessiv.Open(nil, pkt.Auth.Nonce, pkt.Auth.CipherText, pkt.BaseLayer.Contents[:pkt.Auth.Pos])
+	decrytedBuf, err := aessiv.Open(nil, p.Auth.Nonce, p.Auth.CipherText, p.BaseLayer.Contents[:p.Auth.Pos])
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (pkt *Packet) Authenticate(key []byte) error {
 			if err != nil {
 				return fmt.Errorf("unpack Cookie: %s", err)
 			}
-			pkt.Cookies = append(pkt.Cookies, cookie)
+			p.Cookies = append(p.Cookies, cookie)
 
 		default:
 			// Unknown extension field. Skip it.
@@ -109,10 +109,10 @@ func (pkt *Packet) Authenticate(key []byte) error {
 	return nil
 }
 
-func (pkt *Packet) InitNTSResponsePacket(cookies [][]byte, key []byte, uniqueid []byte) {
+func (p *Packet) InitNTSResponsePacket(cookies [][]byte, key []byte, uniqueid []byte) {
 	var uid UniqueIdentifier
 	uid.ID = uniqueid
-	pkt.UniqueID = uid
+	p.UniqueID = uid
 
 	buf := new(bytes.Buffer)
 	for _, c := range cookies {
@@ -124,9 +124,9 @@ func (pkt *Packet) InitNTSResponsePacket(cookies [][]byte, key []byte, uniqueid 
 	var auth Authenticator
 	auth.Key = key
 	auth.AssociatedData = buf.Bytes()
-	pkt.Auth = auth
+	p.Auth = auth
 
-	pkt.NTSMode = true
+	p.NTSMode = true
 }
 
 type ExtHdr struct {

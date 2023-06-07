@@ -6,15 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 
 	"example.com/scion-time/net/ntp"
 	"github.com/google/gopacket"
 )
 
 const (
-	nanosecondsPerSecond int64 = 1e9
-
 	ServerPort = 123
 
 	PacketLen = 48
@@ -85,12 +82,10 @@ type Packet struct {
 }
 
 var (
-	epoch = time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
-
 	errUnexpectedPacketSize = errors.New("unexpected packet size")
 )
 
-func (d *Packet) LayerType() gopacket.LayerType {
+func (p *Packet) LayerType() gopacket.LayerType {
 	return LayerTypeNTS
 }
 
@@ -107,51 +102,51 @@ func decodeNTS(data []byte, p gopacket.PacketBuilder) error {
 	return nil
 }
 
-func (pkt *Packet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (p *Packet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	data, err := b.PrependBytes(PacketLen)
 	if err != nil {
 		return err
 	}
 
-	data[0] = byte(pkt.LVM)
-	data[1] = byte(pkt.Stratum)
-	data[2] = byte(pkt.Poll)
-	data[3] = byte(pkt.Precision)
-	binary.BigEndian.PutUint16(data[4:], pkt.RootDelay.Seconds)
-	binary.BigEndian.PutUint16(data[6:], pkt.RootDelay.Fraction)
-	binary.BigEndian.PutUint16(data[8:], pkt.RootDispersion.Seconds)
-	binary.BigEndian.PutUint16(data[10:], pkt.RootDispersion.Fraction)
-	binary.BigEndian.PutUint32(data[12:], pkt.ReferenceID)
-	binary.BigEndian.PutUint32(data[16:], pkt.ReferenceTime.Seconds)
-	binary.BigEndian.PutUint32(data[20:], pkt.ReferenceTime.Fraction)
-	binary.BigEndian.PutUint32(data[24:], pkt.OriginTime.Seconds)
-	binary.BigEndian.PutUint32(data[28:], pkt.OriginTime.Fraction)
-	binary.BigEndian.PutUint32(data[32:], pkt.ReceiveTime.Seconds)
-	binary.BigEndian.PutUint32(data[36:], pkt.ReceiveTime.Fraction)
-	binary.BigEndian.PutUint32(data[40:], pkt.TransmitTime.Seconds)
-	binary.BigEndian.PutUint32(data[44:], pkt.TransmitTime.Fraction)
+	data[0] = byte(p.LVM)
+	data[1] = byte(p.Stratum)
+	data[2] = byte(p.Poll)
+	data[3] = byte(p.Precision)
+	binary.BigEndian.PutUint16(data[4:], p.RootDelay.Seconds)
+	binary.BigEndian.PutUint16(data[6:], p.RootDelay.Fraction)
+	binary.BigEndian.PutUint16(data[8:], p.RootDispersion.Seconds)
+	binary.BigEndian.PutUint16(data[10:], p.RootDispersion.Fraction)
+	binary.BigEndian.PutUint32(data[12:], p.ReferenceID)
+	binary.BigEndian.PutUint32(data[16:], p.ReferenceTime.Seconds)
+	binary.BigEndian.PutUint32(data[20:], p.ReferenceTime.Fraction)
+	binary.BigEndian.PutUint32(data[24:], p.OriginTime.Seconds)
+	binary.BigEndian.PutUint32(data[28:], p.OriginTime.Fraction)
+	binary.BigEndian.PutUint32(data[32:], p.ReceiveTime.Seconds)
+	binary.BigEndian.PutUint32(data[36:], p.ReceiveTime.Fraction)
+	binary.BigEndian.PutUint32(data[40:], p.TransmitTime.Seconds)
+	binary.BigEndian.PutUint32(data[44:], p.TransmitTime.Fraction)
 
-	if pkt.NTSMode {
+	if p.NTSMode {
 		buf := new(bytes.Buffer)
 		_, _ = buf.Write(data)
 
-		err = pkt.UniqueID.pack(buf)
+		err = p.UniqueID.pack(buf)
 		if err != nil {
 			panic(err)
 		}
-		for _, c := range pkt.Cookies {
+		for _, c := range p.Cookies {
 			err = c.pack(buf)
 			if err != nil {
 				panic(err)
 			}
 		}
-		for _, c := range pkt.CookiePlaceholders {
+		for _, c := range p.CookiePlaceholders {
 			err = c.pack(buf)
 			if err != nil {
 				panic(err)
 			}
 		}
-		err = pkt.Auth.pack(buf)
+		err = p.Auth.pack(buf)
 		if err != nil {
 			panic(err)
 		}
@@ -166,35 +161,36 @@ func (pkt *Packet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	return nil
 }
 
-func (pkt *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (p *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < PacketLen {
 		df.SetTruncated()
 		return errUnexpectedPacketSize
 	}
 
-	pkt.BaseLayer = BaseLayer{Contents: data}
+	p.BaseLayer = BaseLayer{Contents: data}
 
-	pkt.LVM = uint8(data[0])
-	pkt.Stratum = uint8(data[1])
-	pkt.Poll = int8(data[2])
-	pkt.Precision = int8(data[3])
-	pkt.RootDelay.Seconds = binary.BigEndian.Uint16(data[4:])
-	pkt.RootDelay.Fraction = binary.BigEndian.Uint16(data[6:])
-	pkt.RootDispersion.Seconds = binary.BigEndian.Uint16(data[8:])
-	pkt.RootDispersion.Fraction = binary.BigEndian.Uint16(data[10:])
-	pkt.ReferenceID = binary.BigEndian.Uint32(data[12:])
-	pkt.ReferenceTime.Seconds = binary.BigEndian.Uint32(data[16:])
-	pkt.ReferenceTime.Fraction = binary.BigEndian.Uint32(data[20:])
-	pkt.OriginTime.Seconds = binary.BigEndian.Uint32(data[24:])
-	pkt.OriginTime.Fraction = binary.BigEndian.Uint32(data[28:])
-	pkt.ReceiveTime.Seconds = binary.BigEndian.Uint32(data[32:])
-	pkt.ReceiveTime.Fraction = binary.BigEndian.Uint32(data[36:])
-	pkt.TransmitTime.Seconds = binary.BigEndian.Uint32(data[40:])
-	pkt.TransmitTime.Fraction = binary.BigEndian.Uint32(data[44:])
+	p.LVM = uint8(data[0])
+	p.Stratum = uint8(data[1])
+	p.Poll = int8(data[2])
+	p.Precision = int8(data[3])
+	p.RootDelay.Seconds = binary.BigEndian.Uint16(data[4:])
+	p.RootDelay.Fraction = binary.BigEndian.Uint16(data[6:])
+	p.RootDispersion.Seconds = binary.BigEndian.Uint16(data[8:])
+	p.RootDispersion.Fraction = binary.BigEndian.Uint16(data[10:])
+	p.ReferenceID = binary.BigEndian.Uint32(data[12:])
+	p.ReferenceTime.Seconds = binary.BigEndian.Uint32(data[16:])
+	p.ReferenceTime.Fraction = binary.BigEndian.Uint32(data[20:])
+	p.OriginTime.Seconds = binary.BigEndian.Uint32(data[24:])
+	p.OriginTime.Fraction = binary.BigEndian.Uint32(data[28:])
+	p.ReceiveTime.Seconds = binary.BigEndian.Uint32(data[32:])
+	p.ReceiveTime.Fraction = binary.BigEndian.Uint32(data[36:])
+	p.TransmitTime.Seconds = binary.BigEndian.Uint32(data[40:])
+	p.TransmitTime.Fraction = binary.BigEndian.Uint32(data[44:])
 
 	pos := PacketLen
 	msgbuf := bytes.NewReader(data[PacketLen:])
-	for msgbuf.Len() >= 28 {
+	foundAuthenticator := false
+	for msgbuf.Len() >= 28 && !foundAuthenticator {
 		var eh ExtHdr
 		err := eh.unpack(msgbuf)
 		if err != nil {
@@ -208,7 +204,7 @@ func (pkt *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 			if err != nil {
 				return fmt.Errorf("unpack UniqueIdentifier: %s", err)
 			}
-			pkt.UniqueID = u
+			p.UniqueID = u
 
 		case extAuthenticator:
 			a := Authenticator{ExtHdr: eh}
@@ -217,8 +213,8 @@ func (pkt *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 				return fmt.Errorf("unpack Authenticator: %s", err)
 			}
 			a.Pos = pos
-			pkt.Auth = a
-			break
+			p.Auth = a
+			foundAuthenticator = true
 
 		case extCookie:
 			cookie := Cookie{ExtHdr: eh}
@@ -226,7 +222,7 @@ func (pkt *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 			if err != nil {
 				return fmt.Errorf("unpack Cookie: %s", err)
 			}
-			pkt.Cookies = append(pkt.Cookies, cookie)
+			p.Cookies = append(p.Cookies, cookie)
 
 		case extCookiePlaceholder:
 			cookie := CookiePlaceholder{ExtHdr: eh}
@@ -234,7 +230,7 @@ func (pkt *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 			if err != nil {
 				return fmt.Errorf("unpack Cookie: %s", err)
 			}
-			pkt.CookiePlaceholders = append(pkt.CookiePlaceholders, cookie)
+			p.CookiePlaceholders = append(p.CookiePlaceholders, cookie)
 
 		default:
 			// Unknown extension field. Skip it.
