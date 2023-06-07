@@ -7,31 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	"example.com/scion-time/net/ntp"
 	"github.com/google/gopacket"
-)
 
-const (
-	ServerPort = 123
-
-	PacketLen = 48
-
-	LeapIndicatorNoWarning    = 0
-	LeapIndicatorInsertSecond = 1
-	LeapIndicatorDeleteSecond = 2
-	LeapIndicatorUnknown      = 3
-
-	VersionMin = 1
-	VersionMax = 4
-
-	ModeReserved0        = 0
-	ModeSymmetricActive  = 1
-	ModeSymmetricPassive = 2
-	ModeClient           = 3
-	ModeServer           = 4
-	ModeBroadcast        = 5
-	ModeControl          = 6
-	ModeReserved7        = 7
+	"example.com/scion-time/net/ntp"
 )
 
 var LayerTypeNTS = gopacket.RegisterLayerType(
@@ -62,17 +40,7 @@ func (b *BaseLayer) LayerPayload() []byte { return b.Payload }
 
 type Packet struct {
 	BaseLayer
-	LVM            uint8
-	Stratum        uint8
-	Poll           int8
-	Precision      int8
-	RootDelay      ntp.Time32
-	RootDispersion ntp.Time32
-	ReferenceID    uint32
-	ReferenceTime  ntp.Time64
-	OriginTime     ntp.Time64
-	ReceiveTime    ntp.Time64
-	TransmitTime   ntp.Time64
+	ntp.Packet
 
 	NTSMode            bool
 	UniqueID           UniqueIdentifier
@@ -103,7 +71,7 @@ func decodeNTS(data []byte, p gopacket.PacketBuilder) error {
 }
 
 func (p *Packet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	data, err := b.PrependBytes(PacketLen)
+	data, err := b.PrependBytes(ntp.PacketLen)
 	if err != nil {
 		return err
 	}
@@ -151,18 +119,18 @@ func (p *Packet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 			panic(err)
 		}
 
-		ex, err := b.AppendBytes(buf.Len() - PacketLen)
+		ex, err := b.AppendBytes(buf.Len() - ntp.PacketLen)
 		if err != nil {
 			return err
 		}
-		copy(ex, buf.Bytes()[PacketLen:])
+		copy(ex, buf.Bytes()[ntp.PacketLen:])
 	}
 
 	return nil
 }
 
 func (p *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < PacketLen {
+	if len(data) < ntp.PacketLen {
 		df.SetTruncated()
 		return errUnexpectedPacketSize
 	}
@@ -187,8 +155,8 @@ func (p *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	p.TransmitTime.Seconds = binary.BigEndian.Uint32(data[40:])
 	p.TransmitTime.Fraction = binary.BigEndian.Uint32(data[44:])
 
-	pos := PacketLen
-	msgbuf := bytes.NewReader(data[PacketLen:])
+	pos := ntp.PacketLen
+	msgbuf := bytes.NewReader(data[ntp.PacketLen:])
 	foundAuthenticator := false
 	for msgbuf.Len() >= 28 && !foundAuthenticator {
 		var eh ExtHdr
@@ -243,39 +211,6 @@ func (p *Packet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	}
 
 	return nil
-}
-
-func (p *Packet) LeapIndicator() uint8 {
-	return (p.LVM >> 6) & 0b0000_0011
-}
-
-func (p *Packet) SetLeapIndicator(l uint8) {
-	if l&0b0000_0011 != l {
-		panic("unexpected NTP leap indicator value")
-	}
-	p.LVM = (p.LVM & 0b0011_1111) | (l << 6)
-}
-
-func (p *Packet) Version() uint8 {
-	return (p.LVM >> 3) & 0b0000_0111
-}
-
-func (p *Packet) SetVersion(v uint8) {
-	if v&0b0000_0111 != v {
-		panic("unexpected NTP version value")
-	}
-	p.LVM = (p.LVM & 0b_1100_0111) | (v << 3)
-}
-
-func (p *Packet) Mode() uint8 {
-	return p.LVM & 0b0000_0111
-}
-
-func (p *Packet) SetMode(m uint8) {
-	if m&0b0000_0111 != m {
-		panic("unexpected NTP mode value")
-	}
-	p.LVM = (p.LVM & 0b1111_1000) | m
 }
 
 func (p *Packet) CanDecode() gopacket.LayerClass {

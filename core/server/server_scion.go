@@ -25,6 +25,7 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
+	"example.com/scion-time/net/ntp"
 	"example.com/scion-time/net/ntppkt"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/scion"
@@ -291,7 +292,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 
 			ntsAuthenticated := false
 			var serverCookie ntske.ServerCookie
-			if len(udpLayer.Payload) > ntppkt.PacketLen {
+			if len(udpLayer.Payload) > ntp.PacketLen {
 				if ntpreq.Cookies == nil || len(ntpreq.Cookies) < 1 {
 					log.Info("failed to extract cookie", zap.Error(err))
 					continue
@@ -324,7 +325,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				ntsAuthenticated = true
 			}
 
-			err = ntppkt.ValidateRequest(ntpreq, udpLayer.SrcPort)
+			err = ntp.ValidateRequest(&ntpreq.Packet, udpLayer.SrcPort)
 			if err != nil {
 				log.Info("failed to validate packet payload", zap.Error(err))
 				continue
@@ -340,12 +341,12 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				zap.Uint8("DSCP", dscp),
 				zap.Bool("auth", authenticated),
 				zap.Bool("ntsauth", ntsAuthenticated),
-				zap.Object("data", ntppkt.PacketMarshaler{Pkt: ntpreq}),
+				zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq.Packet}),
 			)
 
 			var txt0 time.Time
 			var ntpresp ntppkt.Packet
-			handleRequestGopacket(clientID, ntpreq, &rxt, &txt0, &ntpresp)
+			handleRequest(clientID, &ntpreq.Packet, &rxt, &txt0, &ntpresp.Packet)
 
 			scionLayer.TrafficClass = config.DSCP << 2
 			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA

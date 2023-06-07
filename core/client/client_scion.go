@@ -470,7 +470,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			return offset, weight, err
 		}
 
-		err = ntppkt.ValidateResponseMetadata(ntpresp)
+		err = ntp.ValidateResponseMetadata(&ntpresp.Packet)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -484,7 +484,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			zap.Uint8("DSCP", dscp),
 			zap.Bool("auth", authenticated),
 			zap.Bool("ntsauth", ntsAuthenticated),
-			zap.Object("data", ntppkt.PacketMarshaler{Pkt: ntpresp}),
+			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpresp.Packet}),
 		)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)

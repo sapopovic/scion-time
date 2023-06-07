@@ -149,10 +149,7 @@ func (c *EncryptedServerCookie) Decrypt(key []byte) (ServerCookie, error) {
 		return ServerCookie{}, err
 	}
 
-	var dst []byte
-	var additionalData []byte
-
-	b, err := aessiv.Open(dst /* dst */, c.Nonce, c.Ciphertext, additionalData /* additionalData */)
+	b, err := aessiv.Open(nil /* dst */, c.Nonce, c.Ciphertext, nil /* additionalData */)
 	if err != nil {
 		return ServerCookie{}, err
 	}

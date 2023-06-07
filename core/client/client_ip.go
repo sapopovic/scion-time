@@ -269,7 +269,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			return offset, weight, err
 		}
 
-		err = ntppkt.ValidateResponseMetadata(&ntpresp)
+		err = ntp.ValidateResponseMetadata(&ntpresp.Packet)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -278,7 +278,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			zap.Time("at", cRxTime),
 			zap.String("from", reference),
 			zap.Bool("auth", authenticated),
-			zap.Object("data", ntppkt.PacketMarshaler{Pkt: &ntpresp}),
+			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpresp.Packet}),
 		)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)

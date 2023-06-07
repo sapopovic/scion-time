@@ -18,6 +18,7 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
+	"example.com/scion-time/net/ntp"
 	"example.com/scion-time/net/ntppkt"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/udp"
@@ -98,7 +99,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 
 		var authenticated bool
 		var serverCookie ntske.ServerCookie
-		if len(buf) > ntppkt.PacketLen {
+		if len(buf) > ntp.PacketLen {
 			if ntpreq.Cookies == nil || len(ntpreq.Cookies) < 1 {
 				log.Info("failed to extract cookie", zap.Error(err))
 				continue
@@ -131,7 +132,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 			authenticated = true
 		}
 
-		err = ntppkt.ValidateRequest(&ntpreq, srcAddr.Port())
+		err = ntp.ValidateRequest(&ntpreq.Packet, srcAddr.Port())
 		if err != nil {
 			log.Info("failed to validate packet payload", zap.Error(err))
 			continue
@@ -144,12 +145,12 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 			zap.Time("at", rxt),
 			zap.String("from", clientID),
 			zap.Bool("ntsauth", authenticated),
-			zap.Object("data", ntppkt.PacketMarshaler{Pkt: &ntpreq}),
+			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq.Packet}),
 		)
 
 		var txt0 time.Time
 		var ntpresp ntppkt.Packet
-		handleRequestGopacket(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
+		handleRequest(clientID, &ntpreq.Packet, &rxt, &txt0, &ntpresp.Packet)
 
 		if authenticated {
 			var cookies [][]byte
