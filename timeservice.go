@@ -38,6 +38,7 @@ import (
 	"example.com/scion-time/driver/clock"
 	"example.com/scion-time/driver/mbg"
 
+	"example.com/scion-time/net/ntp"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
@@ -166,6 +167,7 @@ func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureS
 	}
 	c.Auth.Enabled = true
 	c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+		NextProtos:         []string{"ntske/1"},
 		InsecureSkipVerify: ntskeInsecureSkipVerify,
 		ServerName:         ntskeHost,
 		MinVersion:         tls.VersionTLS13,
@@ -194,22 +196,27 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.L
 	return client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
-func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
+func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool, daemonAddr string, localAddr, remoteAddr udp.UDPAddr) {
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
 		log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
 	}
 	c.Auth.NTSEnabled = true
 	c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
+		NextProtos:         []string{"ntske/1"},
 		InsecureSkipVerify: ntskeInsecureSkipVerify,
 		ServerName:         ntskeHost,
 		MinVersion:         tls.VersionTLS13,
 	}
 	c.Auth.NTSKEFetcher.Port = ntskePort
 	c.Auth.NTSKEFetcher.Log = log
+	c.Auth.NTSKEFetcher.QUIC.Enabled = true
+	c.Auth.NTSKEFetcher.QUIC.DaemonAddr = daemonAddr
+	c.Auth.NTSKEFetcher.QUIC.LocalAddr = localAddr
+	c.Auth.NTSKEFetcher.QUIC.RemoteAddr = remoteAddr
 }
 
-func newNTPReferenceClockSCION(localAddr, remoteAddr udp.UDPAddr,
+func newNTPReferenceClockSCION(daemonAddr string, localAddr, remoteAddr udp.UDPAddr,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
 		localAddr:  localAddr,
@@ -220,7 +227,7 @@ func newNTPReferenceClockSCION(localAddr, remoteAddr udp.UDPAddr,
 			InterleavedMode: true,
 		}
 		if contains(authModes, authModeNTS) {
-			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify)
+			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr)
 		}
 	}
 	return c
@@ -230,20 +237,6 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context, log *za
 	time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
 	return client.MeasureClockOffsetSCION(ctx, log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
-}
-
-func newDaemonConnector(ctx context.Context, daemonAddr string) daemon.Connector {
-	if daemonAddr == "" {
-		return nil
-	}
-	s := &daemon.Service{
-		Address: daemonAddr,
-	}
-	c, err := s.Connect(ctx)
-	if err != nil {
-		log.Fatal("failed to create demon connector", zap.Error(err))
-	}
-	return c
 }
 
 func loadConfig(configFile string) svcConfig {
@@ -322,6 +315,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 		ntskeServer := ntskeServerFromRemoteAddr(s)
 		if !remoteAddr.IA.IsZero() {
 			refClocks = append(refClocks, newNTPReferenceClockSCION(
+				cfg.DaemonAddr,
 				udp.UDPAddrFromSnet(localAddr),
 				udp.UDPAddrFromSnet(remoteAddr),
 				cfg.AuthModes,
@@ -350,6 +344,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 		}
 		ntskeServer := ntskeServerFromRemoteAddr(s)
 		netClocks = append(netClocks, newNTPReferenceClockSCION(
+			cfg.DaemonAddr,
 			udp.UDPAddrFromSnet(localAddr),
 			udp.UDPAddrFromSnet(remoteAddr),
 			cfg.AuthModes,
@@ -365,7 +360,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
 		var drkeyFetcher *scion.Fetcher
 		if contains(cfg.AuthModes, authModeSPAO) {
-			drkeyFetcher = scion.NewFetcher(newDaemonConnector(ctx, daemonAddr))
+			drkeyFetcher = scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
 		}
 		for _, c := range refClocks {
 			scionclk, ok := c.(*ntpReferenceClockSCION)
@@ -396,12 +391,18 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 	return
 }
 
+func copyIP(ip net.IP) net.IP {
+	return append(ip[:0:0], ip...)
+}
+
 func runServer(configFile string) {
 	ctx := context.Background()
 
 	cfg := loadConfig(configFile)
 	localAddr := localAddress(cfg)
 	daemonAddr := daemonAddress(cfg)
+
+	localAddr.Host.Port = 0
 	refClocks, netClocks := createClocks(cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
@@ -420,8 +421,12 @@ func runServer(configFile string) {
 	tlsConfig := tlsConfig(cfg)
 	provider := ntske.NewProvider()
 
-	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), tlsConfig, provider)
+	localAddr.Host.Port = ntp.ServerPortIP
+	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
 	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), provider)
+
+	localAddr.Host.Port = ntp.ServerPortSCION
+	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
 	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), provider)
 
 	runMonitor(log)
@@ -433,6 +438,8 @@ func runRelay(configFile string) {
 	cfg := loadConfig(configFile)
 	localAddr := localAddress(cfg)
 	daemonAddr := daemonAddress(cfg)
+
+	localAddr.Host.Port = 0
 	refClocks, netClocks := createClocks(cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
@@ -451,8 +458,12 @@ func runRelay(configFile string) {
 	tlsConfig := tlsConfig(cfg)
 	provider := ntske.NewProvider()
 
-	server.StartNTSKEServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), tlsConfig, provider)
+	localAddr.Host.Port = ntp.ServerPortIP
+	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
 	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), provider)
+
+	localAddr.Host.Port = ntp.ServerPortSCION
+	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
 	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), provider)
 
 	runMonitor(log)
@@ -463,6 +474,8 @@ func runClient(configFile string) {
 
 	cfg := loadConfig(configFile)
 	localAddr := localAddress(cfg)
+
+	localAddr.Host.Port = 0
 	refClocks, netClocks := createClocks(cfg, localAddr)
 	sync.RegisterClocks(refClocks, netClocks)
 
@@ -528,7 +541,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
-	dc := newDaemonConnector(ctx, daemonAddr)
+	dc := scion.NewDaemonConnector(ctx, daemonAddr)
 
 	var ps []snet.Path
 	if remoteAddr.IA.Equal(localAddr.IA) {
@@ -558,7 +571,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
 	}
 	if contains(authModes, authModeNTS) {
-		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
+		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, daemonAddr, laddr, raddr)
 	}
 
 	_, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps)
@@ -576,6 +589,8 @@ func runBenchmark(configFile string) {
 	localAddr := localAddress(cfg)
 	daemonAddr := daemonAddress(cfg)
 	remoteAddr := remoteAddress(cfg)
+
+	localAddr.Host.Port = 0
 	ntskeServer := ntskeServerFromRemoteAddr(cfg.RemoteAddr)
 
 	if !remoteAddr.IA.IsZero() {
@@ -602,7 +617,7 @@ func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 
 func runDRKeyDemo(daemonAddr string, serverMode bool, serverAddr, clientAddr *snet.UDPAddr) {
 	ctx := context.Background()
-	dc := newDaemonConnector(ctx, daemonAddr)
+	dc := scion.NewDaemonConnector(ctx, daemonAddr)
 
 	if serverMode {
 		hostASMeta := drkey.HostASMeta{
@@ -670,7 +685,7 @@ func main() {
 		drkeyClientAddr         snet.UDPAddr
 		authModesStr            string
 		ntskeInsecureSkipVerify bool
-		profileCPU bool
+		profileCPU              bool
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
@@ -723,7 +738,6 @@ func main() {
 		if profileCPU {
 			defer profile.Start(profile.CPUProfile).Stop()
 		}
-
 		initLogger(verbose)
 		runServer(configFile)
 	case relayFlags.Name():

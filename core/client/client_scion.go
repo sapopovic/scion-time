@@ -7,8 +7,8 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/google/gopacket"
+	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -33,7 +33,6 @@ import (
 
 type SCIONClient struct {
 	InterleavedMode bool
-	Histo           *hdrhistogram.Histogram
 	Auth            struct {
 		Enabled      bool
 		NTSEnabled   bool
@@ -43,7 +42,8 @@ type SCIONClient struct {
 		mac          []byte
 		NTSKEFetcher ntske.Fetcher
 	}
-	prev struct {
+	Histo *hdrhistogram.Histogram
+	prev  struct {
 		reference string
 		cTxTime   ntp.Time64
 		cRxTime   ntp.Time64
@@ -436,7 +436,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		if !ok {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Info("failed to decode NTP packet", zap.Error(err))
+				log.Info("failed to decode packet payload", zap.Error(err))
 				numRetries++
 				continue
 			}

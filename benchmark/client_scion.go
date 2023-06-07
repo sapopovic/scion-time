@@ -20,22 +20,7 @@ import (
 	"example.com/scion-time/net/udp"
 )
 
-func newDaemonConnector(ctx context.Context, log *zap.Logger, daemonAddr string) daemon.Connector {
-	if daemonAddr == "" {
-		return nil
-	}
-	s := &daemon.Service{
-		Address: daemonAddr,
-	}
-	c, err := s.Connect(ctx)
-	if err != nil {
-		log.Fatal("failed to create demon connector", zap.Error(err))
-	}
-	return c
-}
-
 func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
-
 	// const numClientGoroutine = 8
 	// const numRequestPerClient = 10000
 	const numClientGoroutine = 1
@@ -47,11 +32,11 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 
 	for i := numClientGoroutine; i > 0; i-- {
 		go func() {
-			hg := hdrhistogram.New(1, 50000, 5)
 			var err error
+			hg := hdrhistogram.New(1, 50000, 5)
 			ctx := context.Background()
 
-			dc := newDaemonConnector(ctx, log, daemonAddr)
+			dc := scion.NewDaemonConnector(ctx, daemonAddr)
 
 			var ps []snet.Path
 			if remoteAddr.IA.Equal(localAddr.IA) {
@@ -77,6 +62,7 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 				InterleavedMode: true,
 				Histo:           hg,
 			}
+
 			if contains(authModes, "spao") {
 				c.Auth.Enabled = true
 				c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
@@ -95,14 +81,19 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 				}
 				c.Auth.NTSKEFetcher.Port = ntskePort
 				c.Auth.NTSKEFetcher.Log = log
+				c.Auth.NTSKEFetcher.QUIC.Enabled = true
+				c.Auth.NTSKEFetcher.QUIC.DaemonAddr = daemonAddr
+				c.Auth.NTSKEFetcher.QUIC.LocalAddr = laddr
+				c.Auth.NTSKEFetcher.QUIC.RemoteAddr = raddr
 			}
 
 			defer wg.Done()
 			<-sg
+			ntpcs := []*client.SCIONClient{c}
 			for j := numRequestPerClient; j > 0; j-- {
-				_, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps)
+				_, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps)
 				if err != nil {
-					log.Fatal("failed to measure clock offset",
+					log.Info("failed to measure clock offset",
 						zap.Stringer("remoteIA", raddr.IA),
 						zap.Stringer("remoteHost", raddr.Host),
 						zap.Error(err),

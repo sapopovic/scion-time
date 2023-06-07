@@ -6,8 +6,8 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/google/gopacket"
+	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -26,12 +26,12 @@ import (
 
 type IPClient struct {
 	InterleavedMode bool
-	Histo           *hdrhistogram.Histogram
 	Auth            struct {
 		Enabled      bool
 		NTSKEFetcher ntske.Fetcher
 	}
-	prev struct {
+	Histo *hdrhistogram.Histogram
+	prev  struct {
 		reference string
 		cTxTime   ntp.Time64
 		cRxTime   ntp.Time64
@@ -233,7 +233,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		err = parser.DecodeLayers(buf, &decoded)
 		if err != nil {
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				log.Info("failed to decode packet", zap.Error(err))
+				log.Info("failed to decode payload", zap.Error(err))
 				numRetries++
 				continue
 			}
@@ -245,7 +245,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			err = ntpresp.ProcessResponse(&c.Auth.NTSKEFetcher, requestID, ntskeData.S2cKey)
 			if err != nil {
 				if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-					log.Info("failed to process NTS packet", zap.Error(err))
+					log.Info("failed to decode NTS packet", zap.Error(err))
 					numRetries++
 					continue
 				}
