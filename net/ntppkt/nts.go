@@ -9,7 +9,7 @@ import (
 	"io"
 
 	"example.com/scion-time/net/ntske"
-	"github.com/secure-io/siv-go"
+	"github.com/miscreant/miscreant.go"
 )
 
 const (
@@ -70,7 +70,7 @@ func (p *Packet) Authenticate(key []byte) error {
 		return errors.New("packet does not contain a unique identifier")
 	}
 
-	aessiv, err := siv.NewCMAC(key)
+	aessiv, err := miscreant.NewAEAD("AES-CMAC-SIV", key, 16)
 	if err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ type Authenticator struct {
 }
 
 func (a Authenticator) pack(buf *bytes.Buffer) error {
-	aessiv, err := siv.NewCMAC(a.Key)
+	aessiv, err := miscreant.NewAEAD("AES-CMAC-SIV", a.Key, 16)
 	if err != nil {
 		return err
 	}

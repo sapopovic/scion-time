@@ -12,13 +12,11 @@ require (
 	github.com/prometheus/client_golang v1.15.1
 	github.com/quic-go/quic-go v0.34.0
 	github.com/scionproto/scion v0.8.0
-	github.com/secure-io/siv-go v0.0.0-20180922214919-5ff40651e2c4
 	go.uber.org/zap v1.24.0
 	golang.org/x/sys v0.8.0
 )
 
 require (
-	github.com/aead/cmac v0.0.0-20160719120800-7af84192f0b1 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/pprof v0.0.0-20230510103437-eeec1cb781c3 // indirect
