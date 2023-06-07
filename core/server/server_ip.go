@@ -18,7 +18,7 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/net/gopacketntp"
+	"example.com/scion-time/net/ntppkt"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/udp"
 )
@@ -86,8 +86,8 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 		buf = buf[:n]
 		mtrcs.pktsReceived.Inc()
 
-		var ntpreq gopacketntp.Packet
-		parser := gopacket.NewDecodingLayerParser(gopacketntp.LayerTypeNTS, &ntpreq)
+		var ntpreq ntppkt.Packet
+		parser := gopacket.NewDecodingLayerParser(ntppkt.LayerTypeNTS, &ntpreq)
 		parser.IgnoreUnsupported = true
 		decoded := make([]gopacket.LayerType, 1)
 		err = parser.DecodeLayers(buf, &decoded)
@@ -98,7 +98,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 
 		var authenticated bool
 		var serverCookie ntske.ServerCookie
-		if len(buf) > gopacketntp.PacketLen {
+		if len(buf) > ntppkt.PacketLen {
 			if ntpreq.Cookies == nil || len(ntpreq.Cookies) < 1 {
 				log.Info("failed to extract cookie", zap.Error(err))
 				continue
@@ -131,7 +131,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 			authenticated = true
 		}
 
-		err = gopacketntp.ValidateRequest(&ntpreq, srcAddr.Port())
+		err = ntppkt.ValidateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
 			log.Info("failed to validate packet payload", zap.Error(err))
 			continue
@@ -144,11 +144,11 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 			zap.Time("at", rxt),
 			zap.String("from", clientID),
 			zap.Bool("ntsauth", authenticated),
-			zap.Object("data", gopacketntp.PacketMarshaler{Pkt: &ntpreq}),
+			zap.Object("data", ntppkt.PacketMarshaler{Pkt: &ntpreq}),
 		)
 
 		var txt0 time.Time
-		var ntpresp gopacketntp.Packet
+		var ntpresp ntppkt.Packet
 		handleRequestGopacket(clientID, &ntpreq, &rxt, &txt0, &ntpresp)
 
 		if authenticated {

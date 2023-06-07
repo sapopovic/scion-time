@@ -24,8 +24,8 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntp"
+	"example.com/scion-time/net/ntppkt"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
@@ -179,7 +179,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	cTxTime0 := timebase.Now()
 	interleaved := false
 
-	ntpreq := gopacketntp.Packet{}
+	ntpreq := ntppkt.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
@@ -431,8 +431,8 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				}
 			}
 		}
-		p := gopacket.NewPacket(udpLayer.Payload, gopacketntp.LayerTypeNTS, gopacket.Default)
-		ntpresp, ok := p.ApplicationLayer().(*gopacketntp.Packet)
+		p := gopacket.NewPacket(udpLayer.Payload, ntppkt.LayerTypeNTS, gopacket.Default)
+		ntpresp, ok := p.ApplicationLayer().(*ntppkt.Packet)
 		if !ok {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
@@ -470,7 +470,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			return offset, weight, err
 		}
 
-		err = gopacketntp.ValidateResponseMetadata(ntpresp)
+		err = ntppkt.ValidateResponseMetadata(ntpresp)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -484,7 +484,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			zap.Uint8("DSCP", dscp),
 			zap.Bool("auth", authenticated),
 			zap.Bool("ntsauth", ntsAuthenticated),
-			zap.Object("data", gopacketntp.PacketMarshaler{Pkt: ntpresp}),
+			zap.Object("data", ntppkt.PacketMarshaler{Pkt: ntpresp}),
 		)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)

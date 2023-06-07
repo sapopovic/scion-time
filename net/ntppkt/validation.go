@@ -1,4 +1,4 @@
-package gopacketntp
+package ntppkt
 
 import (
 	"errors"

@@ -18,8 +18,8 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntp"
+	"example.com/scion-time/net/ntppkt"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/udp"
 )
@@ -136,7 +136,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 	cTxTime0 := timebase.Now()
 	interleaved := false
 
-	ntpreq := gopacketntp.Packet{}
+	ntpreq := ntppkt.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
@@ -226,8 +226,8 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			return offset, weight, err
 		}
 
-		var ntpresp gopacketntp.Packet
-		parser := gopacket.NewDecodingLayerParser(gopacketntp.LayerTypeNTS, &ntpresp)
+		var ntpresp ntppkt.Packet
+		parser := gopacket.NewDecodingLayerParser(ntppkt.LayerTypeNTS, &ntpresp)
 		parser.IgnoreUnsupported = true
 		decoded := make([]gopacket.LayerType, 1)
 		err = parser.DecodeLayers(buf, &decoded)
@@ -269,7 +269,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			return offset, weight, err
 		}
 
-		err = gopacketntp.ValidateResponseMetadata(&ntpresp)
+		err = ntppkt.ValidateResponseMetadata(&ntpresp)
 		if err != nil {
 			return offset, weight, err
 		}
@@ -278,7 +278,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			zap.Time("at", cRxTime),
 			zap.String("from", reference),
 			zap.Bool("auth", authenticated),
-			zap.Object("data", gopacketntp.PacketMarshaler{Pkt: &ntpresp}),
+			zap.Object("data", ntppkt.PacketMarshaler{Pkt: &ntpresp}),
 		)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)

@@ -12,8 +12,8 @@ import (
 
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/net/gopacketntp"
 	"example.com/scion-time/net/ntp"
+	"example.com/scion-time/net/ntppkt"
 )
 
 const (
@@ -210,7 +210,7 @@ func handleRequest(clientID string, req *ntp.Packet, rxt, txt *time.Time, resp *
 	}
 }
 
-func handleRequestGopacket(clientID string, req *gopacketntp.Packet, rxt, txt *time.Time, resp *gopacketntp.Packet) {
+func handleRequestGopacket(clientID string, req *ntppkt.Packet, rxt, txt *time.Time, resp *ntppkt.Packet) {
 	resp.SetVersion(ntp.VersionMax)
 	resp.SetMode(ntp.ModeServer)
 	resp.Stratum = 1

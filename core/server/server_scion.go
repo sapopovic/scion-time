@@ -25,7 +25,7 @@ import (
 	"example.com/scion-time/core/config"
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/net/gopacketntp"
+	"example.com/scion-time/net/ntppkt"
 	"example.com/scion-time/net/ntske"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
@@ -282,8 +282,8 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				}
 			}
 
-			p := gopacket.NewPacket(udpLayer.Payload, gopacketntp.LayerTypeNTS, gopacket.Default)
-			ntpreq, ok := p.ApplicationLayer().(*gopacketntp.Packet)
+			p := gopacket.NewPacket(udpLayer.Payload, ntppkt.LayerTypeNTS, gopacket.Default)
+			ntpreq, ok := p.ApplicationLayer().(*ntppkt.Packet)
 			if !ok {
 				log.Info("failed to decode NTP packet", zap.Error(err))
 				continue
@@ -291,7 +291,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 
 			ntsAuthenticated := false
 			var serverCookie ntske.ServerCookie
-			if len(buf) > gopacketntp.PacketLen {
+			if len(buf) > ntppkt.PacketLen {
 				if ntpreq.Cookies == nil || len(ntpreq.Cookies) < 1 {
 					log.Info("failed to extract cookie", zap.Error(err))
 					continue
@@ -324,7 +324,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				ntsAuthenticated = true
 			}
 
-			err = gopacketntp.ValidateRequest(ntpreq, udpLayer.SrcPort)
+			err = ntppkt.ValidateRequest(ntpreq, udpLayer.SrcPort)
 			if err != nil {
 				log.Info("failed to validate packet payload", zap.Error(err))
 				continue
@@ -340,11 +340,11 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				zap.Uint8("DSCP", dscp),
 				zap.Bool("auth", authenticated),
 				zap.Bool("ntsauth", ntsAuthenticated),
-				zap.Object("data", gopacketntp.PacketMarshaler{Pkt: ntpreq}),
+				zap.Object("data", ntppkt.PacketMarshaler{Pkt: ntpreq}),
 			)
 
 			var txt0 time.Time
-			var ntpresp gopacketntp.Packet
+			var ntpresp ntppkt.Packet
 			handleRequestGopacket(clientID, ntpreq, &rxt, &txt0, &ntpresp)
 
 			scionLayer.TrafficClass = config.DSCP << 2
