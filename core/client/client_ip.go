@@ -6,8 +6,8 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/google/gopacket"
 	"github.com/HdrHistogram/hdrhistogram-go"
+	"github.com/google/gopacket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
