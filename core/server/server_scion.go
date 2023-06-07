@@ -291,7 +291,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 
 			ntsAuthenticated := false
 			var serverCookie ntske.ServerCookie
-			if len(buf) > ntppkt.PacketLen {
+			if len(udpLayer.Payload) > ntppkt.PacketLen {
 				if ntpreq.Cookies == nil || len(ntpreq.Cookies) < 1 {
 					log.Info("failed to extract cookie", zap.Error(err))
 					continue
