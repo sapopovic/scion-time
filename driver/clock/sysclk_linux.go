@@ -13,9 +13,13 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/tklauser/go-sysconf"
+
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
 )
+
+const maxCorrFreqPPB = 500000
 
 type adjustment struct {
 	clock     *SystemClock
@@ -167,6 +171,49 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 			setFrequency(log, adj.afterFreq)
 		}
 	}(c.Log, c.adjustment)
+}
+
+func clampedCorrFreq(corrFreq float64) float64 {
+	if corrFreq > maxCorrFreqPPB {
+		corrFreq = maxCorrFreqPPB
+	} else if corrFreq < -maxCorrFreqPPB {
+		corrFreq = -maxCorrFreqPPB
+	}
+
+	return corrFreq
+}
+
+func (c *SystemClock) AdjustTick(freqPPB float64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	ticksPerSecond, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
+	if err != nil {
+		c.Log.Fatal("sysconf.Sysconf failed", zap.Error(err))
+	}
+
+	// mirror kernel definition (jiffies.h, USER_TICK_USEC)
+	tickDeltaNominal := (1_000_000 + ticksPerSecond/2) / ticksPerSecond
+
+	tickDelta := math.Round(freqPPB / 1_000.0 / float64(ticksPerSecond))
+	frequency := freqPPB - 1_000*float64(ticksPerSecond)*tickDelta
+	corrFreq := clampedCorrFreq(frequency)
+
+	tx := unix.Timex{
+		Modes: unix.ADJ_FREQUENCY | unix.ADJ_TICK,
+		// The Kernel API expects freq in PPM with a 16-bit fractional part. Convert PPB to that format.
+		Freq: int64(math.Floor(corrFreq * 65.536)),
+		Tick: tickDeltaNominal + int64(tickDelta),
+	}
+	c.Log.Debug("AdjustTick",
+		zap.Int64("freq", tx.Freq),
+		zap.Int64("tick", tx.Tick),
+	)
+
+	_, err = unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
+	if err != nil {
+		c.Log.Fatal("unix.ClockAdjtime failed", zap.Error(err))
+	}
 }
 
 func (c *SystemClock) Sleep(duration time.Duration) {
