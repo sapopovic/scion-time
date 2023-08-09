@@ -19,7 +19,7 @@ func (m CookieArrayMarshaler) MarshalLogArray(enc zapcore.ArrayEncoder) error {
 }
 
 func logData(log *zap.Logger, data Data) {
-	log.Debug("NTSKE data",
+	log.Debug("NTS-KE data",
 		zap.String("c2s", hex.EncodeToString(data.C2sKey)),
 		zap.String("s2c", hex.EncodeToString(data.S2cKey)),
 		zap.String("server", data.Server),

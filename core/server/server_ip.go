@@ -103,7 +103,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 				continue
 			}
 
-			cookie, err := ntsreq.GetFirstCookie()
+			cookie, err := ntsreq.FirstCookie()
 			if err != nil {
 				log.Info("failed to get cookie", zap.Error(err))
 				continue

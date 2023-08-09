@@ -32,7 +32,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Data is the negotiated data from the NTS Key Exchange
+// Data is the negotiated data from the NTS Key Exchange.
 type Data struct {
 	C2sKey []byte
 	S2cKey []byte
@@ -77,7 +77,7 @@ var (
 	errReadUnknown              = errors.New("ntske received unknown error message")
 )
 
-// RecordHdr is the header on all records send in NTS-KE.
+// RecordHdr is the header on all records exchanged in NTS-KE.
 type RecordHdr struct {
 	Type    uint16 // First bit is Critical bit
 	BodyLen uint16
@@ -157,15 +157,14 @@ func (m ExchangeMsg) Pack() (buf *bytes.Buffer, err error) {
 	return buf, nil
 }
 
-// AddRecord adds new record type to a Key Exchange message.
+// AddRecord adds a new record to a key exchange message.
 func (m *ExchangeMsg) AddRecord(rec Record) {
 	m.Record = append(m.Record, rec)
 }
 
 const NTPv4 uint16 = 0
 
-// NextProto record. Tells the other side we want to speak NTP,
-// probably. Set to 0.
+// NextProto record. Set to 0.
 type NextProto struct {
 	RecordHdr
 	NextProto uint16
@@ -205,8 +204,7 @@ func (e End) pack(buf *bytes.Buffer) error {
 }
 
 // Server is the NTP Server record, telling the client to use a
-// certain server for the next protocol query. Critical bit is
-// optional. Set Critical to true if you want it set.
+// certain server for the next protocol query.
 type Server struct {
 	RecordHdr
 	Addr     []byte
@@ -217,9 +215,8 @@ func (s Server) pack(buf *bytes.Buffer) error {
 	return packsimple(RecServer, s.Critical, s.Addr, buf)
 }
 
-// Port is the NTP Port record, telling the client to use this port
-// for the next protocol query. Critical bit is optional. Set Critical
-// to true if you want it set.
+// Port is the NTP Port record, telling the client to use a
+// certain port for the next protocol query.
 type Port struct {
 	RecordHdr
 	Port     uint16
@@ -240,8 +237,7 @@ func (c Cookie) pack(buf *bytes.Buffer) error {
 	return packsimple(RecCookie, false, c.Cookie, buf)
 }
 
-// Warning is the record type to send warnings to the other end. Put
-// warning code in Code.
+// Warning is the record type to send warnings to the other end.
 type Warning struct {
 	RecordHdr
 	Code uint16
@@ -251,8 +247,7 @@ func (w Warning) pack(buf *bytes.Buffer) error {
 	return packsimple(RecWarning, true, w.Code, buf)
 }
 
-// Error is the record type to send errors to the other end. Put
-// error code in Code.
+// Error is the record type to send errors to the other end.
 type Error struct {
 	RecordHdr
 	Code uint16
@@ -263,7 +258,7 @@ func (e Error) pack(buf *bytes.Buffer) error {
 
 }
 
-// Algorithm is the record type for a list of AEAD algorithm we can use.
+// Algorithm is the record type for a list of supported AEAD algorithms.
 type Algorithm struct {
 	RecordHdr
 	Algo []uint16
@@ -273,7 +268,7 @@ func (a Algorithm) pack(buf *bytes.Buffer) error {
 	return packsimple(RecAead, true, a.Algo, buf)
 }
 
-// ExportKeys exports two extra sessions keys from the already
+// ExportKeys exports two extra session keys from the already
 // established NTS-KE connection for use with NTS.
 func ExportKeys(cs tls.ConnectionState, data *Data) error {
 	label := "EXPORTER-network-time-security"

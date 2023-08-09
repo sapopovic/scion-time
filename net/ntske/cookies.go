@@ -46,7 +46,7 @@ func (c *ServerCookie) Encode() []byte {
 	return b
 }
 
-// Decode decodes a ServerCookie from a byte slice or returns an error if it can not decode.
+// Decode decodes a ServerCookie from a byte slice or returns an error if it fails to decode it.
 func (c *ServerCookie) Decode(b []byte) error {
 	pos := 0
 	algo, s2c, c2s := false, false, false
@@ -98,7 +98,7 @@ func (c *EncryptedServerCookie) Encode() []byte {
 	return b
 }
 
-// Decode decodes an EncryptedServerCookie from a byte slice or returns an error if it can not decode.
+// Decode decodes an EncryptedServerCookie from a byte slice or returns an error if it fails to decode it.
 func (c *EncryptedServerCookie) Decode(b []byte) error {
 	pos := 0
 	id, nonce, ciphertext := false, false, false

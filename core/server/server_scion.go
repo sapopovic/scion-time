@@ -300,7 +300,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 					continue
 				}
 
-				cookie, err := ntsreq.GetFirstCookie()
+				cookie, err := ntsreq.FirstCookie()
 				if err != nil {
 					log.Info("failed to get cookie", zap.Error(err))
 					continue

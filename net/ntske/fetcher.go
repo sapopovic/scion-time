@@ -30,7 +30,6 @@ type Fetcher struct {
 	data Data
 }
 
-// exchangeKeys performs a NTSKE with a NTSKE Server.
 func (f *Fetcher) exchangeKeys() error {
 	if f.QUIC.Enabled {
 		conn, _, err := dialQUIC(f.Log, f.QUIC.LocalAddr, f.QUIC.RemoteAddr, f.QUIC.DaemonAddr, &f.TLSConfig)
@@ -84,7 +83,7 @@ func (f *Fetcher) exchangeKeys() error {
 	return nil
 }
 
-// FetchData returns either cached Data or requests new Data by performing a NTSKE.
+// FetchData returns either cached data or requests new Data by performing a NTS key exchange.
 func (f *Fetcher) FetchData() (Data, error) {
 	if len(f.data.Cookie) == 0 {
 		err := f.exchangeKeys()
@@ -97,7 +96,7 @@ func (f *Fetcher) FetchData() (Data, error) {
 	return data, nil
 }
 
-// StoreCookie stores a cookie byte slice and appends it to the cached Data.
+// StoreCookie stores a cookie byte slice and appends it to the cached data.
 func (f *Fetcher) StoreCookie(cookie []byte) {
 	f.data.Cookie = append(f.data.Cookie, cookie)
 }

@@ -19,13 +19,11 @@ import (
 	"example.com/scion-time/net/udp"
 )
 
-// AcceptQUICConn accepts an incoming QUIC connection from the quic.Listener.
+// AcceptQUICConn accepts an incoming QUIC connection from a quic.Listener.
 func AcceptQUICConn(ctx context.Context, l quic.Listener) (quic.Connection, error) {
 	return l.Accept(ctx)
 }
 
-// dialQUIC starts a new SCION QUIC connection to remodeAddr using the tls config.
-// Returns the connection as well as the default server address to the NTP server using the Data struct.
 func dialQUIC(log *zap.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr string, config *tls.Config) (*scion.QUICConnection, Data, error) {
 	config.NextProtos = []string{alpn}
 	ctx := context.Background()
@@ -72,7 +70,6 @@ func dialQUIC(log *zap.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr str
 	return conn, data, nil
 }
 
-// exchangeDataQUIC creates server NTSKE message and sends it over the QUIC connection.
 func exchangeDataQUIC(log *zap.Logger, conn *scion.QUICConnection, data *Data) error {
 	stream, err := conn.OpenStream()
 	if err != nil {

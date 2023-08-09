@@ -8,7 +8,7 @@ import (
 )
 
 /*
-This provider is set up to be used concurrently by the NTSKE and time servers.
+This provider is set up to be used concurrently by the NTP and NTS-KE servers.
 In case they should not run on the same machine one option would be to synchronize
 an initial key once at startup of the servers and then each of them will separately
 create the next key each day using some key derivation function like hkdf.
@@ -19,7 +19,7 @@ const (
 	keyRenewalInterval time.Duration = time.Hour * 24
 )
 
-// Key is the key shared between NTP and NTSKE server with a validity time period.
+// Key is the key shared between NTP and NTS-KE servers with a validity time period.
 type Key struct {
 	ID       int
 	Value    []byte
@@ -29,7 +29,7 @@ type Key struct {
 	}
 }
 
-// Provider is a thread safe provider for keys shared between NTP and NTSKE servers.
+// Provider is a provider for keys shared between NTP and NTS-KE servers safe for use by a multiple goroutines.
 type Provider struct {
 	mu          sync.Mutex
 	keys        map[int]Key
@@ -37,7 +37,7 @@ type Provider struct {
 	generatedAt time.Time
 }
 
-// IsValidAt returns if the key is still valid.
+// IsValidAt returns whether the key is still valid.
 func (k *Key) IsValidAt(t time.Time) bool {
 	if t.Before(k.Validity.NotBefore) || t.After(k.Validity.NotAfter) {
 		return false
@@ -45,7 +45,6 @@ func (k *Key) IsValidAt(t time.Time) bool {
 	return true
 }
 
-// generateNext generates the next key for the next id.
 func (p *Provider) generateNext() {
 	tNow := time.Now()
 	for id, key := range p.keys {
@@ -99,7 +98,7 @@ func (p *Provider) Get(id int) (Key, bool) {
 	return key, true
 }
 
-// Current returns the newest Key or creates a new one if no one is valid.
+// Current returns the newest Key or creates a new one if no valid key exists.
 func (p *Provider) Current() Key {
 	p.mu.Lock()
 	defer p.mu.Unlock()
