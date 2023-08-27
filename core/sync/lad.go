@@ -115,8 +115,8 @@ func medfit(inputs []point, log *zap.Logger) (float64, float64, int) {
 			blow = slope - incr
 			bhigh = slope + incr
 
-			_, rlow = getRobustResidual(blow, inputs[startIndex:])
-			_, rhigh = getRobustResidual(bhigh, inputs[startIndex:])
+			_, rlow = robustResidual(blow, inputs[startIndex:])
+			_, rhigh = robustResidual(bhigh, inputs[startIndex:])
 		}
 
 		for bhigh-blow > 1e-8 {
@@ -125,7 +125,7 @@ func medfit(inputs []point, log *zap.Logger) (float64, float64, int) {
 				break
 			}
 
-			intercept, rmid = getRobustResidual(bmid, inputs[startIndex:])
+			intercept, rmid = robustResidual(bmid, inputs[startIndex:])
 
 			if rmid == 0.0 {
 				break
@@ -161,7 +161,7 @@ func medfit(inputs []point, log *zap.Logger) (float64, float64, int) {
 }
 
 // Evaluate right-hand side of equation for given intercept
-func getRobustResidual(slope float64, inputs []point) (float64, float64) {
+func robustResidual(slope float64, inputs []point) (float64, float64) {
 	const EPS float64 = 1e-7
 
 	n := len(inputs)
