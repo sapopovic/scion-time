@@ -26,6 +26,7 @@ func AcceptQUICConn(ctx context.Context, l quic.Listener) (quic.Connection, erro
 
 func dialQUIC(log *zap.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr string, config *tls.Config) (*scion.QUICConnection, Data, error) {
 	config.NextProtos = []string{alpn}
+	var err error
 	ctx := context.Background()
 
 	dc := scion.NewDaemonConnector(ctx, daemonAddr)
@@ -38,7 +39,7 @@ func dialQUIC(log *zap.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr str
 			DataplanePath: path.Empty{},
 		}}
 	} else {
-		ps, err := dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
+		ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 		if err != nil {
 			log.Error("failed to lookup paths", zap.Stringer("to", remoteAddr.IA), zap.Error(err))
 			return nil, Data{}, err
