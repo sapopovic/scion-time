@@ -1,6 +1,6 @@
 module example.com/scion-time
 
-go 1.19
+go 1.21
 
 replace github.com/scionproto/scion => github.com/scionproto/scion v0.8.1-0.20230911150839-783896ee1915
 
