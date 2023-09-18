@@ -77,13 +77,7 @@ func newIPClientMetrics() *ipClientMetrics {
 }
 
 func compareAddrs(x, y netip.Addr) int {
-	if x.Is4In6() {
-		x = netip.AddrFrom4(x.As4())
-	}
-	if y.Is4In6() {
-		y = netip.AddrFrom4(y.As4())
-	}
-	return x.Compare(y)
+	return x.Unmap().Compare(y.Unmap())
 }
 
 func (c *IPClient) ResetInterleavedMode() {

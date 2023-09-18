@@ -118,7 +118,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics, conn *net.UDPConn, ifa
 
 			key, ok := provider.Get(int(encryptedCookie.ID))
 			if !ok {
-				log.Info("failed to get key", zap.Error(err))
+				log.Info("failed to get key")
 				continue
 			}
 

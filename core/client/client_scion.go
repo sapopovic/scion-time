@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/snet"
@@ -95,13 +96,7 @@ func compareIPs(x, y []byte) int {
 	if !okX || !okY {
 		panic("unexpected IP address byte slice")
 	}
-	if addrX.Is4In6() {
-		addrX = netip.AddrFrom4(addrX.As4())
-	}
-	if addrY.Is4In6() {
-		addrY = netip.AddrFrom4(addrY.As4())
-	}
-	return addrX.Compare(addrY)
+	return addrX.Unmap().Compare(addrY.Unmap())
 }
 
 func (c *SCIONClient) ResetInterleavedMode() {
@@ -170,9 +165,6 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			scion.EndhostPort)
 	}
 
-	srcAddr := &net.IPAddr{IP: localAddr.Host.IP}
-	dstAddr := &net.IPAddr{IP: remoteAddr.Host.IP}
-
 	buf := make([]byte, scion.MTU)
 
 	reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
@@ -203,12 +195,20 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	var scionLayer slayers.SCION
 	scionLayer.TrafficClass = config.DSCP << 2
 	scionLayer.SrcIA = localAddr.IA
-	err = scionLayer.SetSrcAddr(srcAddr)
+	srcAddrIP, ok := netip.AddrFromSlice(localAddr.Host.IP)
+	if !ok {
+		panic(errUnexpectedAddrType)
+	}
+	err = scionLayer.SetSrcAddr(addr.HostIP(srcAddrIP.Unmap()))
 	if err != nil {
 		panic(err)
 	}
 	scionLayer.DstIA = remoteAddr.IA
-	err = scionLayer.SetDstAddr(dstAddr)
+	dstAddrIP, ok := netip.AddrFromSlice(remoteAddr.Host.IP)
+	if !ok {
+		panic(errUnexpectedAddrType)
+	}
+	err = scionLayer.SetDstAddr(addr.HostIP(dstAddrIP.Unmap()))
 	if err != nil {
 		panic(err)
 	}

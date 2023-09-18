@@ -31,7 +31,8 @@ type ReferenceClockClient struct {
 }
 
 var (
-	errNoPaths = errors.New("failed to measure clock offset: no paths")
+	errNoPaths            = errors.New("failed to measure clock offset: no paths")
+	errUnexpectedAddrType = errors.New("unexpected address type")
 
 	ipMetrics    atomic.Pointer[ipClientMetrics]
 	scionMetrics atomic.Pointer[scionClientMetrics]

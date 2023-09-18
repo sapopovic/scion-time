@@ -67,10 +67,10 @@ On x86-64:
 
 ```
 sudo rm -rf /usr/local/go
-curl -LO https://golang.org/dl/go1.19.9.linux-amd64.tar.gz
-echo "e858173b489ec1ddbe2374894f52f53e748feed09dde61be5b4b4ba2d73ef34b go1.19.9.linux-amd64.tar.gz" | sha256sum -c
-sudo tar -C /usr/local -xzf go1.19.9.linux-amd64.tar.gz
-rm go1.19.9.linux-amd64.tar.gz
+curl -LO https://golang.org/dl/go1.21.1.linux-amd64.tar.gz
+echo "b3075ae1ce5dab85f89bc7905d1632de23ca196bd8336afd93fa97434cfa55ae go1.21.1.linux-amd64.tar.gz" | sha256sum -c
+sudo tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
+rm go1.21.1.linux-amd64.tar.gz
 echo >> .bash_profile
 echo 'export PATH=$PATH:/usr/local/go/bin' >> .bash_profile
 source ~/.bash_profile
@@ -81,10 +81,10 @@ On ARM64:
 
 ```
 sudo rm -rf /usr/local/go
-curl -LO https://golang.org/dl/go1.19.9.linux-arm64.tar.gz
-echo "b947e457be9d7b52a082c68e42b6939f9cc151f1ad5b3d8fd646ca3352f6f2f1 go1.19.9.linux-arm64.tar.gz" | sha256sum -c
-sudo tar -C /usr/local -xzf go1.19.9.linux-arm64.tar.gz
-rm go1.19.9.linux-arm64.tar.gz
+curl -LO https://golang.org/dl/go1.21.1.linux-arm64.tar.gz
+echo "7da1a3936a928fd0b2602ed4f3ef535b8cd1990f1503b8d3e1acc0fa0759c967 go1.21.1.linux-arm64.tar.gz" | sha256sum -c
+sudo tar -C /usr/local -xzf go1.21.1.linux-arm64.tar.gz
+rm go1.21.1.linux-arm64.tar.gz
 echo >> .bash_profile
 echo 'export PATH=$PATH:/usr/local/go/bin' >> .bash_profile
 source ~/.bash_profile
