@@ -45,10 +45,11 @@ func init() {
 
 func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 	ntpc *IPClient, localAddr, remoteAddr *net.UDPAddr) (
-	time.Duration, error) {
+	time.Time, time.Duration, error) {
 	mtrcs := ipMetrics.Load()
 
 	var err error
+	var at time.Time
 	var off time.Duration
 	var nerr, n int
 	if ntpc.InterleavedMode {
@@ -57,19 +58,19 @@ func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 		n = 1
 	}
 	for i := 0; i != n; i++ {
-		o, _, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
+		t, o, _, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
 		if e == nil {
-			off, err = o, e
+			at, off, err = t, o, e
 		} else {
 			if nerr == i {
-				off, err = o, e
+				at, off, err = t, o, e
 			}
 			nerr++
 			log.Info("failed to measure clock offset",
 				zap.Stringer("to", remoteAddr), zap.Error(e))
 		}
 	}
-	return off, err
+	return at, off, err
 }
 
 func collectMeasurements(ctx context.Context, off []time.Duration, ms chan measurement) int {
@@ -102,7 +103,7 @@ loop:
 
 func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 	ntpcs []*SCIONClient, localAddr, remoteAddr udp.UDPAddr, ps []snet.Path) (
-	time.Duration, error) {
+	time.Time, time.Duration, error) {
 	mtrcs := scionMetrics.Load()
 
 	sps := make([]snet.Path, len(ntpcs))
@@ -136,7 +137,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 				n = 1
 			}
 			for j := 0; j != n; j++ {
-				o, _, e := ntpc.measureClockOffsetSCION(ctx, log, mtrcs, localAddr, remoteAddr, p)
+				_, o, _, e := ntpc.measureClockOffsetSCION(ctx, log, mtrcs, localAddr, remoteAddr, p)
 				if e == nil {
 					off, err = o, e
 				} else {
