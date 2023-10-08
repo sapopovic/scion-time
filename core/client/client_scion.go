@@ -43,6 +43,7 @@ type SCIONClient struct {
 		mac          []byte
 		NTSKEFetcher ntske.Fetcher
 	}
+	Raw             bool
 	Histo *hdrhistogram.Histogram
 	prev  struct {
 		reference string
@@ -546,7 +547,11 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		}
 
 		at = cRxTime
-		offset, weight = filter(log, reference, t0, t1, t2, t3) // offset, weight = off, 1000.0
+		if c.Raw {
+			offset, weight = off, 1000.0
+		} else {
+			offset, weight = filter(log, reference, t0, t1, t2, t3)
+		}
 
 		if c.Histo != nil {
 			c.Histo.RecordValue(rtd.Microseconds())
