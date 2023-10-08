@@ -195,7 +195,7 @@ func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr, dscp uint8,
 
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
 	time.Duration, error) {
-	_, off, err := client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
+	off, err := client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 	return off, err
 }
 
@@ -541,7 +541,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
 	}
 
-	_, _, err = client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
+	_, err = client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 	if err != nil {
 		log.Fatal("failed to measure clock offset", zap.Stringer("to", raddr), zap.Error(err))
 	}
