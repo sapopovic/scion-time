@@ -29,7 +29,7 @@ type IPClient struct {
 		Enabled      bool
 		NTSKEFetcher ntske.Fetcher
 	}
-	Raw             bool
+	Raw   bool
 	Histo *hdrhistogram.Histogram
 	prev  struct {
 		reference string
