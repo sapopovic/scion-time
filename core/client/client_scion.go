@@ -100,6 +100,10 @@ func compareIPs(x, y []byte) int {
 	return addrX.Unmap().Compare(addrY.Unmap())
 }
 
+func (c *SCIONClient) InInterleavedMode() bool {
+	return c.prev.reference != ""
+}
+
 func (c *SCIONClient) ResetInterleavedMode() {
 	c.prev.reference = ""
 }
@@ -544,6 +548,8 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
 			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
 			c.prev.sRxTime = ntpresp.ReceiveTime
+		} else {
+			c.prev.reference = ""
 		}
 
 		at = cRxTime

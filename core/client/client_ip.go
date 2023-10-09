@@ -81,6 +81,10 @@ func compareAddrs(x, y netip.Addr) int {
 	return x.Unmap().Compare(y.Unmap())
 }
 
+func (c *IPClient) InInterleavedMode() bool {
+	return c.prev.reference != ""
+}
+
 func (c *IPClient) ResetInterleavedMode() {
 	c.prev.reference = ""
 }
@@ -315,6 +319,8 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
 			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
 			c.prev.sRxTime = ntpresp.ReceiveTime
+		} else {
+			c.prev.reference = ""
 		}
 
 		at = cRxTime
