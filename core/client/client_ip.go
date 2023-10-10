@@ -32,10 +32,11 @@ type IPClient struct {
 	Raw   bool
 	Histo *hdrhistogram.Histogram
 	prev  struct {
-		reference string
-		cTxTime   ntp.Time64
-		cRxTime   ntp.Time64
-		sRxTime   ntp.Time64
+		reference   string
+		interleaved bool
+		cTxTime     ntp.Time64
+		cRxTime     ntp.Time64
+		sRxTime     ntp.Time64
 	}
 }
 
@@ -82,7 +83,7 @@ func compareAddrs(x, y netip.Addr) int {
 }
 
 func (c *IPClient) InInterleavedMode() bool {
-	return c.prev.reference != ""
+	return c.InterleavedMode && c.prev.reference != "" && c.prev.interleaved
 }
 
 func (c *IPClient) ResetInterleavedMode() {
@@ -132,14 +133,14 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 
 	reference := remoteAddr.String()
 	cTxTime0 := timebase.Now()
-	interleaved := false
+	interleavedReq := false
 
 	ntpreq := ntp.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
 		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= time.Second {
-		interleaved = true
+		interleavedReq = true
 		ntpreq.OriginTime = c.prev.sRxTime
 		ntpreq.ReceiveTime = c.prev.cRxTime
 		ntpreq.TransmitTime = c.prev.cTxTime
@@ -169,7 +170,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		log.Error("failed to read packet tx timestamp", zap.Error(err))
 	}
 	mtrcs.reqsSent.Inc()
-	if interleaved {
+	if interleavedReq {
 		mtrcs.reqsSentInterleaved.Inc()
 	}
 
@@ -253,9 +254,9 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 			mtrcs.pktsAuthenticated.Inc()
 		}
 
-		interleaved = false
-		if c.InterleavedMode && ntpresp.OriginTime == c.prev.cRxTime {
-			interleaved = true
+		interleavedResp := false
+		if interleavedReq && ntpresp.OriginTime == c.prev.cRxTime {
+			interleavedResp = true
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
@@ -282,7 +283,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
 
 		var t0, t1, t2, t3 time.Time
-		if interleaved {
+		if interleavedResp {
 			t0 = ntp.TimeFromTime64(c.prev.cTxTime)
 			t1 = ntp.TimeFromTime64(c.prev.sRxTime)
 			t2 = sTxTime
@@ -303,24 +304,23 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
 		mtrcs.respsAccepted.Inc()
-		if interleaved {
+		if interleavedResp {
 			mtrcs.respsAcceptedInterleaved.Inc()
 		}
 		log.Debug("evaluated response",
 			zap.Time("at", cRxTime),
 			zap.String("from", reference),
-			zap.Bool("interleaved", interleaved),
+			zap.Bool("interleaved", interleavedResp),
 			zap.Duration("clock offset", off),
 			zap.Duration("round trip delay", rtd),
 		)
 
 		if c.InterleavedMode {
 			c.prev.reference = reference
+			c.prev.interleaved = interleavedResp
 			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
 			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
 			c.prev.sRxTime = ntpresp.ReceiveTime
-		} else {
-			c.prev.reference = ""
 		}
 
 		at = cRxTime
