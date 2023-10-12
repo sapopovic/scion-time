@@ -479,7 +479,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		}
 
 		interleavedResp := false
-		if interleavedReq && ntpresp.OriginTime == c.prev.cRxTime {
+		if interleavedReq && ntpresp.OriginTime == ntpreq.ReceiveTime {
 			interleavedResp = true
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket

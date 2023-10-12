@@ -255,7 +255,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		}
 
 		interleavedResp := false
-		if interleavedReq && ntpresp.OriginTime == c.prev.cRxTime {
+		if interleavedReq && ntpresp.OriginTime == ntpreq.ReceiveTime {
 			interleavedResp = true
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
