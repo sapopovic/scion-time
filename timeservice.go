@@ -195,7 +195,7 @@ func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr, dscp uint8,
 
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
 	time.Duration, error) {
-	off, err := client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
+	_, off, err := client.MeasureClockOffsetIP(ctx, log, c.ntpc, c.localAddr, c.remoteAddr)
 	return off, err
 }
 
@@ -525,7 +525,6 @@ func runClient(configFile string) {
 
 func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify, periodic bool) {
-	var err error
 	ctx := context.Background()
 
 	lclk := &clock.SystemClock{Log: log}
@@ -536,14 +535,22 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	c := &client.IPClient{
 		DSCP:            dscp,
 		InterleavedMode: true,
+		Raw:             true,
 	}
 	if contains(authModes, authModeNTS) {
 		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
 	}
 
-	_, err = client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
-	if err != nil {
-		log.Fatal("failed to measure clock offset", zap.Stringer("to", raddr), zap.Error(err))
+	for {
+		at, offset, err := client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
+		if err != nil {
+			log.Fatal("failed to measure clock offset", zap.Stringer("to", raddr), zap.Error(err))
+		}
+		fmt.Printf("%s,%+.9f,%t\n", at.UTC().Format(time.RFC3339), offset.Seconds(), c.InInterleavedMode())
+		if !periodic {
+			break
+		}
+		lclk.Sleep(1 * time.Second)
 	}
 }
 

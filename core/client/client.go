@@ -45,11 +45,9 @@ func init() {
 
 func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 	ntpc *IPClient, localAddr, remoteAddr *net.UDPAddr) (
-	time.Duration, error) {
+	at time.Time, offset time.Duration, err error) {
 	mtrcs := ipMetrics.Load()
 
-	var err error
-	var off time.Duration
 	var nerr, n int
 	if ntpc.InterleavedMode {
 		n = 3
@@ -57,19 +55,19 @@ func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 		n = 1
 	}
 	for i := 0; i != n; i++ {
-		_, o, _, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
+		a, o, _, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
 		if e == nil {
-			off, err = o, e
+			at, offset, err = a, o, e
 		} else {
 			if nerr == i {
-				off, err = o, e
+				at, offset, err = a, o, e
 			}
 			nerr++
 			log.Info("failed to measure clock offset",
 				zap.Stringer("to", remoteAddr), zap.Error(e))
 		}
 	}
-	return off, err
+	return
 }
 
 func collectMeasurements(ctx context.Context, off []time.Duration, ms chan measurement) int {
