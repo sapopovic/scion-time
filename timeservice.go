@@ -546,10 +546,10 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 		if err != nil {
 			log.Fatal("failed to measure clock offset", zap.Stringer("to", raddr), zap.Error(err))
 		}
-		fmt.Printf("%s,%+.9f,%t\n", at.UTC().Format(time.RFC3339), offset.Seconds(), c.InInterleavedMode())
 		if !periodic {
 			break
 		}
+		fmt.Printf("%s,%+.9f,%t\n", at.UTC().Format(time.RFC3339), offset.Seconds(), c.InInterleavedMode())
 		lclk.Sleep(1 * time.Second)
 	}
 }
