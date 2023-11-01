@@ -535,7 +535,6 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	c := &client.IPClient{
 		DSCP:            dscp,
 		InterleavedMode: true,
-		Raw:             true,
 	}
 	if contains(authModes, authModeNTS) {
 		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
