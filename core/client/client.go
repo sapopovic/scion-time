@@ -58,6 +58,9 @@ func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 		a, o, _, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
 		if e == nil {
 			at, offset, err = a, o, e
+			if ntpc.InInterleavedMode() {
+				break
+			}
 		} else {
 			if nerr == i {
 				at, offset, err = a, o, e
@@ -137,6 +140,9 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 				_, o, _, e := ntpc.measureClockOffsetSCION(ctx, log, mtrcs, localAddr, remoteAddr, p)
 				if e == nil {
 					off, err = o, e
+					if ntpc.InInterleavedMode() {
+						break
+					}
 				} else {
 					if nerr == j {
 						off, err = o, e
