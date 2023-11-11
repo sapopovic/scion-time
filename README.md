@@ -67,10 +67,10 @@ On x86-64:
 
 ```
 sudo rm -rf /usr/local/go
-curl -LO https://golang.org/dl/go1.21.2.linux-amd64.tar.gz
-echo "f5414a770e5e11c6e9674d4cd4dd1f4f630e176d1828d3427ea8ca4211eee90d go1.21.2.linux-amd64.tar.gz" | sha256sum -c
-sudo tar -C /usr/local -xzf go1.21.2.linux-amd64.tar.gz
-rm go1.21.2.linux-amd64.tar.gz
+curl -LO https://golang.org/dl/go1.21.4.linux-amd64.tar.gz
+echo "73cac0215254d0c7d1241fa40837851f3b9a8a742d0b54714cbdfb3feaf8f0af go1.21.4.linux-amd64.tar.gz" | sha256sum -c
+sudo tar -C /usr/local -xzf go1.21.4.linux-amd64.tar.gz
+rm go1.21.4.linux-amd64.tar.gz
 echo >> .bash_profile
 echo 'export PATH=$PATH:/usr/local/go/bin' >> .bash_profile
 source ~/.bash_profile
@@ -81,10 +81,10 @@ On ARM64:
 
 ```
 sudo rm -rf /usr/local/go
-curl -LO https://golang.org/dl/go1.21.2.linux-arm64.tar.gz
-echo "23e208ca44a3cb46cd4308e48a27c714ddde9c8c34f2e4211dbca95b6d456554 go1.21.2.linux-arm64.tar.gz" | sha256sum -c
-sudo tar -C /usr/local -xzf go1.21.2.linux-arm64.tar.gz
-rm go1.21.2.linux-arm64.tar.gz
+curl -LO https://golang.org/dl/go1.21.4.linux-arm64.tar.gz
+echo "ce1983a7289856c3a918e1fd26d41e072cc39f928adfb11ba1896440849b95da go1.21.4.linux-arm64.tar.gz" | sha256sum -c
+sudo tar -C /usr/local -xzf go1.21.4.linux-arm64.tar.gz
+rm go1.21.4.linux-arm64.tar.gz
 echo >> .bash_profile
 echo 'export PATH=$PATH:/usr/local/go/bin' >> .bash_profile
 source ~/.bash_profile
@@ -98,7 +98,7 @@ cd ~
 git clone https://github.com/scionproto/scion.git
 
 cd ~/scion
-rm -rf bin/*
+git checkout v0.9.1
 go build -o ./bin/ ./control/cmd/control
 go build -o ./bin/ ./daemon/cmd/daemon
 go build -o ./bin/ ./dispatcher/cmd/dispatcher
