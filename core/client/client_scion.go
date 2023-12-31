@@ -43,12 +43,14 @@ type SCIONClient struct {
 		mac          []byte
 		NTSKEFetcher ntske.Fetcher
 	}
+	Raw   bool
 	Histo *hdrhistogram.Histogram
 	prev  struct {
-		reference string
-		cTxTime   ntp.Time64
-		cRxTime   ntp.Time64
-		sRxTime   ntp.Time64
+		reference   string
+		interleaved bool
+		cTxTime     ntp.Time64
+		cRxTime     ntp.Time64
+		sRxTime     ntp.Time64
 	}
 }
 
@@ -99,13 +101,17 @@ func compareIPs(x, y []byte) int {
 	return addrX.Unmap().Compare(addrY.Unmap())
 }
 
+func (c *SCIONClient) InInterleavedMode() bool {
+	return c.InterleavedMode && c.prev.reference != "" && c.prev.interleaved
+}
+
 func (c *SCIONClient) ResetInterleavedMode() {
 	c.prev.reference = ""
 }
 
 func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logger, mtrcs *scionClientMetrics,
 	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
-	offset time.Duration, weight float64, err error) {
+	at time.Time, offset time.Duration, weight float64, err error) {
 	if c.Auth.Enabled && c.Auth.opt == nil {
 		c.Auth.opt = &slayers.EndToEndOption{}
 		c.Auth.opt.OptData = make([]byte, scion.PacketAuthOptDataLen)
@@ -116,14 +122,14 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
 	if err != nil {
-		return offset, weight, err
+		return at, offset, weight, err
 	}
 	defer conn.Close()
 	deadline, deadlineIsSet := ctx.Deadline()
 	if deadlineIsSet {
 		err = conn.SetDeadline(deadline)
 		if err != nil {
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 	}
 	err = udp.EnableTimestamping(conn, localAddr.Host.Zone)
@@ -142,7 +148,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		ntskeData, err = c.Auth.NTSKEFetcher.FetchData()
 		if err != nil {
 			log.Info("failed to fetch key exchange data", zap.Error(err))
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 		remoteAddr.Host.IP = net.ParseIP(ntskeData.Server)
 		remoteAddr.Host.Port = int(ntskeData.Port)
@@ -169,14 +175,14 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 	reference := remoteAddr.IA.String() + "," + remoteAddr.Host.String()
 	cTxTime0 := timebase.Now()
-	interleaved := false
+	interleavedReq := false
 
 	ntpreq := ntp.Packet{}
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
-		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= time.Second {
-		interleaved = true
+		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= 2 * time.Second {
+		interleavedReq = true
 		ntpreq.OriginTime = c.prev.sRxTime
 		ntpreq.ReceiveTime = c.prev.cRxTime
 		ntpreq.TransmitTime = c.prev.cTxTime
@@ -295,10 +301,10 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 	n, err := conn.WriteToUDPAddrPort(buffer.Bytes(), nextHop)
 	if err != nil {
-		return offset, weight, err
+		return at, offset, weight, err
 	}
 	if n != len(buffer.Bytes()) {
-		return offset, weight, errWrite
+		return at, offset, weight, errWrite
 	}
 	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
 	if err != nil || id != 0 {
@@ -306,7 +312,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		log.Error("failed to read packet tx timestamp", zap.Error(err))
 	}
 	mtrcs.reqsSent.Inc()
-	if interleaved {
+	if interleavedReq {
 		mtrcs.reqsSentInterleaved.Inc()
 	}
 
@@ -322,7 +328,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				numRetries++
 				continue
 			}
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 		if flags != 0 {
 			err = errUnexpectedPacketFlags
@@ -331,7 +337,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				numRetries++
 				continue
 			}
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 		oob = oob[:oobn]
 		cRxTime, err := udp.TimestampFromOOBData(oob)
@@ -359,7 +365,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				numRetries++
 				continue
 			}
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 		validType := len(decoded) >= 2 &&
 			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
@@ -370,7 +376,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				numRetries++
 				continue
 			}
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 		validSrc := scionLayer.SrcIA.Equal(remoteAddr.IA) &&
 			compareIPs(scionLayer.RawSrcAddr, remoteAddr.Host.IP) == 0
@@ -388,7 +394,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				numRetries++
 				continue
 			}
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 
 		authenticated := false
@@ -428,7 +434,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 								numRetries++
 								continue
 							}
-							return offset, weight, err
+							return at, offset, weight, err
 						}
 						mtrcs.pktsAuthenticated.Inc()
 					}
@@ -444,7 +450,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				numRetries++
 				continue
 			}
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 
 		ntsAuthenticated := false
@@ -457,7 +463,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 					numRetries++
 					continue
 				}
-				return offset, weight, err
+				return at, offset, weight, err
 			}
 
 			err = nts.ProcessResponse(udpLayer.Payload, ntskeData.S2cKey, &c.Auth.NTSKEFetcher, &ntsresp, requestID)
@@ -467,14 +473,14 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 					numRetries++
 					continue
 				}
-				return offset, weight, err
+				return at, offset, weight, err
 			}
 			ntsAuthenticated = true
 		}
 
-		interleaved = false
-		if c.InterleavedMode && ntpresp.OriginTime == c.prev.cRxTime {
-			interleaved = true
+		interleavedResp := false
+		if interleavedReq && ntpresp.OriginTime == ntpreq.ReceiveTime {
+			interleavedResp = true
 		} else if ntpresp.OriginTime != ntpreq.TransmitTime {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
@@ -482,12 +488,12 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 				numRetries++
 				continue
 			}
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 
 		err = ntp.ValidateResponseMetadata(&ntpresp)
 		if err != nil {
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 
 		dscp := scionLayer.TrafficClass >> 2
@@ -506,7 +512,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
 
 		var t0, t1, t2, t3 time.Time
-		if interleaved {
+		if interleavedResp {
 			t0 = ntp.TimeFromTime64(c.prev.cTxTime)
 			t1 = ntp.TimeFromTime64(c.prev.sRxTime)
 			t2 = sTxTime
@@ -520,33 +526,38 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 		err = ntp.ValidateResponseTimestamps(t0, t1, t1, t3)
 		if err != nil {
-			return offset, weight, err
+			return at, offset, weight, err
 		}
 
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
 		mtrcs.respsAccepted.Inc()
-		if interleaved {
+		if interleavedResp {
 			mtrcs.respsAcceptedInterleaved.Inc()
 		}
 		log.Debug("evaluated response",
+			zap.Time("at", cRxTime),
 			zap.String("from", reference),
-			zap.Bool("interleaved", interleaved),
+			zap.Bool("interleaved", interleavedResp),
 			zap.Duration("clock offset", off),
 			zap.Duration("round trip delay", rtd),
 		)
 
 		if c.InterleavedMode {
 			c.prev.reference = reference
+			c.prev.interleaved = interleavedResp
 			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
 			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
 			c.prev.sRxTime = ntpresp.ReceiveTime
 		}
 
-		// offset, weight = off, 1000.0
-
-		offset, weight = filter(log, reference, t0, t1, t2, t3)
+		at = cRxTime
+		if c.Raw {
+			offset, weight = off, 1000.0
+		} else {
+			offset, weight = filter(log, reference, t0, t1, t2, t3)
+		}
 
 		if c.Histo != nil {
 			c.Histo.RecordValue(rtd.Microseconds())
@@ -555,5 +566,5 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		break
 	}
 
-	return offset, weight, nil
+	return at, offset, weight, nil
 }
