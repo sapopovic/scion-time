@@ -115,3 +115,71 @@ func TestBeforeAfterVariousCases(t *testing.T) {
 		t.Errorf("t8 must be after t7 with both fields non-zero")
 	}
 }
+
+func TestLeapIndicatorRoundTrip(t *testing.T) {
+	// Based on equivalent test from ntpd-rs
+	for l := range uint8(4) {
+		p0 := ntp.Packet{}
+		p0.SetLeapIndicator(l)
+		l0 := p0.LeapIndicator()
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		l1 := p1.LeapIndicator()
+		if l0 != l {
+			t.Fail()
+		}
+		if l1 != l0 {
+			t.Fail()
+		}
+	}
+}
+
+func TestVersionRoundTrip(t *testing.T) {
+	for v := range uint8(8) {
+		p0 := ntp.Packet{}
+		p0.SetVersion(v)
+		v0 := p0.Version()
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		v1 := p1.Version()
+		if v0 != v {
+			t.Fail()
+		}
+		if v1 != v0 {
+			t.Fail()
+		}
+	}
+}
+
+func TestModeRoundTrip(t *testing.T) {
+	// Based on equivalent test from ntpd-rs
+	for m := range uint8(8) {
+		p0 := ntp.Packet{}
+		p0.SetMode(m)
+		m0 := p0.Mode()
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		m1 := p1.Mode()
+		if m0 != m {
+			t.Fail()
+		}
+		if m1 != m0 {
+			t.Fail()
+		}
+	}
+}
