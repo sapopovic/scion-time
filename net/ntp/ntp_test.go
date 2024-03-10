@@ -1,6 +1,7 @@
 package ntp_test
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -179,6 +180,344 @@ func TestModeRoundTrip(t *testing.T) {
 			t.Fail()
 		}
 		if m1 != m0 {
+			t.Fail()
+		}
+	}
+}
+
+func TestStratumRoundTrip(t *testing.T) {
+	vs := []uint8{0, 1, math.MaxUint8 - 1, math.MaxUint8}
+	for _, v := range vs {
+		p0 := ntp.Packet{Stratum: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.Stratum != v {
+			t.Fail()
+		}
+		if p1.Stratum != p0.Stratum {
+			t.Fail()
+		}
+	}
+}
+
+func TestPollRoundTrip(t *testing.T) {
+	vs := []int8{math.MinInt8, math.MinInt8 + 1, -1, 0, 1, math.MaxInt8 - 1, math.MaxInt8}
+	for _, v := range vs {
+		p0 := ntp.Packet{Poll: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.Poll != v {
+			t.Fail()
+		}
+		if p1.Poll != p0.Poll {
+			t.Fail()
+		}
+	}
+}
+
+func TestPrecisionRoundTrip(t *testing.T) {
+	vs := []int8{math.MinInt8, math.MinInt8 + 1, -1, 0, 1, math.MaxInt8 - 1, math.MaxInt8}
+	for _, v := range vs {
+		p0 := ntp.Packet{Precision: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.Precision != v {
+			t.Fail()
+		}
+		if p1.Precision != p0.Precision {
+			t.Fail()
+		}
+	}
+}
+
+func TestRootDelayRoundTrip(t *testing.T) {
+	vs := []ntp.Time32{
+		{Seconds: 0, Fraction: 0},
+		{Seconds: 0, Fraction: 1},
+		{Seconds: 0, Fraction: math.MaxUint16 - 1},
+		{Seconds: 0, Fraction: math.MaxUint16},
+		{Seconds: 1, Fraction: 0},
+		{Seconds: 1, Fraction: 1},
+		{Seconds: 1, Fraction: math.MaxUint16 - 1},
+		{Seconds: 1, Fraction: math.MaxUint16},
+		{Seconds: math.MaxUint16 - 1, Fraction: 0},
+		{Seconds: math.MaxUint16 - 1, Fraction: 1},
+		{Seconds: math.MaxUint16 - 1, Fraction: math.MaxUint16 - 1},
+		{Seconds: math.MaxUint16 - 1, Fraction: math.MaxUint16},
+		{Seconds: math.MaxUint16, Fraction: 0},
+		{Seconds: math.MaxUint16, Fraction: 1},
+		{Seconds: math.MaxUint16, Fraction: math.MaxUint16 - 1},
+		{Seconds: math.MaxUint16, Fraction: math.MaxUint16},
+	}
+	for _, v := range vs {
+		p0 := ntp.Packet{RootDelay: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.RootDelay.Seconds != v.Seconds {
+			t.Fail()
+		}
+		if p0.RootDelay.Fraction != v.Fraction {
+			t.Fail()
+		}
+		if p1.RootDelay.Seconds != p0.RootDelay.Seconds {
+			t.Fail()
+		}
+		if p1.RootDelay.Fraction != p0.RootDelay.Fraction {
+			t.Fail()
+		}
+	}
+}
+
+func TestRootDispersionRoundTrip(t *testing.T) {
+	vs := []ntp.Time32{
+		{Seconds: 0, Fraction: 0},
+		{Seconds: 0, Fraction: 1},
+		{Seconds: 0, Fraction: math.MaxUint16 - 1},
+		{Seconds: 0, Fraction: math.MaxUint16},
+		{Seconds: 1, Fraction: 0},
+		{Seconds: 1, Fraction: 1},
+		{Seconds: 1, Fraction: math.MaxUint16 - 1},
+		{Seconds: 1, Fraction: math.MaxUint16},
+		{Seconds: math.MaxUint16 - 1, Fraction: 0},
+		{Seconds: math.MaxUint16 - 1, Fraction: 1},
+		{Seconds: math.MaxUint16 - 1, Fraction: math.MaxUint16 - 1},
+		{Seconds: math.MaxUint16 - 1, Fraction: math.MaxUint16},
+		{Seconds: math.MaxUint16, Fraction: 0},
+		{Seconds: math.MaxUint16, Fraction: 1},
+		{Seconds: math.MaxUint16, Fraction: math.MaxUint16 - 1},
+		{Seconds: math.MaxUint16, Fraction: math.MaxUint16},
+	}
+	for _, v := range vs {
+		p0 := ntp.Packet{RootDispersion: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.RootDispersion.Seconds != v.Seconds {
+			t.Fail()
+		}
+		if p0.RootDispersion.Fraction != v.Fraction {
+			t.Fail()
+		}
+		if p1.RootDispersion.Seconds != p0.RootDispersion.Seconds {
+			t.Fail()
+		}
+		if p1.RootDispersion.Fraction != p0.RootDispersion.Fraction {
+			t.Fail()
+		}
+	}
+}
+
+func TestReferenceIDRoundTrip(t *testing.T) {
+	vs := []uint32{0, 1, math.MaxUint32 - 1, math.MaxUint32}
+	for _, v := range vs {
+		p0 := ntp.Packet{ReferenceID: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.ReferenceID != v {
+			t.Fail()
+		}
+		if p1.ReferenceID != p0.ReferenceID {
+			t.Fail()
+		}
+	}
+}
+
+func TestReferenceTimeRoundTrip(t *testing.T) {
+	vs := []ntp.Time64{
+		{Seconds: 0, Fraction: 0},
+		{Seconds: 0, Fraction: 1},
+		{Seconds: 0, Fraction: math.MaxUint32 - 1},
+		{Seconds: 0, Fraction: math.MaxUint32},
+		{Seconds: 1, Fraction: 0},
+		{Seconds: 1, Fraction: 1},
+		{Seconds: 1, Fraction: math.MaxUint32 - 1},
+		{Seconds: 1, Fraction: math.MaxUint32},
+		{Seconds: math.MaxUint32 - 1, Fraction: 0},
+		{Seconds: math.MaxUint32 - 1, Fraction: 1},
+		{Seconds: math.MaxUint32 - 1, Fraction: math.MaxUint32 - 1},
+		{Seconds: math.MaxUint32 - 1, Fraction: math.MaxUint32},
+		{Seconds: math.MaxUint32, Fraction: 0},
+		{Seconds: math.MaxUint32, Fraction: 1},
+		{Seconds: math.MaxUint32, Fraction: math.MaxUint32 - 1},
+		{Seconds: math.MaxUint32, Fraction: math.MaxUint32},
+	}
+	for _, v := range vs {
+		p0 := ntp.Packet{ReferenceTime: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.ReferenceTime.Seconds != v.Seconds {
+			t.Fail()
+		}
+		if p0.ReferenceTime.Fraction != v.Fraction {
+			t.Fail()
+		}
+		if p1.ReferenceTime.Seconds != p0.ReferenceTime.Seconds {
+			t.Fail()
+		}
+		if p1.ReferenceTime.Fraction != p0.ReferenceTime.Fraction {
+			t.Fail()
+		}
+	}
+}
+
+func TestOriginTimeRoundTrip(t *testing.T) {
+	vs := []ntp.Time64{
+		{Seconds: 0, Fraction: 0},
+		{Seconds: 0, Fraction: 1},
+		{Seconds: 0, Fraction: math.MaxUint32 - 1},
+		{Seconds: 0, Fraction: math.MaxUint32},
+		{Seconds: 1, Fraction: 0},
+		{Seconds: 1, Fraction: 1},
+		{Seconds: 1, Fraction: math.MaxUint32 - 1},
+		{Seconds: 1, Fraction: math.MaxUint32},
+		{Seconds: math.MaxUint32 - 1, Fraction: 0},
+		{Seconds: math.MaxUint32 - 1, Fraction: 1},
+		{Seconds: math.MaxUint32 - 1, Fraction: math.MaxUint32 - 1},
+		{Seconds: math.MaxUint32 - 1, Fraction: math.MaxUint32},
+		{Seconds: math.MaxUint32, Fraction: 0},
+		{Seconds: math.MaxUint32, Fraction: 1},
+		{Seconds: math.MaxUint32, Fraction: math.MaxUint32 - 1},
+		{Seconds: math.MaxUint32, Fraction: math.MaxUint32},
+	}
+	for _, v := range vs {
+		p0 := ntp.Packet{OriginTime: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.OriginTime.Seconds != v.Seconds {
+			t.Fail()
+		}
+		if p0.OriginTime.Fraction != v.Fraction {
+			t.Fail()
+		}
+		if p1.OriginTime.Seconds != p0.OriginTime.Seconds {
+			t.Fail()
+		}
+		if p1.OriginTime.Fraction != p0.OriginTime.Fraction {
+			t.Fail()
+		}
+	}
+}
+
+func TestReceiveTimeRoundTrip(t *testing.T) {
+	vs := []ntp.Time64{
+		{Seconds: 0, Fraction: 0},
+		{Seconds: 0, Fraction: 1},
+		{Seconds: 0, Fraction: math.MaxUint32 - 1},
+		{Seconds: 0, Fraction: math.MaxUint32},
+		{Seconds: 1, Fraction: 0},
+		{Seconds: 1, Fraction: 1},
+		{Seconds: 1, Fraction: math.MaxUint32 - 1},
+		{Seconds: 1, Fraction: math.MaxUint32},
+		{Seconds: math.MaxUint32 - 1, Fraction: 0},
+		{Seconds: math.MaxUint32 - 1, Fraction: 1},
+		{Seconds: math.MaxUint32 - 1, Fraction: math.MaxUint32 - 1},
+		{Seconds: math.MaxUint32 - 1, Fraction: math.MaxUint32},
+		{Seconds: math.MaxUint32, Fraction: 0},
+		{Seconds: math.MaxUint32, Fraction: 1},
+		{Seconds: math.MaxUint32, Fraction: math.MaxUint32 - 1},
+		{Seconds: math.MaxUint32, Fraction: math.MaxUint32},
+	}
+	for _, v := range vs {
+		p0 := ntp.Packet{ReceiveTime: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.ReceiveTime.Seconds != v.Seconds {
+			t.Fail()
+		}
+		if p0.ReceiveTime.Fraction != v.Fraction {
+			t.Fail()
+		}
+		if p1.ReceiveTime.Seconds != p0.ReceiveTime.Seconds {
+			t.Fail()
+		}
+		if p1.ReceiveTime.Fraction != p0.ReceiveTime.Fraction {
+			t.Fail()
+		}
+	}
+}
+
+func TestTransmitTimeRoundTrip(t *testing.T) {
+	vs := []ntp.Time64{
+		{Seconds: 0, Fraction: 0},
+		{Seconds: 0, Fraction: 1},
+		{Seconds: 0, Fraction: math.MaxUint32 - 1},
+		{Seconds: 0, Fraction: math.MaxUint32},
+		{Seconds: 1, Fraction: 0},
+		{Seconds: 1, Fraction: 1},
+		{Seconds: 1, Fraction: math.MaxUint32 - 1},
+		{Seconds: 1, Fraction: math.MaxUint32},
+		{Seconds: math.MaxUint32 - 1, Fraction: 0},
+		{Seconds: math.MaxUint32 - 1, Fraction: 1},
+		{Seconds: math.MaxUint32 - 1, Fraction: math.MaxUint32 - 1},
+		{Seconds: math.MaxUint32 - 1, Fraction: math.MaxUint32},
+		{Seconds: math.MaxUint32, Fraction: 0},
+		{Seconds: math.MaxUint32, Fraction: 1},
+		{Seconds: math.MaxUint32, Fraction: math.MaxUint32 - 1},
+		{Seconds: math.MaxUint32, Fraction: math.MaxUint32},
+	}
+	for _, v := range vs {
+		p0 := ntp.Packet{TransmitTime: v}
+		b := make([]byte, ntp.PacketLen)
+		ntp.EncodePacket(&b, &p0)
+		p1 := ntp.Packet{}
+		err := ntp.DecodePacket(&p1, b)
+		if err != nil {
+			panic(err)
+		}
+		if p0.TransmitTime.Seconds != v.Seconds {
+			t.Fail()
+		}
+		if p0.TransmitTime.Fraction != v.Fraction {
+			t.Fail()
+		}
+		if p1.TransmitTime.Seconds != p0.TransmitTime.Seconds {
+			t.Fail()
+		}
+		if p1.TransmitTime.Fraction != p0.TransmitTime.Fraction {
 			t.Fail()
 		}
 	}
