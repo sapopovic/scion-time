@@ -1,6 +1,7 @@
 package ntp_test
 
 import (
+	"bytes"
 	"math"
 	"testing"
 	"time"
@@ -273,16 +274,10 @@ func TestRootDelayRoundTrip(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		if p0.RootDelay.Seconds != v.Seconds {
+		if p0.RootDelay != v {
 			t.Fail()
 		}
-		if p0.RootDelay.Fraction != v.Fraction {
-			t.Fail()
-		}
-		if p1.RootDelay.Seconds != p0.RootDelay.Seconds {
-			t.Fail()
-		}
-		if p1.RootDelay.Fraction != p0.RootDelay.Fraction {
+		if p1.RootDelay != p0.RootDelay {
 			t.Fail()
 		}
 	}
@@ -316,16 +311,10 @@ func TestRootDispersionRoundTrip(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		if p0.RootDispersion.Seconds != v.Seconds {
+		if p0.RootDispersion != v {
 			t.Fail()
 		}
-		if p0.RootDispersion.Fraction != v.Fraction {
-			t.Fail()
-		}
-		if p1.RootDispersion.Seconds != p0.RootDispersion.Seconds {
-			t.Fail()
-		}
-		if p1.RootDispersion.Fraction != p0.RootDispersion.Fraction {
+		if p1.RootDispersion != p0.RootDispersion {
 			t.Fail()
 		}
 	}
@@ -379,16 +368,10 @@ func TestReferenceTimeRoundTrip(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		if p0.ReferenceTime.Seconds != v.Seconds {
+		if p0.ReferenceTime != v {
 			t.Fail()
 		}
-		if p0.ReferenceTime.Fraction != v.Fraction {
-			t.Fail()
-		}
-		if p1.ReferenceTime.Seconds != p0.ReferenceTime.Seconds {
-			t.Fail()
-		}
-		if p1.ReferenceTime.Fraction != p0.ReferenceTime.Fraction {
+		if p1.ReferenceTime != p0.ReferenceTime {
 			t.Fail()
 		}
 	}
@@ -422,16 +405,10 @@ func TestOriginTimeRoundTrip(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		if p0.OriginTime.Seconds != v.Seconds {
+		if p0.OriginTime != v {
 			t.Fail()
 		}
-		if p0.OriginTime.Fraction != v.Fraction {
-			t.Fail()
-		}
-		if p1.OriginTime.Seconds != p0.OriginTime.Seconds {
-			t.Fail()
-		}
-		if p1.OriginTime.Fraction != p0.OriginTime.Fraction {
+		if p1.OriginTime != p0.OriginTime {
 			t.Fail()
 		}
 	}
@@ -465,16 +442,10 @@ func TestReceiveTimeRoundTrip(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		if p0.ReceiveTime.Seconds != v.Seconds {
+		if p0.ReceiveTime != v {
 			t.Fail()
 		}
-		if p0.ReceiveTime.Fraction != v.Fraction {
-			t.Fail()
-		}
-		if p1.ReceiveTime.Seconds != p0.ReceiveTime.Seconds {
-			t.Fail()
-		}
-		if p1.ReceiveTime.Fraction != p0.ReceiveTime.Fraction {
+		if p1.ReceiveTime != p0.ReceiveTime {
 			t.Fail()
 		}
 	}
@@ -508,17 +479,89 @@ func TestTransmitTimeRoundTrip(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		if p0.TransmitTime.Seconds != v.Seconds {
+		if p0.TransmitTime != v {
 			t.Fail()
 		}
-		if p0.TransmitTime.Fraction != v.Fraction {
+		if p1.TransmitTime != p0.TransmitTime {
 			t.Fail()
 		}
-		if p1.TransmitTime.Seconds != p0.TransmitTime.Seconds {
-			t.Fail()
-		}
-		if p1.TransmitTime.Fraction != p0.TransmitTime.Fraction {
-			t.Fail()
-		}
+	}
+}
+
+func TestClientPacket(t *testing.T) {
+	// Based on equivalent test from ntpd-rs
+	p0 := ntp.Packet{}
+	p0.SetLeapIndicator(ntp.LeapIndicatorNoWarning)
+	p0.SetVersion(4)
+	p0.SetMode(ntp.ModeClient)
+	p0.Stratum = 2
+	p0.Poll = 6
+	p0.Precision = -24
+	p0.RootDelay = ntp.Time32{Seconds: 0, Fraction: 1023}
+	p0.RootDispersion = ntp.Time32{Seconds: 0, Fraction: 893}
+	p0.ReferenceID = 0x5ec69f0f
+	p0.ReferenceTime = ntp.Time64{Seconds: 0xe5f66298, Fraction: 0x7b61b9af}
+	p0.OriginTime = ntp.Time64{Seconds: 0xe5f66366, Fraction: 0x7b64995d}
+	p0.ReceiveTime = ntp.Time64{Seconds: 0xe5f66366, Fraction: 0x81405590}
+	p0.TransmitTime = ntp.Time64{Seconds: 0xe5f663a8, Fraction: 0x761dde48}
+	b0 := make([]byte, ntp.PacketLen)
+	ntp.EncodePacket(&b0, &p0)
+	b1 := []byte{
+		0x23, 0x02, 0x06, 0xe8, 0x00, 0x00, 0x03, 0xff,
+		0x00, 0x00, 0x03, 0x7d, 0x5e, 0xc6, 0x9f, 0x0f,
+		0xe5, 0xf6, 0x62, 0x98, 0x7b, 0x61, 0xb9, 0xaf,
+		0xe5, 0xf6, 0x63, 0x66, 0x7b, 0x64, 0x99, 0x5d,
+		0xe5, 0xf6, 0x63, 0x66, 0x81, 0x40, 0x55, 0x90,
+		0xe5, 0xf6, 0x63, 0xa8, 0x76, 0x1d, 0xde, 0x48,
+	}
+	p1 := ntp.Packet{}
+	err := ntp.DecodePacket(&p1, b1)
+	if err != nil {
+		panic(err)
+	}
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	if p1 != p0 {
+		t.Fail()
+	}
+}
+
+func TestServerPacket(t *testing.T) {
+	// Based on equivalent test from ntpd-rs
+	p0 := ntp.Packet{}
+	p0.SetLeapIndicator(ntp.LeapIndicatorNoWarning)
+	p0.SetVersion(4)
+	p0.SetMode(ntp.ModeServer)
+	p0.Stratum = 2
+	p0.Poll = 6
+	p0.Precision = -23
+	p0.RootDelay = ntp.Time32{Seconds: 0, Fraction: 566}
+	p0.RootDispersion = ntp.Time32{Seconds: 0, Fraction: 951}
+	p0.ReferenceID = 0xc035676c
+	p0.ReferenceTime = ntp.Time64{Seconds: 0xe5f661fd, Fraction: 0x6f165f03}
+	p0.OriginTime = ntp.Time64{Seconds: 0xe5f663a8, Fraction: 0x7619ef40}
+	p0.ReceiveTime = ntp.Time64{Seconds: 0xe5f663a8, Fraction: 0x798c6581}
+	p0.TransmitTime = ntp.Time64{Seconds: 0xe5f663a8, Fraction: 0x798eae2b}
+	b0 := make([]byte, ntp.PacketLen)
+	ntp.EncodePacket(&b0, &p0)
+	b1 := []byte{
+		0x24, 0x02, 0x06, 0xe9, 0x00, 0x00, 0x02, 0x36,
+		0x00, 0x00, 0x03, 0xb7, 0xc0, 0x35, 0x67, 0x6c,
+		0xe5, 0xf6, 0x61, 0xfd, 0x6f, 0x16, 0x5f, 0x03,
+		0xe5, 0xf6, 0x63, 0xa8, 0x76, 0x19, 0xef, 0x40,
+		0xe5, 0xf6, 0x63, 0xa8, 0x79, 0x8c, 0x65, 0x81,
+		0xe5, 0xf6, 0x63, 0xa8, 0x79, 0x8e, 0xae, 0x2b,
+	}
+	p1 := ntp.Packet{}
+	err := ntp.DecodePacket(&p1, b1)
+	if err != nil {
+		panic(err)
+	}
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	if p1 != p0 {
+		t.Fail()
 	}
 }
