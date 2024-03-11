@@ -54,7 +54,7 @@ func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 	} else {
 		n = 1
 	}
-	for i := 0; i != n; i++ {
+	for i := range n {
 		a, o, _, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
 		if e == nil {
 			at, off, err = a, o, e
@@ -120,7 +120,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 
 	off := make([]time.Duration, len(sps))
 	ms := make(chan measurement)
-	for i := 0; i != len(sps); i++ {
+	for i := range len(sps) {
 		go func(ctx context.Context, log *zap.Logger, mtrcs *scionClientMetrics,
 			ntpc *SCIONClient, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
 			var err error
@@ -136,7 +136,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 			} else {
 				n = 1
 			}
-			for j := 0; j != n; j++ {
+			for j := range n {
 				_, o, _, e := ntpc.measureClockOffsetSCION(ctx, log, mtrcs, localAddr, remoteAddr, p)
 				if e == nil {
 					off, err = o, e

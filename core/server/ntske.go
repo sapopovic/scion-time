@@ -32,7 +32,7 @@ func newNTSKEMsg(log *zap.Logger, localIP net.IP, localPort int, data *ntske.Dat
 	plaintextCookie.S2C = data.S2cKey
 	key := provider.Current()
 	addedCookie := false
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		encryptedCookie, err := plaintextCookie.EncryptWithNonce(key.Value, key.ID)
 		if err != nil {
 			log.Info("failed to encrypt cookie", zap.Error(err))

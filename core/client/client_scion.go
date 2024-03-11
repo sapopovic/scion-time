@@ -560,7 +560,10 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		}
 
 		if c.Histo != nil {
-			c.Histo.RecordValue(rtd.Microseconds())
+			err := c.Histo.RecordValue(rtd.Microseconds())
+			if err != nil {
+				return at, offset, weight, err
+			}
 		}
 
 		break

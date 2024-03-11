@@ -30,7 +30,7 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 	var wg sync.WaitGroup
 	wg.Add(numClientGoroutine)
 
-	for i := numClientGoroutine; i > 0; i-- {
+	for range numClientGoroutine {
 		go func() {
 			var err error
 			hg := hdrhistogram.New(1, 50000, 5)
@@ -90,7 +90,7 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 			defer wg.Done()
 			<-sg
 			ntpcs := []*client.SCIONClient{c}
-			for j := numRequestPerClient; j > 0; j-- {
+			for range numRequestPerClient {
 				_, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps)
 				if err != nil {
 					log.Info("failed to measure clock offset",

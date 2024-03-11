@@ -330,7 +330,10 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		}
 
 		if c.Histo != nil {
-			c.Histo.RecordValue(rtd.Microseconds())
+			err := c.Histo.RecordValue(rtd.Microseconds())
+			if err != nil {
+				return at, offset, weight, err
+			}
 		}
 
 		break

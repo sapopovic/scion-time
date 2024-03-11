@@ -370,7 +370,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 				var cookies [][]byte
 				key := provider.Current()
 				addedCookie := false
-				for i := 0; i < len(ntsreq.Cookies)+len(ntsreq.CookiePlaceholders); i++ {
+				for range len(ntsreq.Cookies) + len(ntsreq.CookiePlaceholders) {
 					encryptedCookie, err := serverCookie.EncryptWithNonce(key.Value, key.ID)
 					if err != nil {
 						log.Info("failed to encrypt cookie", zap.Error(err))
@@ -491,7 +491,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 		}
 		go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHostPort, dscp, fetcher, provider)
 	} else {
-		for i := scionServerNumGoroutine; i > 0; i-- {
+		for range scionServerNumGoroutine {
 			fetcher := scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
 			conn, err := reuseport.ListenPacket("udp",
 				net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port)))

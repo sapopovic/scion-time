@@ -225,7 +225,7 @@ func newNTPReferenceClockSCION(daemonAddr string, localAddr, remoteAddr udp.UDPA
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
-	for i := 0; i != len(c.ntpcs); i++ {
+	for i := range len(c.ntpcs) {
 		c.ntpcs[i] = &client.SCIONClient{
 			DSCP:            dscp,
 			InterleavedMode: true,

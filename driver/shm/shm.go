@@ -48,6 +48,12 @@ func initSHM(log *zap.Logger) error {
 		return errno
 	}
 
+	// go vet warns about possible misuse of unsafe.Pointer in the following
+	// assignments. However, this seems to be in accordance with case (3) in
+	// https://pkg.go.dev/unsafe#Pointer. Maybe the follwing accepted proposal
+	// will help here: https://github.com/golang/go/issues/58625
+	// Another possible workourund would be to use expressions of the form
+	// (unsafe.Add(*(*unsafe.Pointer)(unsafe.Pointer(&addr)), ...))
 	shmTimeMode = (*int32)(unsafe.Pointer(addr +
 		0 /* offsetof(struct shmTime, mode) */))
 	shmTimeCount = (*int32)(unsafe.Pointer(addr +
