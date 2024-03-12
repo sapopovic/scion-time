@@ -131,7 +131,10 @@ func MeasureClockOffset(ctx context.Context, log *zap.Logger, dev string) (time.
 		zap.Int64("latency", refTimeCycles-sysTimeCyclesAfter),
 		zap.Uint64("frequency", cycleFrequency),
 	)
-	log.Debug("mbg clock offset", zap.Duration("offset", refTime.Sub(sysTime)))
 
-	return refTime.Sub(sysTime), nil
+	offset := refTime.Sub(sysTime)
+
+	log.Debug("mbg clock offset", zap.Duration("offset", offset))
+
+	return offset, nil
 }

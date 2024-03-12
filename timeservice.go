@@ -37,6 +37,7 @@ import (
 
 	"example.com/scion-time/driver/clock"
 	"example.com/scion-time/driver/mbg"
+	"example.com/scion-time/driver/shm"
 
 	"example.com/scion-time/net/ntp"
 	"example.com/scion-time/net/ntske"
@@ -60,6 +61,7 @@ type svcConfig struct {
 	DaemonAddr              string   `toml:"daemon_address,omitempty"`
 	RemoteAddr              string   `toml:"remote_address,omitempty"`
 	MBGReferenceClocks      []string `toml:"mbg_reference_clocks,omitempty"`
+	SHMReferenceClocks      []string `toml:"shm_reference_clocks,omitempty"`
 	NTPReferenceClocks      []string `toml:"ntp_reference_clocks,omitempty"`
 	SCIONPeers              []string `toml:"scion_peers,omitempty"`
 	NTSKECertFile           string   `toml:"ntske_cert_file,omitempty"`
@@ -73,6 +75,8 @@ type svcConfig struct {
 type mbgReferenceClock struct {
 	dev string
 }
+
+type shmReferenceClock struct{}
 
 type ntpReferenceClockIP struct {
 	ntpc       *client.IPClient
@@ -159,6 +163,11 @@ func (c *tlsCertCache) loadCert(chi *tls.ClientHelloInfo) (*tls.Certificate, err
 func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
 	time.Duration, error) {
 	return mbg.MeasureClockOffset(ctx, log, c.dev)
+}
+
+func (c *shmReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
+	time.Duration, error) {
+	return shm.MeasureClockOffset(ctx, log)
 }
 
 func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
@@ -315,6 +324,14 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 		refClocks = append(refClocks, &mbgReferenceClock{
 			dev: s,
 		})
+	}
+
+	for _, s := range cfg.SHMReferenceClocks {
+		if s != shm.ReferenceClockType {
+			log.Fatal("unexpected SHM reference clock type",
+				zap.String("type", s))
+		}
+		refClocks = append(refClocks, &shmReferenceClock{})
 	}
 
 	var dstIAs []addr.IA
