@@ -1,7 +1,7 @@
 package shm
 
 // References:
-// http://doc.ntp.org/current-stable/drivers/driver28.html
+// https://www.ntp.org/documentation/drivers/driver28
 
 import (
 	"unsafe"
