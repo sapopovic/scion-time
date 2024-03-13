@@ -27,14 +27,14 @@ var (
 	shmTimeReceiveTimeStampNSec *uint32
 )
 
-func initSHM(log *zap.Logger) error {
+func initSHM(log *zap.Logger, unit int) error {
 	if shmInitialized {
 		panic("SHM already initialized")
 	}
 
-	var key int = 0x4e545030
+	var key int = 0x4e545030 + unit
 	var size int = 96 /* sizeof(struct shmTime) */
-	var flags int = 01000 /* IPC_CREAT */ | 0666
+	var flags int = 01000 /* IPC_CREAT */ | 0600
 	id, _, errno := unix.Syscall(unix.SYS_SHMGET, uintptr(key), uintptr(size), uintptr(flags))
 	if int(id) < 0 {
 		if int(id) != -1 {

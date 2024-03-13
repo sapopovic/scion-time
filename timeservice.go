@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -76,7 +77,9 @@ type mbgReferenceClock struct {
 	dev string
 }
 
-type shmReferenceClock struct{}
+type shmReferenceClock struct {
+	unit int
+}
 
 type ntpReferenceClockIP struct {
 	ntpc       *client.IPClient
@@ -167,7 +170,7 @@ func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Log
 
 func (c *shmReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
 	time.Duration, error) {
-	return shm.MeasureClockOffset(ctx, log)
+	return shm.MeasureClockOffset(ctx, log, c.unit)
 }
 
 func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
@@ -327,11 +330,23 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 	}
 
 	for _, s := range cfg.SHMReferenceClocks {
-		if s != shm.ReferenceClockType {
-			log.Fatal("unexpected SHM reference clock type",
-				zap.String("type", s))
+		t := strings.Split(s, ":")
+		if len(t) > 2 || t[0] != shm.ReferenceClockType {
+			log.Fatal("unexpected SHM reference clock id",
+				zap.String("id", s))
 		}
-		refClocks = append(refClocks, &shmReferenceClock{})
+		var u int
+		if len(t) > 1 {
+			var err error
+			u, err = strconv.Atoi(t[1])
+			if err != nil {
+				log.Fatal("unexpected SHM reference clock id",
+					zap.String("id", s), zap.Error(err))
+			}
+		}
+		refClocks = append(refClocks, &shmReferenceClock{
+			unit: u,
+		})
 	}
 
 	var dstIAs []addr.IA

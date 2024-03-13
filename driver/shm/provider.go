@@ -8,7 +8,7 @@ import (
 
 func StoreClockSamples(log *zap.Logger, refTime, sysTime time.Time) error {
 	if !shmInitialized {
-		err := initSHM(log)
+		err := initSHM(log, 0 /* unit */)
 		if err != nil {
 			return err
 		}
