@@ -10,15 +10,24 @@ import (
 
 const ReferenceClockType = "ntpshm"
 
+type ReferenceClock struct {
+	unit int
+	shm  segment
+}
+
 var errNoSample = errors.New("SHM sample temporarily unavailable")
 
-func MeasureClockOffset(ctx context.Context, log *zap.Logger, unit int) (time.Duration, error) {
+func NewReferenceClock(unit int) *ReferenceClock {
+	return &ReferenceClock{unit: unit}
+}
+
+func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (time.Duration, error) {
 	deadline, deadlineIsSet := ctx.Deadline()
 	const maxNumRetries = 8
 	numRetries := 0
 	for {
-		if !shmInitialized {
-			err := initSHM(log, unit)
+		if !c.shm.initialized {
+			err := initSegment(&c.shm, c.unit)
 			if err != nil {
 				if numRetries != maxNumRetries && deadlineIsSet && time.Now().Before(deadline) {
 					time.Sleep(0)
@@ -29,23 +38,23 @@ func MeasureClockOffset(ctx context.Context, log *zap.Logger, unit int) (time.Du
 			}
 		}
 
-		tTimeMode := *shmTimeMode
-		tTimeCount := *shmTimeCount
-		tTimeValid := *shmTimeValid
-		tTimeClockTimeStampSec := *shmTimeClockTimeStampSec
-		tTimeClockTimeStampUSec := *shmTimeClockTimeStampUSec
-		tTimeReceiveTimeStampSec := *shmTimeReceiveTimeStampSec
-		tTimeReceiveTimeStampUSec := *shmTimeReceiveTimeStampUSec
-		tTimeLeap := *shmTimeLeap
-		tTimeClockTimeStampNSec := *shmTimeClockTimeStampNSec
-		tTimeReceiveTimeStampNSec := *shmTimeReceiveTimeStampNSec
+		timeMode := *c.shm.timeMode
+		timeCount := *c.shm.timeCount
+		timeValid := *c.shm.timeValid
+		timeClockTimeStampSec := *c.shm.timeClockTimeStampSec
+		timeClockTimeStampUSec := *c.shm.timeClockTimeStampUSec
+		timeReceiveTimeStampSec := *c.shm.timeReceiveTimeStampSec
+		timeReceiveTimeStampUSec := *c.shm.timeReceiveTimeStampUSec
+		timeLeap := *c.shm.timeLeap
+		timeClockTimeStampNSec := *c.shm.timeClockTimeStampNSec
+		timeReceiveTimeStampNSec := *c.shm.timeReceiveTimeStampNSec
 
 		// SHM client logic based on analogous code in chrony
 
-		if (tTimeMode == 1 && tTimeCount != *shmTimeCount) ||
-			!(tTimeMode == 0 || tTimeMode == 1) || tTimeValid == 0 {
+		if (timeMode == 1 && timeCount != *c.shm.timeCount) ||
+			!(timeMode == 0 || timeMode == 1) || timeValid == 0 {
 			log.Error("SHM sample temporarily unavailable",
-				zap.Int32("mode", tTimeMode), zap.Int32("count", tTimeCount), zap.Int32("valid", tTimeValid))
+				zap.Int32("mode", timeMode), zap.Int32("count", timeCount), zap.Int32("valid", timeValid))
 			if numRetries != maxNumRetries && deadlineIsSet && time.Now().Before(deadline) {
 				time.Sleep(0)
 				numRetries++
@@ -54,19 +63,19 @@ func MeasureClockOffset(ctx context.Context, log *zap.Logger, unit int) (time.Du
 			return 0, errNoSample
 		}
 
-		*shmTimeValid = 0
+		*c.shm.timeValid = 0
 
-		receiveTimeSeconds := tTimeReceiveTimeStampSec
-		clockTimeSeconds := tTimeClockTimeStampSec
+		receiveTimeSeconds := timeReceiveTimeStampSec
+		clockTimeSeconds := timeClockTimeStampSec
 
 		var receiveTimeNanoseconds, clockTimeNanoseconds int64
-		if tTimeClockTimeStampNSec/1000 == uint32(tTimeClockTimeStampUSec) &&
-			tTimeReceiveTimeStampNSec/1000 == uint32(tTimeReceiveTimeStampUSec) {
-			receiveTimeNanoseconds = int64(tTimeReceiveTimeStampNSec)
-			clockTimeNanoseconds = int64(tTimeClockTimeStampNSec)
+		if timeClockTimeStampNSec/1000 == uint32(timeClockTimeStampUSec) &&
+			timeReceiveTimeStampNSec/1000 == uint32(timeReceiveTimeStampUSec) {
+			receiveTimeNanoseconds = int64(timeReceiveTimeStampNSec)
+			clockTimeNanoseconds = int64(timeClockTimeStampNSec)
 		} else {
-			receiveTimeNanoseconds = 1000 * int64(tTimeReceiveTimeStampUSec)
-			clockTimeNanoseconds = 1000 * int64(tTimeClockTimeStampUSec)
+			receiveTimeNanoseconds = 1000 * int64(timeReceiveTimeStampUSec)
+			clockTimeNanoseconds = 1000 * int64(timeClockTimeStampUSec)
 		}
 
 		receiveTime := time.Unix(receiveTimeSeconds, receiveTimeNanoseconds).UTC()
@@ -75,7 +84,7 @@ func MeasureClockOffset(ctx context.Context, log *zap.Logger, unit int) (time.Du
 		log.Debug("SHM clock sample",
 			zap.Time("receiveTime", receiveTime),
 			zap.Time("clockTime", clockTime),
-			zap.Int32("leap", tTimeLeap),
+			zap.Int32("leap", timeLeap),
 		)
 
 		offset := clockTime.Sub(receiveTime)

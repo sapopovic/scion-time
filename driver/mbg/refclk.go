@@ -38,6 +38,10 @@ const (
 	ioctlDirShift  = ioctlSizeShift + ioctlSizeBits
 )
 
+type ReferenceClock struct {
+	dev string
+}
+
 func ioctlRequest(d, s, t, n int) uint {
 	// See https://man7.org/linux/man-pages/man2/ioctl.2.html#NOTES
 
@@ -56,10 +60,14 @@ func nanoseconds(frac uint32) int64 {
 	return int64((uint64(frac) * uint64(time.Second)) / (1 << 32))
 }
 
-func MeasureClockOffset(ctx context.Context, log *zap.Logger, dev string) (time.Duration, error) {
-	fd, err := unix.Open(dev, unix.O_RDWR, 0)
+func NewReferenceClock(dev string) *ReferenceClock {
+	return &ReferenceClock{dev: dev}
+}
+
+func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (time.Duration, error) {
+	fd, err := unix.Open(c.dev, unix.O_RDWR, 0)
 	if err != nil {
-		log.Error("unix.Open failed", zap.String("dev", dev), zap.Error(err))
+		log.Error("unix.Open failed", zap.String("dev", c.dev), zap.Error(err))
 		return 0, err
 	}
 	defer func(log *zap.Logger, dev string) {
@@ -67,7 +75,7 @@ func MeasureClockOffset(ctx context.Context, log *zap.Logger, dev string) (time.
 		if err != nil {
 			log.Info("unix.Close failed", zap.String("dev", dev), zap.Error(err))
 		}
-	}(log, dev)
+	}(log, c.dev)
 
 	featureType := uint32(2 /* PCPS */)
 	featureNumber := uint32(6 /* HAS_HR_TIME */)
@@ -80,7 +88,7 @@ func MeasureClockOffset(ctx context.Context, log *zap.Logger, dev string) (time.
 		uintptr(ioctlRequest(ioctlWrite, len(featureData), 'M', 0xa4)),
 		uintptr(unsafe.Pointer(&featureData[0])))
 	if errno != 0 {
-		log.Error("ioctl failed (features) or HR time not supported", zap.String("dev", dev), zap.Error(errno))
+		log.Error("ioctl failed (features) or HR time not supported", zap.String("dev", c.dev), zap.Error(errno))
 		return 0, errno
 	}
 
@@ -89,7 +97,7 @@ func MeasureClockOffset(ctx context.Context, log *zap.Logger, dev string) (time.
 		uintptr(ioctlRequest(ioctlRead, len(cycleFrequencyData), 'M', 0x68)),
 		uintptr(unsafe.Pointer(&cycleFrequencyData[0])))
 	if errno != 0 {
-		log.Error("ioctl failed (cycle frequency)", zap.String("dev", dev), zap.Error(errno))
+		log.Error("ioctl failed (cycle frequency)", zap.String("dev", c.dev), zap.Error(errno))
 		return 0, errno
 	}
 
@@ -101,7 +109,7 @@ func MeasureClockOffset(ctx context.Context, log *zap.Logger, dev string) (time.
 		uintptr(ioctlRequest(ioctlRead, len(timeData), 'M', 0x80)),
 		uintptr(unsafe.Pointer(&timeData[0])))
 	if errno != 0 {
-		log.Error("ioctl failed (time)", zap.String("dev", dev), zap.Error(errno))
+		log.Error("ioctl failed (time)", zap.String("dev", c.dev), zap.Error(errno))
 		return 0, errno
 	}
 

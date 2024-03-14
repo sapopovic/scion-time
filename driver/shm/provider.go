@@ -6,27 +6,36 @@ import (
 	"go.uber.org/zap"
 )
 
-func StoreClockSamples(log *zap.Logger, refTime, sysTime time.Time) error {
-	if !shmInitialized {
-		err := initSHM(log, 0 /* unit */)
+type Provider struct {
+	unit int
+	shm  segment
+}
+
+func NewProvider(unit int) *Provider {
+	return &Provider{unit: unit}
+}
+
+func (p *Provider) StoreClockSamples(log *zap.Logger, refTime, sysTime time.Time) error {
+	if !p.shm.initialized {
+		err := initSegment(&p.shm, p.unit)
 		if err != nil {
 			return err
 		}
 	}
 
-	*shmTimeMode = 0
-	*shmTimeClockTimeStampSec = refTime.Unix()
-	*shmTimeClockTimeStampUSec = int32(refTime.Nanosecond() / 1e3)
-	*shmTimeReceiveTimeStampSec = sysTime.Unix()
-	*shmTimeReceiveTimeStampUSec = int32(sysTime.Nanosecond() / 1e3)
-	*shmTimeLeap = 0
-	*shmTimePrecision = 0
-	*shmTimeNSamples = 0
-	*shmTimeClockTimeStampNSec = uint32(refTime.Nanosecond())
-	*shmTimeReceiveTimeStampNSec = uint32(sysTime.Nanosecond())
+	*p.shm.timeMode = 0
+	*p.shm.timeClockTimeStampSec = refTime.Unix()
+	*p.shm.timeClockTimeStampUSec = int32(refTime.Nanosecond() / 1e3)
+	*p.shm.timeReceiveTimeStampSec = sysTime.Unix()
+	*p.shm.timeReceiveTimeStampUSec = int32(sysTime.Nanosecond() / 1e3)
+	*p.shm.timeLeap = 0
+	*p.shm.timePrecision = 0
+	*p.shm.timeNSamples = 0
+	*p.shm.timeClockTimeStampNSec = uint32(refTime.Nanosecond())
+	*p.shm.timeReceiveTimeStampNSec = uint32(sysTime.Nanosecond())
 
-	*shmTimeCount++
-	*shmTimeValid = 1
+	*p.shm.timeCount++
+	*p.shm.timeValid = 1
 
 	return nil
 }

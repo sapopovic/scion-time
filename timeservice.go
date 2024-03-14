@@ -73,14 +73,6 @@ type svcConfig struct {
 	DSCP                    uint8    `toml:"dscp,omitempty"` // must be in range [0, 63]
 }
 
-type mbgReferenceClock struct {
-	dev string
-}
-
-type shmReferenceClock struct {
-	unit int
-}
-
 type ntpReferenceClockIP struct {
 	ntpc       *client.IPClient
 	localAddr  *net.UDPAddr
@@ -161,16 +153,6 @@ func (c *tlsCertCache) loadCert(chi *tls.ClientHelloInfo) (*tls.Certificate, err
 		c.reloadedAt = now
 	}
 	return c.cert, nil
-}
-
-func (c *mbgReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
-	time.Duration, error) {
-	return mbg.MeasureClockOffset(ctx, log, c.dev)
-}
-
-func (c *shmReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
-	time.Duration, error) {
-	return shm.MeasureClockOffset(ctx, log, c.unit)
 }
 
 func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
@@ -324,9 +306,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 	dscp := dscp(cfg)
 
 	for _, s := range cfg.MBGReferenceClocks {
-		refClocks = append(refClocks, &mbgReferenceClock{
-			dev: s,
-		})
+		refClocks = append(refClocks, mbg.NewReferenceClock(s))
 	}
 
 	for _, s := range cfg.SHMReferenceClocks {
@@ -344,9 +324,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 					zap.String("id", s), zap.Error(err))
 			}
 		}
-		refClocks = append(refClocks, &shmReferenceClock{
-			unit: u,
-		})
+		refClocks = append(refClocks, shm.NewReferenceClock(u))
 	}
 
 	var dstIAs []addr.IA
