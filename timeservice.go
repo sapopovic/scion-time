@@ -38,6 +38,7 @@ import (
 
 	"example.com/scion-time/driver/clock"
 	"example.com/scion-time/driver/mbg"
+	"example.com/scion-time/driver/phc"
 	"example.com/scion-time/driver/shm"
 
 	"example.com/scion-time/net/ntp"
@@ -62,6 +63,7 @@ type svcConfig struct {
 	DaemonAddr              string   `toml:"daemon_address,omitempty"`
 	RemoteAddr              string   `toml:"remote_address,omitempty"`
 	MBGReferenceClocks      []string `toml:"mbg_reference_clocks,omitempty"`
+	PHCReferenceClocks      []string `toml:"phc_reference_clocks,omitempty"`
 	SHMReferenceClocks      []string `toml:"shm_reference_clocks,omitempty"`
 	NTPReferenceClocks      []string `toml:"ntp_reference_clocks,omitempty"`
 	SCIONPeers              []string `toml:"scion_peers,omitempty"`
@@ -307,6 +309,10 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 
 	for _, s := range cfg.MBGReferenceClocks {
 		refClocks = append(refClocks, mbg.NewReferenceClock(s))
+	}
+
+	for _, s := range cfg.PHCReferenceClocks {
+		refClocks = append(refClocks, phc.NewReferenceClock(s))
 	}
 
 	for _, s := range cfg.SHMReferenceClocks {
