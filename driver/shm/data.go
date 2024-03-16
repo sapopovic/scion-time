@@ -8,26 +8,67 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type shmTime struct {
+	mode int32
+	// 0 - if valid is set:
+	//       use values
+	//       clear valid
+	// 1 - if valid is set:
+	//       if count before and after read of data is equal:
+	//         use values
+	//       clear valid
+	count                int32
+	clockTimeStampSec    int64
+	clockTimeStampUSec   int32
+	receiveTimeStampSec  int64
+	receiveTimeStampUSec int32
+	leap                 int32
+	precision            int32
+	nSamples             int32
+	valid                int32
+	clockTimeStampNSec   uint32 // Unsigned ns timestamps
+	receiveTimeStampNSec uint32 // Unsigned ns timestamps
+	dummy                [8]int32
+}
+
+const (
+	offsetOfMode                 = 0  // offsetof(struct shmTime, mode)
+	offsetOfCount                = 4  // offsetof(struct shmTime, count)
+	offsetOfClockTimeStampSec    = 8  // offsetof(struct shmTime, clockTimeStampSec)
+	offsetOfClockTimeStampUSec   = 16 // offsetof(struct shmTime, clockTimeStampUSec)
+	offsetOfReceiveTimeStampSec  = 24 // offsetof(struct shmTime, receiveTimeStampSec)
+	offsetOfReceiveTimeStampUSec = 32 // offsetof(struct shmTime, receiveTimeStampUSec)
+	offsetOfLeap                 = 36 // offsetof(struct shmTime, leap)
+	offsetOfPrecision            = 40 // offsetof(struct shmTime, precision)
+	offsetOfNSamples             = 44 // offsetof(struct shmTime, nsamples)
+	offsetOfValid                = 48 // offsetof(struct shmTime, valid)
+	offsetOfClockTimeStampNSec   = 52 // offsetof(struct shmTime, clockTimeStampNSec)
+	offsetOfReceiveTimeStampNSec = 56 // offsetof(struct shmTime, receiveTimeStampNSec)
+)
+
 type segment struct {
 	initialized bool
-
-	timeMode                 *int32
-	timeCount                *int32
-	timeClockTimeStampSec    *int64
-	timeClockTimeStampUSec   *int32
-	timeReceiveTimeStampSec  *int64
-	timeReceiveTimeStampUSec *int32
-	timeLeap                 *int32
-	timePrecision            *int32
-	timeNSamples             *int32
-	timeValid                *int32
-	timeClockTimeStampNSec   *uint32
-	timeReceiveTimeStampNSec *uint32
+	time        *shmTime
 }
 
 func initSegment(shm *segment, unit int) error {
 	if shm.initialized {
 		panic("SHM already initialized")
+	}
+
+	if unsafe.Offsetof(shm.time.mode) != offsetOfMode ||
+		unsafe.Offsetof(shm.time.count) != offsetOfCount ||
+		unsafe.Offsetof(shm.time.clockTimeStampSec) != offsetOfClockTimeStampSec ||
+		unsafe.Offsetof(shm.time.clockTimeStampUSec) != offsetOfClockTimeStampUSec ||
+		unsafe.Offsetof(shm.time.receiveTimeStampSec) != offsetOfReceiveTimeStampSec ||
+		unsafe.Offsetof(shm.time.receiveTimeStampUSec) != offsetOfReceiveTimeStampUSec ||
+		unsafe.Offsetof(shm.time.leap) != offsetOfLeap ||
+		unsafe.Offsetof(shm.time.precision) != offsetOfPrecision ||
+		unsafe.Offsetof(shm.time.nSamples) != offsetOfNSamples ||
+		unsafe.Offsetof(shm.time.valid) != offsetOfValid ||
+		unsafe.Offsetof(shm.time.clockTimeStampNSec) != offsetOfClockTimeStampNSec ||
+		unsafe.Offsetof(shm.time.receiveTimeStampNSec) != offsetOfReceiveTimeStampNSec {
+		panic("unexpected memory layout")
 	}
 
 	var key int = 0x4e545030 + unit
@@ -45,36 +86,13 @@ func initSegment(shm *segment, unit int) error {
 		return errno
 	}
 
-	// go vet warns about possible misuse of unsafe.Pointer in the following
-	// assignments. However, this seems to be in accordance with case (3) in
-	// https://pkg.go.dev/unsafe#Pointer. Maybe the follwing accepted proposal
-	// will help here: https://github.com/golang/go/issues/58625
-	// Another possible workourund would be to use expressions of the form
-	// (unsafe.Add(*(*unsafe.Pointer)(unsafe.Pointer(&addr)), ...))
-	shm.timeMode = (*int32)(unsafe.Pointer(addr +
-		0 /* offsetof(struct shmTime, mode) */))
-	shm.timeCount = (*int32)(unsafe.Pointer(addr +
-		4 /* offsetof(struct shmTime, count) */))
-	shm.timeClockTimeStampSec = (*int64)(unsafe.Pointer(addr +
-		8 /* offsetof(struct shmTime, clockTimeStampSec) */))
-	shm.timeClockTimeStampUSec = (*int32)(unsafe.Pointer(addr +
-		16 /* offsetof(struct shmTime, clockTimeStampUSec) */))
-	shm.timeReceiveTimeStampSec = (*int64)(unsafe.Pointer(addr +
-		24 /* offsetof(struct shmTime, receiveTimeStampSec) */))
-	shm.timeReceiveTimeStampUSec = (*int32)(unsafe.Pointer(addr +
-		32 /* offsetof(struct shmTime, receiveTimeStampUSec) */))
-	shm.timeLeap = (*int32)(unsafe.Pointer(addr +
-		36 /* offsetof(struct shmTime, leap) */))
-	shm.timePrecision = (*int32)(unsafe.Pointer(addr +
-		40 /* offsetof(struct shmTime, precision) */))
-	shm.timeNSamples = (*int32)(unsafe.Pointer(addr +
-		44 /* offsetof(struct shmTime, nsamples) */))
-	shm.timeValid = (*int32)(unsafe.Pointer(addr +
-		48 /* offsetof(struct shmTime, valid) */))
-	shm.timeClockTimeStampNSec = (*uint32)(unsafe.Pointer(addr +
-		52 /* offsetof(struct shmTime, clockTimeStampNSec) */))
-	shm.timeReceiveTimeStampNSec = (*uint32)(unsafe.Pointer(addr +
-		56 /* offsetof(struct shmTime, receiveTimeStampNSec) */))
+	// go vet warns about a possible misuse of unsafe.Pointer in
+	// `shm.time = (*shmTime)(unsafe.Pointer(addr))`
+	// However, this seems to be in accordance with case (3) in
+	// https://pkg.go.dev/unsafe#Pointer.
+	// Maybe the follwing accepted proposal will help here:
+	// https://github.com/golang/go/issues/58625
+	shm.time = (*shmTime)(*(*unsafe.Pointer)(unsafe.Pointer(&addr)))
 
 	shm.initialized = true
 

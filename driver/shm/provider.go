@@ -23,19 +23,20 @@ func (p *Provider) StoreClockSamples(log *zap.Logger, refTime, sysTime time.Time
 		}
 	}
 
-	*p.shm.timeMode = 0
-	*p.shm.timeClockTimeStampSec = refTime.Unix()
-	*p.shm.timeClockTimeStampUSec = int32(refTime.Nanosecond() / 1e3)
-	*p.shm.timeReceiveTimeStampSec = sysTime.Unix()
-	*p.shm.timeReceiveTimeStampUSec = int32(sysTime.Nanosecond() / 1e3)
-	*p.shm.timeLeap = 0
-	*p.shm.timePrecision = 0
-	*p.shm.timeNSamples = 0
-	*p.shm.timeClockTimeStampNSec = uint32(refTime.Nanosecond())
-	*p.shm.timeReceiveTimeStampNSec = uint32(sysTime.Nanosecond())
-
-	*p.shm.timeCount++
-	*p.shm.timeValid = 1
+	*p.shm.time = shmTime{
+		mode:                 0,
+		clockTimeStampSec:    refTime.Unix(),
+		clockTimeStampUSec:   int32(refTime.Nanosecond() / 1e3),
+		receiveTimeStampSec:  sysTime.Unix(),
+		receiveTimeStampUSec: int32(sysTime.Nanosecond() / 1e3),
+		leap:                 0,
+		precision:            0,
+		nSamples:             0,
+		clockTimeStampNSec:   uint32(refTime.Nanosecond()),
+		receiveTimeStampNSec: uint32(sysTime.Nanosecond()),
+		count:                p.shm.time.count + 1,
+		valid:                1,
+	}
 
 	return nil
 }
