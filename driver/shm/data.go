@@ -32,18 +32,20 @@ type shmTime struct {
 }
 
 const (
-	offsetOfMode                 = 0  // offsetof(struct shmTime, mode)
-	offsetOfCount                = 4  // offsetof(struct shmTime, count)
-	offsetOfClockTimeStampSec    = 8  // offsetof(struct shmTime, clockTimeStampSec)
-	offsetOfClockTimeStampUSec   = 16 // offsetof(struct shmTime, clockTimeStampUSec)
-	offsetOfReceiveTimeStampSec  = 24 // offsetof(struct shmTime, receiveTimeStampSec)
-	offsetOfReceiveTimeStampUSec = 32 // offsetof(struct shmTime, receiveTimeStampUSec)
-	offsetOfLeap                 = 36 // offsetof(struct shmTime, leap)
-	offsetOfPrecision            = 40 // offsetof(struct shmTime, precision)
-	offsetOfNSamples             = 44 // offsetof(struct shmTime, nsamples)
-	offsetOfValid                = 48 // offsetof(struct shmTime, valid)
-	offsetOfClockTimeStampNSec   = 52 // offsetof(struct shmTime, clockTimeStampNSec)
-	offsetOfReceiveTimeStampNSec = 56 // offsetof(struct shmTime, receiveTimeStampNSec)
+	sizeofSHMTime = 96 // sizeof(struct shmTime)
+
+	offsetofSHMTimeMode                 = 0  // offsetof(struct shmTime, mode)
+	offsetofSHMTimeCount                = 4  // offsetof(struct shmTime, count)
+	offsetofSHMTimeClockTimeStampSec    = 8  // offsetof(struct shmTime, clockTimeStampSec)
+	offsetofSHMTimeClockTimeStampUSec   = 16 // offsetof(struct shmTime, clockTimeStampUSec)
+	offsetofSHMTimeReceiveTimeStampSec  = 24 // offsetof(struct shmTime, receiveTimeStampSec)
+	offsetofSHMTimeReceiveTimeStampUSec = 32 // offsetof(struct shmTime, receiveTimeStampUSec)
+	offsetofSHMTimeLeap                 = 36 // offsetof(struct shmTime, leap)
+	offsetofSHMTimePrecision            = 40 // offsetof(struct shmTime, precision)
+	offsetofSHMTimeNSamples             = 44 // offsetof(struct shmTime, nsamples)
+	offsetofSHMTimeValid                = 48 // offsetof(struct shmTime, valid)
+	offsetofSHMTimeClockTimeStampNSec   = 52 // offsetof(struct shmTime, clockTimeStampNSec)
+	offsetofSHMTimeReceiveTimeStampNSec = 56 // offsetof(struct shmTime, receiveTimeStampNSec)
 )
 
 type segment struct {
@@ -51,24 +53,28 @@ type segment struct {
 	time        *shmTime
 }
 
+func init() {
+	var t shmTime
+	if unsafe.Sizeof(t) != sizeofSHMTime ||
+		unsafe.Offsetof(t.mode) != offsetofSHMTimeMode ||
+		unsafe.Offsetof(t.count) != offsetofSHMTimeCount ||
+		unsafe.Offsetof(t.clockTimeStampSec) != offsetofSHMTimeClockTimeStampSec ||
+		unsafe.Offsetof(t.clockTimeStampUSec) != offsetofSHMTimeClockTimeStampUSec ||
+		unsafe.Offsetof(t.receiveTimeStampSec) != offsetofSHMTimeReceiveTimeStampSec ||
+		unsafe.Offsetof(t.receiveTimeStampUSec) != offsetofSHMTimeReceiveTimeStampUSec ||
+		unsafe.Offsetof(t.leap) != offsetofSHMTimeLeap ||
+		unsafe.Offsetof(t.precision) != offsetofSHMTimePrecision ||
+		unsafe.Offsetof(t.nSamples) != offsetofSHMTimeNSamples ||
+		unsafe.Offsetof(t.valid) != offsetofSHMTimeValid ||
+		unsafe.Offsetof(t.clockTimeStampNSec) != offsetofSHMTimeClockTimeStampNSec ||
+		unsafe.Offsetof(t.receiveTimeStampNSec) != offsetofSHMTimeReceiveTimeStampNSec {
+		panic("unexpected memory layout")
+	}
+}
+
 func initSegment(shm *segment, unit int) error {
 	if shm.initialized {
 		panic("SHM already initialized")
-	}
-
-	if unsafe.Offsetof(shm.time.mode) != offsetOfMode ||
-		unsafe.Offsetof(shm.time.count) != offsetOfCount ||
-		unsafe.Offsetof(shm.time.clockTimeStampSec) != offsetOfClockTimeStampSec ||
-		unsafe.Offsetof(shm.time.clockTimeStampUSec) != offsetOfClockTimeStampUSec ||
-		unsafe.Offsetof(shm.time.receiveTimeStampSec) != offsetOfReceiveTimeStampSec ||
-		unsafe.Offsetof(shm.time.receiveTimeStampUSec) != offsetOfReceiveTimeStampUSec ||
-		unsafe.Offsetof(shm.time.leap) != offsetOfLeap ||
-		unsafe.Offsetof(shm.time.precision) != offsetOfPrecision ||
-		unsafe.Offsetof(shm.time.nSamples) != offsetOfNSamples ||
-		unsafe.Offsetof(shm.time.valid) != offsetOfValid ||
-		unsafe.Offsetof(shm.time.clockTimeStampNSec) != offsetOfClockTimeStampNSec ||
-		unsafe.Offsetof(shm.time.receiveTimeStampNSec) != offsetOfReceiveTimeStampNSec {
-		panic("unexpected memory layout")
 	}
 
 	var key int = 0x4e545030 + unit
