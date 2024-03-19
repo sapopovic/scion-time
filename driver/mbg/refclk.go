@@ -152,23 +152,23 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 
 	refTime := time.Unix(refTimeSeconds, nanoseconds(refTimeFractions)).UTC()
 	sysTime := time.Unix(sysTimeSeconds, sysTimeNanoseconds).UTC()
-
-	log.Debug("mbg reference time",
-		zap.Time("time", refTime),
-		zap.Int32("UTC offset", refTimeUTCOffset),
-		zap.Uint16("status", refTimeStatus),
-		zap.Uint8("signal", refTimeSignal),
-	)
-	log.Debug("mbg system time",
-		zap.Time("time", sysTime),
-		zap.Int64("at", sysTimeCyclesBefore),
-		zap.Int64("latency", refTimeCycles-sysTimeCyclesAfter),
-		zap.Uint64("frequency", cycleFrequency),
-	)
-
 	offset := refTime.Sub(sysTime)
 
-	log.Debug("mbg clock offset", zap.Duration("offset", offset))
+	log.Debug("MBG clock sample",
+		zap.Dict("sysTime",
+			zap.Time("time", sysTime),
+			zap.Int64("at", sysTimeCyclesBefore),
+			zap.Int64("latency", refTimeCycles-sysTimeCyclesAfter),
+			zap.Uint64("frequency", cycleFrequency),
+		),
+		zap.Dict("refTime",
+			zap.Time("time", refTime),
+			zap.Int32("UTC offset", refTimeUTCOffset),
+			zap.Uint16("status", refTimeStatus),
+			zap.Uint8("signal", refTimeSignal),
+		),
+		zap.Duration("offset", offset),
+	)
 
 	return offset, nil
 }
