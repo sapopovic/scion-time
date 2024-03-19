@@ -77,13 +77,20 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 		}
 	}(log, c.dev)
 
+	// mbg_chk_dev_has_hr_time functionality:
+	// See https://kb.meinbergglobal.com/mbglib-api/mbgdevio_8h.html
+
 	featureType := uint32(2 /* PCPS */)
 	featureNumber := uint32(6 /* HAS_HR_TIME */)
 
+	// IOCTL_DEV_FEAT_REQ
+	// See mbglib/common/mbgioctl.h
 	featureData := make([]byte, 4+4)
 	binary.LittleEndian.PutUint32(featureData[0:], featureType)
 	binary.LittleEndian.PutUint32(featureData[4:], featureNumber)
 
+	// IOCTL_CHK_DEV_FEAT
+	// See mbglib/common/mbgioctl.h
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd),
 		uintptr(ioctlRequest(ioctlWrite, len(featureData), 'M', 0xa4)),
 		uintptr(unsafe.Pointer(&featureData[0])))
@@ -92,7 +99,15 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 		return 0, errno
 	}
 
+	// mbg_get_default_cycles_frequency_from_dev functionality:
+	// See https://kb.meinbergglobal.com/mbglib-api/mbgdevio_8h.html
+
+	// MBG_PC_CYCLES_FREQUENCY
+	// mbglib/common/mbgpccyc.h
 	cycleFrequencyData := make([]byte, 8)
+
+	// IOCTL_GET_CYCLES_FREQUENCY
+	// See mbglib/common/mbgioctl.h
 	_, _, errno = unix.Syscall(unix.SYS_IOCTL, uintptr(fd),
 		uintptr(ioctlRequest(ioctlRead, len(cycleFrequencyData), 'M', 0x68)),
 		uintptr(unsafe.Pointer(&cycleFrequencyData[0])))
@@ -103,8 +118,15 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 
 	cycleFrequency := binary.LittleEndian.Uint64(cycleFrequencyData[0:])
 
+	// mbg_get_time_info_hrt functionality:
+	// See https://kb.meinbergglobal.com/mbglib-api/mbgdevio_8h.html
+
+	// MBG_TIME_INFO_HRT
+	// See https://kb.meinbergglobal.com/mbglib-api/pcpsdev_8h.html
 	timeData := make([]byte, 8+4+4+4+2+1+8+8+8+8)
 
+	// IOCTL_GET_TIME_INFO_HRT
+	// See mbglib/common/mbgioctl.h
 	_, _, errno = unix.Syscall(unix.SYS_IOCTL, uintptr(fd),
 		uintptr(ioctlRequest(ioctlRead, len(timeData), 'M', 0x80)),
 		uintptr(unsafe.Pointer(&timeData[0])))
@@ -113,12 +135,16 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 		return 0, errno
 	}
 
+	// PCPS_HR_TIME_CYCLES
+	// See https://kb.meinbergglobal.com/mbglib-api/pcpsdev_8h.html
 	refTimeCycles := int64(binary.LittleEndian.Uint64(timeData[0:]))
 	refTimeSeconds := int64(binary.LittleEndian.Uint32(timeData[8:]))
 	refTimeFractions := uint32(binary.LittleEndian.Uint32(timeData[12:]))
 	refTimeUTCOffset := int32(binary.LittleEndian.Uint32(timeData[16:]))
 	refTimeStatus := uint16(binary.LittleEndian.Uint16(timeData[20:]))
 	refTimeSignal := uint8(timeData[22])
+	// MBG_SYS_TIME_CYCLES
+	// See https://kb.meinbergglobal.com/mbglib-api/pcpsdev_8h.html
 	sysTimeCyclesBefore := int64(binary.LittleEndian.Uint64(timeData[23:]))
 	sysTimeCyclesAfter := int64(binary.LittleEndian.Uint64(timeData[31:]))
 	sysTimeSeconds := int64(binary.LittleEndian.Uint64(timeData[39:]))
