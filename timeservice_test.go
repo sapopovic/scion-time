@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"example.com/scion-time/base/zaplog"
 	"example.com/scion-time/core/client"
 	"example.com/scion-time/core/timebase"
 	"example.com/scion-time/driver/clock"
@@ -38,7 +39,7 @@ func TestTimeserviceNTSChrony(t *testing.T) {
 
 	ctx := context.Background()
 
-	lclk := &clock.SystemClock{Log: log}
+	lclk := &clock.SystemClock{Log: zaplog.Logger()}
 	timebase.RegisterClock(lclk)
 
 	laddr := localAddrSnet.Host
@@ -59,9 +60,9 @@ func TestTimeserviceNTSChrony(t *testing.T) {
 		MinVersion:         tls.VersionTLS13,
 	}
 	c.Auth.NTSKEFetcher.Port = ntskePort
-	c.Auth.NTSKEFetcher.Log = log
+	c.Auth.NTSKEFetcher.Log = zaplog.Logger()
 
-	_, _, err = client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
+	_, _, err = client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c, laddr, raddr)
 	if err != nil {
 		t.Fatalf("failed to measure clock offset %v", err)
 	}
