@@ -1,6 +1,8 @@
 package ntp
 
 import (
+	"log"
+
 	"errors"
 	"time"
 )
@@ -14,15 +16,19 @@ func ValidateResponseMetadata(resp *Packet) error {
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
 	if resp.LeapIndicator() == LeapIndicatorUnknown {
+log.Print("@0")
 		return errUnexpectedResponse
 	}
 	if resp.Version() != 3 && resp.Version() != 4 {
+log.Print("@1")
 		return errUnexpectedResponse
 	}
 	if resp.Mode() != ModeServer {
+log.Print("@2")
 		return errUnexpectedResponse
 	}
 	if resp.Stratum == 0 || resp.Stratum > 15 {
+log.Print("@3")
 		return errUnexpectedResponse
 	}
 	return nil
@@ -33,6 +39,7 @@ func ValidateResponseTimestamps(t0, t1, t2, t3 time.Time) error {
 		panic("unexpected local clock behavior")
 	}
 	if t2.Sub(t1) < 0 {
+log.Print("@4")
 		return errUnexpectedResponse
 	}
 	return nil
