@@ -1,10 +1,11 @@
 package server_test
 
 import (
+	"log/slog"
 	"testing"
 	"time"
 
-	"go.uber.org/zap"
+	"example.com/scion-time/base/logbase"
 
 	"example.com/scion-time/core/server"
 	"example.com/scion-time/core/timebase"
@@ -15,7 +16,7 @@ import (
 )
 
 func init() {
-	lclk := &clock.SystemClock{Log: zap.NewNop()}
+	lclk := &clock.SystemClock{Log: slog.New(logbase.NewNopHandler())}
 	timebase.RegisterClock(lclk)
 }
 

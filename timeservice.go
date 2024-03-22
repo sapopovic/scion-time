@@ -30,6 +30,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/base/zaplog"
 
 	"example.com/scion-time/benchmark"
@@ -449,7 +450,7 @@ func runServer(configFile string) {
 	refClocks, netClocks := createClocks(cfg, localAddr, log)
 	sync.RegisterClocks(refClocks, netClocks)
 
-	lclk := &clock.SystemClock{Log: zaplog.Logger()}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
@@ -488,7 +489,7 @@ func runRelay(configFile string) {
 	refClocks, netClocks := createClocks(cfg, localAddr, log)
 	sync.RegisterClocks(refClocks, netClocks)
 
-	lclk := &clock.SystemClock{Log: zaplog.Logger()}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
@@ -526,7 +527,7 @@ func runClient(configFile string) {
 	refClocks, netClocks := createClocks(cfg, localAddr, log)
 	sync.RegisterClocks(refClocks, netClocks)
 
-	lclk := &clock.SystemClock{Log: zaplog.Logger()}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	scionClocksAvailable := false
@@ -556,8 +557,9 @@ func runClient(configFile string) {
 func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify, periodic bool) {
 	ctx := context.Background()
+	log := slog.Default()
 
-	lclk := &clock.SystemClock{Log: zaplog.Logger()}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	laddr := localAddr.Host
@@ -587,8 +589,9 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	dscp uint8, authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) {
 	var err error
 	ctx := context.Background()
+	log := slog.Default()
 
-	lclk := &clock.SystemClock{Log: zaplog.Logger()}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	if dispatcherMode == dispatcherModeInternal {
@@ -662,13 +665,13 @@ func runBenchmark(configFile string) {
 }
 
 func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
-	lclk := &clock.SystemClock{Log: zap.NewNop()}
+	lclk := &clock.SystemClock{Log: slog.New(logbase.NewNopHandler())}
 	timebase.RegisterClock(lclk)
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authModes, ntskeServer, log)
 }
 
 func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
-	lclk := &clock.SystemClock{Log: zap.NewNop()}
+	lclk := &clock.SystemClock{Log: slog.New(logbase.NewNopHandler())}
 	timebase.RegisterClock(lclk)
 	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr, authModes, ntskeServer, log)
 }

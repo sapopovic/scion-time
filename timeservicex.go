@@ -3,19 +3,19 @@
 package main
 
 import (
+	"log/slog"
 	"time"
 
-	"go.uber.org/zap"
-
-	"example.com/scion-time/base/zaplog"
 	"example.com/scion-time/driver/clock"
 )
 
 func runX() {
 	initLogger(true /* verbose */)
 
-	clk := &clock.SystemClock{Log: zaplog.Logger()}
-	zaplog.Logger().Debug("local clock", zap.Stringer("now", clk.Now()))
+	log := slog.Default()
+
+	clk := &clock.SystemClock{Log: log}
+	log.Debug("local clock", slog.Time("now", clk.Now()))
 	clk.Step(-1 * time.Second)
-	zaplog.Logger().Debug("local clock", zap.Stringer("now", clk.Now()))
+	log.Debug("local clock", slog.Time("now", clk.Now()))
 }

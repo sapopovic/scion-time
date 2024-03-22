@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"net"
 	"os"
 	"testing"
@@ -38,8 +39,9 @@ func TestTimeserviceNTSChrony(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	log := slog.Default()
 
-	lclk := &clock.SystemClock{Log: zaplog.Logger()}
+	lclk := &clock.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
 
 	laddr := localAddrSnet.Host
