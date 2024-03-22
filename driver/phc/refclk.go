@@ -6,9 +6,8 @@ import (
 	"unsafe"
 
 	"context"
+	"log/slog"
 	"time"
-
-	"go.uber.org/zap"
 
 	"golang.org/x/sys/unix"
 )
@@ -64,6 +63,7 @@ const (
 )
 
 type ReferenceClock struct {
+	log *slog.Logger
 	dev string
 }
 
@@ -92,22 +92,22 @@ func ioctlRequest(d, s, t, n int) uint {
 		(uint(n&ioctlSNMask) << ioctlSNShift)
 }
 
-func NewReferenceClock(dev string) *ReferenceClock {
-	return &ReferenceClock{dev: dev}
+func NewReferenceClock(log *slog.Logger, dev string) *ReferenceClock {
+	return &ReferenceClock{log: log, dev: dev}
 }
 
-func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (time.Duration, error) {
+func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	fd, err := unix.Open(c.dev, unix.O_RDWR, 0)
 	if err != nil {
-		log.Error("unix.Open failed", zap.String("dev", c.dev), zap.Error(err))
+		c.log.Error("unix.Open failed", slog.String("dev", c.dev), slog.Any("error", err))
 		return 0, err
 	}
-	defer func(log *zap.Logger, dev string) {
+	defer func(log *slog.Logger, dev string) {
 		err = unix.Close(fd)
 		if err != nil {
-			log.Info("unix.Close failed", zap.String("dev", dev), zap.Error(err))
+			log.Info("unix.Close failed", slog.String("dev", c.dev), slog.Any("error", err))
 		}
-	}(log, c.dev)
+	}(c.log, c.dev)
 
 	off := ptpSysOffsetPrecise{}
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd),
@@ -115,7 +115,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 		uintptr(unsafe.Pointer(&off)),
 	)
 	if errno != 0 {
-		log.Error("ioctl failed", zap.String("dev", c.dev), zap.Error(errno))
+		c.log.Error("ioctl failed", slog.String("dev", c.dev), slog.Any("errno", errno))
 		return 0, errno
 	}
 
@@ -123,10 +123,10 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 	deviceTime := time.Unix(off.device.sec, int64(off.device.nsec)).UTC()
 	offset := deviceTime.Sub(sysRealTime)
 
-	log.Debug("PTP hardware clock sample",
-		zap.Time("sysRealTime", sysRealTime),
-		zap.Time("deviceTime", deviceTime),
-		zap.Duration("offset", offset),
+	c.log.Debug("PTP hardware clock sample",
+		slog.Time("sysRealTime", sysRealTime),
+		slog.Time("deviceTime", deviceTime),
+		slog.Duration("offset", offset),
 	)
 
 	return offset, nil

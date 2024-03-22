@@ -38,7 +38,7 @@ var (
 	netClkClient  client.ReferenceClockClient
 )
 
-func (c *localReferenceClock) MeasureClockOffset(context.Context, *zap.Logger) (
+func (c *localReferenceClock) MeasureClockOffset(context.Context) (
 	time.Duration, error) {
 	return 0, nil
 }

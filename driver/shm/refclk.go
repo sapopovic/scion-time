@@ -3,25 +3,26 @@ package shm
 import (
 	"context"
 	"errors"
-	"time"
+	"log/slog"
 
-	"go.uber.org/zap"
+	"time"
 )
 
 const ReferenceClockType = "ntpshm"
 
 type ReferenceClock struct {
+	log  *slog.Logger
 	unit int
 	shm  segment
 }
 
 var errNoSample = errors.New("SHM sample temporarily unavailable")
 
-func NewReferenceClock(unit int) *ReferenceClock {
+func NewReferenceClock(log *slog.Logger, unit int) *ReferenceClock {
 	return &ReferenceClock{unit: unit}
 }
 
-func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (time.Duration, error) {
+func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	deadline, deadlineIsSet := ctx.Deadline()
 	const maxNumRetries = 8
 	numRetries := 0
@@ -44,8 +45,11 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 
 		if (t.mode == 1 && t.count != c.shm.time.count) ||
 			!(t.mode == 0 || t.mode == 1) || t.valid == 0 {
-			log.Error("SHM sample temporarily unavailable",
-				zap.Int32("mode", t.mode), zap.Int32("count", t.count), zap.Int32("valid", t.valid))
+			c.log.Error("SHM sample temporarily unavailable",
+				slog.Int64("mode", int64(t.mode)),
+				slog.Int64("count", int64(t.count)),
+				slog.Int64("valid", int64(t.valid)),
+			)
 			if numRetries != maxNumRetries && deadlineIsSet && time.Now().Before(deadline) {
 				time.Sleep(0)
 				numRetries++
@@ -73,10 +77,10 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 		clockTime := time.Unix(clockTimeSeconds, clockTimeNanoseconds).UTC()
 		offset := clockTime.Sub(receiveTime)
 
-		log.Debug("SHM clock sample",
-			zap.Time("receiveTime", receiveTime),
-			zap.Time("clockTime", clockTime),
-			zap.Duration("offset", offset),
+		c.log.Debug("SHM clock sample",
+			slog.Time("receiveTime", receiveTime),
+			slog.Time("clockTime", clockTime),
+			slog.Duration("offset", offset),
 		)
 
 		return offset, nil

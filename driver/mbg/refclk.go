@@ -9,9 +9,8 @@ import (
 
 	"context"
 	"encoding/binary"
+	"log/slog"
 	"time"
-
-	"go.uber.org/zap"
 
 	"golang.org/x/sys/unix"
 )
@@ -39,6 +38,7 @@ const (
 )
 
 type ReferenceClock struct {
+	log *slog.Logger
 	dev string
 }
 
@@ -60,22 +60,22 @@ func nanoseconds(frac uint32) int64 {
 	return int64((uint64(frac) * uint64(time.Second)) / (1 << 32))
 }
 
-func NewReferenceClock(dev string) *ReferenceClock {
-	return &ReferenceClock{dev: dev}
+func NewReferenceClock(log *slog.Logger, dev string) *ReferenceClock {
+	return &ReferenceClock{log: log, dev: dev}
 }
 
-func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger) (time.Duration, error) {
+func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
 	fd, err := unix.Open(c.dev, unix.O_RDWR, 0)
 	if err != nil {
-		log.Error("unix.Open failed", zap.String("dev", c.dev), zap.Error(err))
+		c.log.Error("unix.Open failed", slog.String("dev", c.dev), slog.Any("error", err))
 		return 0, err
 	}
-	defer func(log *zap.Logger, dev string) {
+	defer func(log *slog.Logger, dev string) {
 		err = unix.Close(fd)
 		if err != nil {
-			log.Info("unix.Close failed", zap.String("dev", dev), zap.Error(err))
+			log.Info("unix.Close failed", slog.String("dev", c.dev), slog.Any("error", err))
 		}
-	}(log, c.dev)
+	}(c.log, c.dev)
 
 	// mbg_chk_dev_has_hr_time functionality:
 	// See https://kb.meinbergglobal.com/mbglib-api/mbgdevio_8h.html
@@ -95,7 +95,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 		uintptr(ioctlRequest(ioctlWrite, len(featureData), 'M', 0xa4)),
 		uintptr(unsafe.Pointer(&featureData[0])))
 	if errno != 0 {
-		log.Error("ioctl failed (features) or HR time not supported", zap.String("dev", c.dev), zap.Error(errno))
+		c.log.Error("ioctl failed (features) or HR time not supported", slog.String("dev", c.dev), slog.Any("errno", errno))
 		return 0, errno
 	}
 
@@ -112,7 +112,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 		uintptr(ioctlRequest(ioctlRead, len(cycleFrequencyData), 'M', 0x68)),
 		uintptr(unsafe.Pointer(&cycleFrequencyData[0])))
 	if errno != 0 {
-		log.Error("ioctl failed (cycle frequency)", zap.String("dev", c.dev), zap.Error(errno))
+		c.log.Error("ioctl failed (cycle frequency)", slog.String("dev", c.dev), slog.Any("errno", errno))
 		return 0, errno
 	}
 
@@ -131,7 +131,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 		uintptr(ioctlRequest(ioctlRead, len(timeData), 'M', 0x80)),
 		uintptr(unsafe.Pointer(&timeData[0])))
 	if errno != 0 {
-		log.Error("ioctl failed (time)", zap.String("dev", c.dev), zap.Error(errno))
+		c.log.Error("ioctl failed (time)", slog.String("dev", c.dev), slog.Any("errno", errno))
 		return 0, errno
 	}
 
@@ -154,20 +154,20 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context, log *zap.Logger
 	sysTime := time.Unix(sysTimeSeconds, sysTimeNanoseconds).UTC()
 	offset := refTime.Sub(sysTime)
 
-	log.Debug("MBG clock sample",
-		zap.Dict("sysTime",
-			zap.Time("time", sysTime),
-			zap.Int64("at", sysTimeCyclesBefore),
-			zap.Int64("latency", refTimeCycles-sysTimeCyclesAfter),
-			zap.Uint64("frequency", cycleFrequency),
+	c.log.Debug("MBG clock sample",
+		slog.Group("sysTime",
+			slog.Time("time", sysTime),
+			slog.Int64("at", sysTimeCyclesBefore),
+			slog.Int64("latency", refTimeCycles-sysTimeCyclesAfter),
+			slog.Uint64("frequency", cycleFrequency),
 		),
-		zap.Dict("refTime",
-			zap.Time("time", refTime),
-			zap.Int32("UTC offset", refTimeUTCOffset),
-			zap.Uint16("status", refTimeStatus),
-			zap.Uint8("signal", refTimeSignal),
+		slog.Group("refTime",
+			slog.Time("time", refTime),
+			slog.Int64("UTC offset", int64(refTimeUTCOffset)),
+			slog.Uint64("status", uint64(refTimeStatus)),
+			slog.Uint64("signal", uint64(refTimeSignal)),
 		),
-		zap.Duration("offset", offset),
+		slog.Duration("offset", offset),
 	)
 
 	return offset, nil

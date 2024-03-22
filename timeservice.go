@@ -200,7 +200,7 @@ func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr, dscp uint8,
 	return c
 }
 
-func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
+func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (
 	time.Duration, error) {
 	_, off, err := client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c.ntpc, c.localAddr, c.remoteAddr)
 	return off, err
@@ -244,7 +244,7 @@ func newNTPReferenceClockSCION(daemonAddr string, localAddr, remoteAddr udp.UDPA
 	return c
 }
 
-func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context, log *zap.Logger) (
+func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
 	return client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
@@ -314,16 +314,16 @@ func tlsConfig(cfg svcConfig) *tls.Config {
 	}
 }
 
-func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
+func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 	refClocks, netClocks []client.ReferenceClock) {
 	dscp := dscp(cfg)
 
 	for _, s := range cfg.MBGReferenceClocks {
-		refClocks = append(refClocks, mbg.NewReferenceClock(s))
+		refClocks = append(refClocks, mbg.NewReferenceClock(log, s))
 	}
 
 	for _, s := range cfg.PHCReferenceClocks {
-		refClocks = append(refClocks, phc.NewReferenceClock(s))
+		refClocks = append(refClocks, phc.NewReferenceClock(log, s))
 	}
 
 	for _, s := range cfg.SHMReferenceClocks {
@@ -341,7 +341,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr) (
 					slog.String("id", s), slog.Any("error", err))
 			}
 		}
-		refClocks = append(refClocks, shm.NewReferenceClock(u))
+		refClocks = append(refClocks, shm.NewReferenceClock(log, u))
 	}
 
 	var dstIAs []addr.IA
@@ -439,13 +439,14 @@ func copyIP(ip net.IP) net.IP {
 
 func runServer(configFile string) {
 	ctx := context.Background()
+	log := slog.Default()
 
 	cfg := loadConfig(configFile)
 	localAddr := localAddress(cfg)
 	daemonAddr := daemonAddress(cfg)
 
 	localAddr.Host.Port = 0
-	refClocks, netClocks := createClocks(cfg, localAddr)
+	refClocks, netClocks := createClocks(cfg, localAddr, log)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: zaplog.Logger()}
@@ -477,13 +478,14 @@ func runServer(configFile string) {
 
 func runRelay(configFile string) {
 	ctx := context.Background()
+	log := slog.Default()
 
 	cfg := loadConfig(configFile)
 	localAddr := localAddress(cfg)
 	daemonAddr := daemonAddress(cfg)
 
 	localAddr.Host.Port = 0
-	refClocks, netClocks := createClocks(cfg, localAddr)
+	refClocks, netClocks := createClocks(cfg, localAddr, log)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: zaplog.Logger()}
@@ -515,12 +517,13 @@ func runRelay(configFile string) {
 
 func runClient(configFile string) {
 	ctx := context.Background()
+	log := slog.Default()
 
 	cfg := loadConfig(configFile)
 	localAddr := localAddress(cfg)
 
 	localAddr.Host.Port = 0
-	refClocks, netClocks := createClocks(cfg, localAddr)
+	refClocks, netClocks := createClocks(cfg, localAddr, log)
 	sync.RegisterClocks(refClocks, netClocks)
 
 	lclk := &clock.SystemClock{Log: zaplog.Logger()}

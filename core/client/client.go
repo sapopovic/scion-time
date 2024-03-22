@@ -23,7 +23,7 @@ type measurement struct {
 }
 
 type ReferenceClock interface {
-	MeasureClockOffset(ctx context.Context, log *zap.Logger) (time.Duration, error)
+	MeasureClockOffset(ctx context.Context) (time.Duration, error)
 }
 
 type ReferenceClockClient struct {
@@ -181,7 +181,7 @@ func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap
 	ms := make(chan measurement)
 	for _, refclk := range refclks {
 		go func(ctx context.Context, log *zap.Logger, refclk ReferenceClock) {
-			off, err := refclk.MeasureClockOffset(ctx, log)
+			off, err := refclk.MeasureClockOffset(ctx)
 			ms <- measurement{off, err}
 		}(ctx, log, refclk)
 	}
