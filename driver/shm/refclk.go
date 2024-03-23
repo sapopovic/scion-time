@@ -22,7 +22,8 @@ func NewReferenceClock(log *slog.Logger, unit int) *ReferenceClock {
 	return &ReferenceClock{unit: unit}
 }
 
-func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
+	time.Time, time.Duration, error) {
 	deadline, deadlineIsSet := ctx.Deadline()
 	const maxNumRetries = 8
 	numRetries := 0
@@ -35,7 +36,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration,
 					numRetries++
 					continue
 				}
-				return 0, err
+				return time.Time{}, 0, err
 			}
 		}
 
@@ -55,7 +56,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration,
 				numRetries++
 				continue
 			}
-			return 0, errNoSample
+			return time.Time{}, 0, errNoSample
 		}
 
 		c.shm.time.valid = 0
@@ -83,6 +84,6 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration,
 			slog.Duration("offset", offset),
 		)
 
-		return offset, nil
+		return receiveTime, offset, nil
 	}
 }

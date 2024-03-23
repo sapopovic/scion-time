@@ -91,7 +91,7 @@ func RunSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, a
 			<-sg
 			ntpcs := []*client.SCIONClient{c}
 			for range numRequestPerClient {
-				_, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps)
+				_, _, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps)
 				if err != nil {
 					log.Info("failed to measure clock offset",
 						zap.Stringer("remoteIA", raddr.IA),

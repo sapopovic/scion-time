@@ -64,11 +64,12 @@ func NewReferenceClock(log *slog.Logger, dev string) *ReferenceClock {
 	return &ReferenceClock{log: log, dev: dev}
 }
 
-func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration, error) {
+func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
+	time.Time, time.Duration, error) {
 	fd, err := unix.Open(c.dev, unix.O_RDWR, 0)
 	if err != nil {
 		c.log.Error("unix.Open failed", slog.String("dev", c.dev), slog.Any("error", err))
-		return 0, err
+		return time.Time{}, 0, err
 	}
 	defer func(log *slog.Logger, dev string) {
 		err = unix.Close(fd)
@@ -96,7 +97,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration,
 		uintptr(unsafe.Pointer(&featureData[0])))
 	if errno != 0 {
 		c.log.Error("ioctl failed (features) or HR time not supported", slog.String("dev", c.dev), slog.Any("errno", errno))
-		return 0, errno
+		return time.Time{}, 0, errno
 	}
 
 	// mbg_get_default_cycles_frequency_from_dev functionality:
@@ -113,7 +114,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration,
 		uintptr(unsafe.Pointer(&cycleFrequencyData[0])))
 	if errno != 0 {
 		c.log.Error("ioctl failed (cycle frequency)", slog.String("dev", c.dev), slog.Any("errno", errno))
-		return 0, errno
+		return time.Time{}, 0, errno
 	}
 
 	cycleFrequency := binary.LittleEndian.Uint64(cycleFrequencyData[0:])
@@ -132,7 +133,7 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration,
 		uintptr(unsafe.Pointer(&timeData[0])))
 	if errno != 0 {
 		c.log.Error("ioctl failed (time)", slog.String("dev", c.dev), slog.Any("errno", errno))
-		return 0, errno
+		return time.Time{}, 0, errno
 	}
 
 	// PCPS_HR_TIME_CYCLES
@@ -170,5 +171,5 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (time.Duration,
 		slog.Duration("offset", offset),
 	)
 
-	return offset, nil
+	return sysTime, offset, nil
 }

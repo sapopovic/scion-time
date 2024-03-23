@@ -202,9 +202,8 @@ func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr, dscp uint8,
 }
 
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (
-	time.Duration, error) {
-	_, off, err := client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c.ntpc, c.localAddr, c.remoteAddr)
-	return off, err
+	time.Time, time.Duration, error) {
+	return client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c.ntpc, c.localAddr, c.remoteAddr)
 }
 
 func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool, daemonAddr string, localAddr, remoteAddr udp.UDPAddr) {
@@ -246,7 +245,7 @@ func newNTPReferenceClockSCION(daemonAddr string, localAddr, remoteAddr udp.UDPA
 }
 
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
-	time.Duration, error) {
+	time.Time, time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
 	return client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
 }
@@ -635,7 +634,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, daemonAddr, laddr, raddr)
 	}
 
-	_, err = client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), []*client.SCIONClient{c}, laddr, raddr, ps)
+	_, _, err = client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), []*client.SCIONClient{c}, laddr, raddr, ps)
 	if err != nil {
 		logFatal("failed to measure clock offset",
 			slog.Any("remoteIA", raddr.IA),

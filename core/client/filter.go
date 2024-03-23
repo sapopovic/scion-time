@@ -37,9 +37,11 @@ func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, we
 }
 
 func filter(log *zap.Logger, reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
-	offset time.Duration, weight float64) {
+	offset time.Duration) {
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
+
+	var weight float64
 
 	filtersMu.Lock()
 	f := filters[reference]
@@ -122,5 +124,5 @@ func filter(log *zap.Logger, reference string, cTxTime, sRxTime, sTxTime, cRxTim
 		zap.Float64("weight", weight),
 	)
 
-	return timemath.Inv(offset), weight
+	return timemath.Inv(offset)
 }

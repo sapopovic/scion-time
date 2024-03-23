@@ -92,17 +92,17 @@ func (c *IPClient) ResetInterleavedMode() {
 
 func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mtrcs *ipClientMetrics,
 	localAddr, remoteAddr *net.UDPAddr) (
-	at time.Time, offset time.Duration, weight float64, err error) {
+	at time.Time, offset time.Duration, err error) {
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.IP})
 	if err != nil {
-		return at, offset, weight, err
+		return at, offset, err
 	}
 	defer conn.Close()
 	deadline, deadlineIsSet := ctx.Deadline()
 	if deadlineIsSet {
 		err = conn.SetDeadline(deadline)
 		if err != nil {
-			return at, offset, weight, err
+			return at, offset, err
 		}
 	}
 	err = udp.EnableTimestamping(conn, localAddr.Zone)
@@ -119,7 +119,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		ntskeData, err = c.Auth.NTSKEFetcher.FetchData()
 		if err != nil {
 			log.Info("failed to fetch key exchange data", zap.Error(err))
-			return at, offset, weight, err
+			return at, offset, err
 		}
 		remoteAddr.IP = net.ParseIP(ntskeData.Server)
 		remoteAddr.Port = int(ntskeData.Port)
@@ -158,10 +158,10 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 
 	n, err := conn.WriteToUDPAddrPort(buf, remoteAddr.AddrPort())
 	if err != nil {
-		return at, offset, weight, err
+		return at, offset, err
 	}
 	if n != len(buf) {
-		return at, offset, weight, errWrite
+		return at, offset, errWrite
 	}
 	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
 	if err != nil || id != 0 {
@@ -185,7 +185,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 				numRetries++
 				continue
 			}
-			return at, offset, weight, err
+			return at, offset, err
 		}
 		if flags != 0 {
 			err = errUnexpectedPacketFlags
@@ -194,7 +194,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 				numRetries++
 				continue
 			}
-			return at, offset, weight, err
+			return at, offset, err
 		}
 		oob = oob[:oobn]
 		cRxTime, err := udp.TimestampFromOOBData(oob)
@@ -212,7 +212,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 				numRetries++
 				continue
 			}
-			return at, offset, weight, err
+			return at, offset, err
 		}
 
 		var ntpresp ntp.Packet
@@ -223,7 +223,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 				numRetries++
 				continue
 			}
-			return at, offset, weight, err
+			return at, offset, err
 		}
 
 		authenticated := false
@@ -236,7 +236,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 					numRetries++
 					continue
 				}
-				return at, offset, weight, err
+				return at, offset, err
 			}
 
 			err = nts.ProcessResponse(buf, ntskeData.S2cKey, &c.Auth.NTSKEFetcher, &ntsresp, requestID)
@@ -246,7 +246,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 					numRetries++
 					continue
 				}
-				return at, offset, weight, err
+				return at, offset, err
 			}
 
 			authenticated = true
@@ -263,12 +263,12 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 				numRetries++
 				continue
 			}
-			return at, offset, weight, err
+			return at, offset, err
 		}
 
 		err = ntp.ValidateResponseMetadata(&ntpresp)
 		if err != nil {
-			return at, offset, weight, err
+			return at, offset, err
 		}
 
 		log.Debug("received response",
@@ -296,7 +296,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 
 		err = ntp.ValidateResponseTimestamps(t0, t1, t1, t3)
 		if err != nil {
-			return at, offset, weight, err
+			return at, offset, err
 		}
 
 		off := ntp.ClockOffset(t0, t1, t2, t3)
@@ -324,20 +324,20 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 
 		at = cRxTime
 		if c.Raw {
-			offset, weight = off, 1000.0
+			offset = off
 		} else {
-			offset, weight = filter(log, reference, t0, t1, t2, t3)
+			offset = filter(log, reference, t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {
 			err := c.Histo.RecordValue(rtd.Microseconds())
 			if err != nil {
-				return at, offset, weight, err
+				return at, offset, err
 			}
 		}
 
 		break
 	}
 
-	return at, offset, weight, nil
+	return at, offset, nil
 }
