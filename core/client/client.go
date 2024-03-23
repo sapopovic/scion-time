@@ -17,9 +17,9 @@ import (
 )
 
 type Measurement struct {
-	At     time.Time
-	Offset time.Duration
-	Error  error
+	Timestamp time.Time
+	Offset    time.Duration
+	Error     error
 }
 
 type ReferenceClock interface {
@@ -45,7 +45,7 @@ func init() {
 
 func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 	ntpc *IPClient, localAddr, remoteAddr *net.UDPAddr) (
-	at time.Time, off time.Duration, err error) {
+	ts time.Time, off time.Duration, err error) {
 	mtrcs := ipMetrics.Load()
 
 	var nerr, n int
@@ -55,9 +55,9 @@ func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 		n = 1
 	}
 	for i := range n {
-		a, o, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
+		t, o, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
 		if e == nil {
-			at, off, err = a, o, e
+			ts, off, err = t, o, e
 			if ntpc.InInterleavedMode() {
 				break
 			}
@@ -124,7 +124,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 		go func(ctx context.Context, log *zap.Logger, mtrcs *scionClientMetrics,
 			ntpc *SCIONClient, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
 			var err error
-			var at time.Time
+			var ts time.Time
 			var off time.Duration
 			var nerr, n int
 			log.Debug("measuring clock offset",
@@ -138,9 +138,9 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 				n = 1
 			}
 			for j := range n {
-				a, o, e := ntpc.measureClockOffsetSCION(ctx, log, mtrcs, localAddr, remoteAddr, p)
+				t, o, e := ntpc.measureClockOffsetSCION(ctx, log, mtrcs, localAddr, remoteAddr, p)
 				if e == nil {
-					at, off, err = a, o, e
+					ts, off, err = t, o, e
 					if ntpc.InInterleavedMode() {
 						break
 					}
@@ -156,13 +156,13 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 					)
 				}
 			}
-			msc <- Measurement{at, off, err}
+			msc <- Measurement{ts, off, err}
 		}(ctx, log, mtrcs, ntpcs[i], localAddr, remoteAddr, sps[i])
 	}
 	collectMeasurements(ctx, ms, msc)
 	panic("@@@")
 	median := Measurement{} // timemath.Median(ms)
-	return median.At, median.Offset, median.Error
+	return median.Timestamp, median.Offset, median.Error
 }
 
 func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap.Logger,
@@ -184,8 +184,8 @@ func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap
 	msc := make(chan Measurement)
 	for _, refclk := range refclks {
 		go func(ctx context.Context, log *zap.Logger, refclk ReferenceClock) {
-			at, off, err := refclk.MeasureClockOffset(ctx)
-			msc <- Measurement{at, off, err}
+			ts, off, err := refclk.MeasureClockOffset(ctx)
+			msc <- Measurement{ts, off, err}
 		}(ctx, log, refclk)
 	}
 	collectMeasurements(ctx, ms, msc)

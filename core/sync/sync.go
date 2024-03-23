@@ -65,7 +65,7 @@ func measureOffsetToRefClocks(log *zap.Logger, timeout time.Duration) (
 	refClkClient.MeasureClockOffsets(ctx, log, refClks, refClkOffsets)
 	panic("@@@")
 	median := client.Measurement{} // timemath.Median(refClkOffsets)
-	return median.At, median.Offset
+	return median.Timestamp, median.Offset
 }
 
 func SyncToRefClocks(log *zap.Logger, lclk timebase.LocalClock) {
@@ -116,7 +116,7 @@ func measureOffsetToNetClocks(log *zap.Logger, timeout time.Duration) (
 	netClkClient.MeasureClockOffsets(ctx, log, netClks, netClkOffsets)
 	panic("@@@")
 	midpoint := client.Measurement{} // timemath.FaultTolerantMidpoint(netClkOffsets)
-	return midpoint.At, midpoint.Offset
+	return midpoint.Timestamp, midpoint.Offset
 }
 
 func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
