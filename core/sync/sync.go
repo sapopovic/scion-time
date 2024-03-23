@@ -14,6 +14,7 @@ import (
 	"example.com/scion-time/base/timemath"
 
 	"example.com/scion-time/core/client"
+	"example.com/scion-time/core/measurements"
 )
 
 const (
@@ -31,10 +32,10 @@ type localReferenceClock struct{}
 
 var (
 	refClks       []client.ReferenceClock
-	refClkOffsets []client.Measurement
+	refClkOffsets []measurements.Measurement
 	refClkClient  client.ReferenceClockClient
 	netClks       []client.ReferenceClock
-	netClkOffsets []client.Measurement
+	netClkOffsets []measurements.Measurement
 	netClkClient  client.ReferenceClockClient
 )
 
@@ -49,13 +50,13 @@ func RegisterClocks(refClocks, netClocks []client.ReferenceClock) {
 	}
 
 	refClks = refClocks
-	refClkOffsets = make([]client.Measurement, len(refClks))
+	refClkOffsets = make([]measurements.Measurement, len(refClks))
 
 	netClks = netClocks
 	if len(netClks) != 0 {
 		netClks = append(netClks, &localReferenceClock{})
 	}
-	netClkOffsets = make([]client.Measurement, len(netClks))
+	netClkOffsets = make([]measurements.Measurement, len(netClks))
 }
 
 func measureOffsetToRefClocks(log *zap.Logger, timeout time.Duration) (
@@ -63,9 +64,8 @@ func measureOffsetToRefClocks(log *zap.Logger, timeout time.Duration) (
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	refClkClient.MeasureClockOffsets(ctx, log, refClks, refClkOffsets)
-	panic("@@@")
-	median := client.Measurement{} // timemath.Median(refClkOffsets)
-	return median.Timestamp, median.Offset
+	m := measurements.Median(refClkOffsets)
+	return m.Timestamp, m.Offset
 }
 
 func SyncToRefClocks(log *zap.Logger, lclk timebase.LocalClock) {
@@ -114,9 +114,8 @@ func measureOffsetToNetClocks(log *zap.Logger, timeout time.Duration) (
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	netClkClient.MeasureClockOffsets(ctx, log, netClks, netClkOffsets)
-	panic("@@@")
-	midpoint := client.Measurement{} // timemath.FaultTolerantMidpoint(netClkOffsets)
-	return midpoint.Timestamp, midpoint.Offset
+	m := measurements.FaultTolerantMidpoint(netClkOffsets)
+	return m.Timestamp, m.Offset
 }
 
 func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {

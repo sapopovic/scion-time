@@ -12,15 +12,10 @@ import (
 	"go.uber.org/zap"
 
 	"example.com/scion-time/base/crypto"
+	"example.com/scion-time/core/measurements"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
 )
-
-type Measurement struct {
-	Timestamp time.Time
-	Offset    time.Duration
-	Error     error
-}
 
 type ReferenceClock interface {
 	MeasureClockOffset(ctx context.Context) (time.Time, time.Duration, error)
@@ -73,7 +68,7 @@ func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
 	return
 }
 
-func collectMeasurements(ctx context.Context, ms []Measurement, msc chan Measurement) int {
+func collectMeasurements(ctx context.Context, ms []measurements.Measurement, msc chan measurements.Measurement) int {
 	i := 0
 	j := 0
 	n := len(ms)
@@ -118,8 +113,8 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 	}
 	sps = sps[:n]
 
-	ms := make([]Measurement, len(sps))
-	msc := make(chan Measurement)
+	ms := make([]measurements.Measurement, len(sps))
+	msc := make(chan measurements.Measurement)
 	for i := range len(sps) {
 		go func(ctx context.Context, log *zap.Logger, mtrcs *scionClientMetrics,
 			ntpc *SCIONClient, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
@@ -156,17 +151,20 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 					)
 				}
 			}
-			msc <- Measurement{ts, off, err}
+			msc <- measurements.Measurement{
+				Timestamp: ts,
+				Offset:    off,
+				Error:     err,
+			}
 		}(ctx, log, mtrcs, ntpcs[i], localAddr, remoteAddr, sps[i])
 	}
 	collectMeasurements(ctx, ms, msc)
-	panic("@@@")
-	median := Measurement{} // timemath.Median(ms)
-	return median.Timestamp, median.Offset, median.Error
+	m := measurements.Median(ms)
+	return m.Timestamp, m.Offset, m.Error
 }
 
 func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap.Logger,
-	refclks []ReferenceClock, ms []Measurement) {
+	refclks []ReferenceClock, ms []measurements.Measurement) {
 	if len(ms) != len(refclks) {
 		panic("number of result offsets must be equal to the number of reference clocks")
 	}
@@ -181,11 +179,15 @@ func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap
 		}
 	}(&c.numOpsInProgress)
 
-	msc := make(chan Measurement)
+	msc := make(chan measurements.Measurement)
 	for _, refclk := range refclks {
 		go func(ctx context.Context, log *zap.Logger, refclk ReferenceClock) {
 			ts, off, err := refclk.MeasureClockOffset(ctx)
-			msc <- Measurement{ts, off, err}
+			msc <- measurements.Measurement{
+				Timestamp: ts,
+				Offset:    off,
+				Error:     err,
+			}
 		}(ctx, log, refclk)
 	}
 	collectMeasurements(ctx, ms, msc)
