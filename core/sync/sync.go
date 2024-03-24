@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,12 +10,17 @@ import (
 
 	"go.uber.org/zap"
 
+	"golang.org/x/sys/unix"
+
+	"example.com/scion-time/driver/fb/clock"
+
 	"example.com/scion-time/base/metrics"
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
 
 	"example.com/scion-time/core/client"
 	"example.com/scion-time/core/measurements"
+	"example.com/scion-time/core/servo"
 )
 
 const (
@@ -73,6 +79,50 @@ func SyncToRefClocks(log *zap.Logger, lclk timebase.LocalClock) {
 	if corr != 0 {
 		lclk.Step(corr)
 	}
+}
+
+func initServo() error {
+	/*
+	Copyright (c) Facebook, Inc. and its affiliates.
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+	    http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+	*/
+
+	freqPPB, clkstate, err := clock.FrequencyPPB(unix.CLOCK_REALTIME)
+	if err != nil {
+		return err
+	}
+	if clkstate != unix.TIME_OK {
+		slog.Info("clock state is not TIME_OK after getting current frequency", "clkstate", clkstate)
+	}
+	slog.Debug("starting CLOCK_REALTIME frequency", "freqPPB", freqPPB)
+	maxFreqPPB, clkstate, err := clock.MaxFreqPPB(unix.CLOCK_REALTIME)
+	if err != nil {
+		return err
+	}
+	if clkstate != unix.TIME_OK {
+		slog.Info("clock state is not TIME_OK after getting current frequency", "clkstate", clkstate)
+	}
+	slog.Debug("max CLOCK_REALTIME frequency", "maxFreqPPB", maxFreqPPB)
+
+	servoCfg := servo.DefaultServoConfig()
+	servoCfg.FirstUpdate = true
+	servoCfg.FirstStepThreshold = int64(1 * time.Second)
+	pi := servo.NewPiServo(servoCfg, servo.DefaultPiServoCfg(), -freqPPB)
+	pi.SetMaxFreq(maxFreqPPB)
+	piFilterCfg := servo.DefaultPiServoFilterCfg()
+	_ = servo.NewPiServoFilter(pi, piFilterCfg)
+	return nil
 }
 
 func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
