@@ -19,7 +19,7 @@ type ReferenceClock struct {
 var errNoSample = errors.New("SHM sample temporarily unavailable")
 
 func NewReferenceClock(log *slog.Logger, unit int) *ReferenceClock {
-	return &ReferenceClock{unit: unit}
+	return &ReferenceClock{log: log, unit: unit}
 }
 
 func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
