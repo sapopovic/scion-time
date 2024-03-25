@@ -81,7 +81,7 @@ func SyncToRefClocks(log *zap.Logger, lclk timebase.LocalClock) {
 	}
 }
 
-func initServo() error {
+func initServo() (*servo.PiServo, error) {
 	/*
 	Copyright (c) Facebook, Inc. and its affiliates.
 
@@ -100,7 +100,7 @@ func initServo() error {
 
 	freqPPB, clkstate, err := clock.FrequencyPPB(unix.CLOCK_REALTIME)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if clkstate != unix.TIME_OK {
 		slog.Info("clock state is not TIME_OK after getting current frequency", "clkstate", clkstate)
@@ -108,7 +108,7 @@ func initServo() error {
 	slog.Debug("starting CLOCK_REALTIME frequency", "freqPPB", freqPPB)
 	maxFreqPPB, clkstate, err := clock.MaxFreqPPB(unix.CLOCK_REALTIME)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if clkstate != unix.TIME_OK {
 		slog.Info("clock state is not TIME_OK after getting current frequency", "clkstate", clkstate)
@@ -119,10 +119,11 @@ func initServo() error {
 	servoCfg.FirstUpdate = true
 	servoCfg.FirstStepThreshold = int64(1 * time.Second)
 	pi := servo.NewPiServo(servoCfg, servo.DefaultPiServoCfg(), -freqPPB)
+	pi.SyncInterval(2 * time.Second.Seconds())
 	pi.SetMaxFreq(maxFreqPPB)
 	piFilterCfg := servo.DefaultPiServoFilterCfg()
 	_ = servo.NewPiServoFilter(pi, piFilterCfg)
-	return nil
+	return pi, nil
 }
 
 func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
@@ -143,16 +144,40 @@ func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 		Name: metrics.SyncLocalCorrN,
 		Help: metrics.SyncLocalCorrH,
 	})
-	pll := newPLL(log, lclk)
+	pi, err := initServo()
+	if err != nil {
+		panic(err)
+	}
+	// pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		_, corr := measureOffsetToRefClocks(log, refClkTimeout)
+		ts, corr := measureOffsetToRefClocks(log, refClkTimeout)
 		if timemath.Abs(corr) > refClkCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
 			// lclk.Adjust(corr, refClkInterval, 0)
-			pll.Do(corr, 1000.0 /* weight */)
+			// pll.Do(corr, 1000.0 /* weight */)
+			slog.Debug("corr", "val", -int64(corr))
+			freqAdj, state := pi.Sample(-int64(corr), uint64(ts.UnixNano()))
+			if state == servo.StateJump {
+				slog.Debug("Step", "corr", -corr)
+				_, err := clock.Step(unix.CLOCK_REALTIME, -corr)
+				if err != nil {
+					slog.Error("failed to step clock", "step", -corr, "error", err)
+					continue
+				}
+			} else {
+				slog.Debug("AdjFreqPPB", "freqAdj", -freqAdj,)
+				_, err := clock.AdjFreqPPB(unix.CLOCK_REALTIME, -freqAdj)
+				if err != nil {
+					slog.Error("failed to adjust clock freq", "freqAdj", -freqAdj, "error", err)
+					continue
+				}
+				if err := clock.SetSync(unix.CLOCK_REALTIME); err != nil {
+					slog.Error("failed to set sys clock sync state", "error", err)
+				}
+			}
 			corrGauge.Set(float64(corr))
 		}
 		lclk.Sleep(refClkInterval)

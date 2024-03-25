@@ -236,6 +236,7 @@ func newNTPReferenceClockSCION(daemonAddr string, localAddr, remoteAddr udp.UDPA
 		c.ntpcs[i] = &client.SCIONClient{
 			DSCP:            dscp,
 			InterleavedMode: true,
+			Raw:             true,
 		}
 		if contains(authModes, authModeNTS) {
 			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr)
