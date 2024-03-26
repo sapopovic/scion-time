@@ -5,6 +5,7 @@ package clock
 // Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
 import (
+	"context"
 	"log/slog"
 	"math"
 	"os"
@@ -32,8 +33,8 @@ type SystemClock struct {
 
 var _ timebase.LocalClock = (*SystemClock)(nil)
 
-func logFatal(log *slog.Logger, msg string, args ...any) {
-	log.Error(msg, args...)
+func logFatal(log *slog.Logger, msg string, attrs ...slog.Attr) {
+	log.LogAttrs(context.Background(), slog.LevelError, msg, attrs...)
 	os.Exit(1)
 }
 
@@ -93,7 +94,8 @@ func nsecToNsecTimeval(nsec int64) unix.Timeval {
 }
 
 func setTime(log *slog.Logger, offset time.Duration) {
-	log.Debug("setting time", slog.Duration("offset", offset))
+	log.LogAttrs(context.Background(), slog.LevelDebug,
+		"setting time", slog.Duration("offset", offset))
 	tx := unix.Timex{
 		Modes: unix.ADJ_SETOFFSET | unix.ADJ_NANO,
 		Time:  nsecToNsecTimeval(offset.Nanoseconds()),
@@ -105,7 +107,8 @@ func setTime(log *slog.Logger, offset time.Duration) {
 }
 
 func setFrequency(log *slog.Logger, frequency float64) {
-	log.Debug("setting frequency", slog.Float64("frequency", frequency))
+	log.LogAttrs(context.Background(), slog.LevelDebug,
+		"setting frequency", slog.Float64("frequency", frequency))
 	tx := unix.Timex{
 		Modes:  unix.ADJ_FREQUENCY,
 		Freq:   int64(math.Floor(frequency * 65536 * 1e6)),
@@ -175,7 +178,8 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 }
 
 func (c *SystemClock) Sleep(duration time.Duration) {
-	c.Log.Debug("sleeping", slog.Duration("duration", duration))
+	c.Log.LogAttrs(context.Background(), slog.LevelDebug,
+		"sleeping", slog.Duration("duration", duration))
 	if duration < 0 {
 		panic("invalid duration value")
 	}

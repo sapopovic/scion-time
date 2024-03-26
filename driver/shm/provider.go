@@ -1,21 +1,21 @@
 package shm
 
 import (
+	"log/slog"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 type Provider struct {
+	log  *slog.Logger
 	unit int
 	shm  segment
 }
 
-func NewProvider(unit int) *Provider {
-	return &Provider{unit: unit}
+func NewProvider(log *slog.Logger, unit int) *Provider {
+	return &Provider{log: log, unit: unit}
 }
 
-func (p *Provider) StoreClockSamples(log *zap.Logger, refTime, sysTime time.Time) error {
+func (p *Provider) StoreClockSample(refTime, sysTime time.Time) error {
 	if !p.shm.initialized {
 		err := initSegment(&p.shm, p.unit)
 		if err != nil {

@@ -100,15 +100,23 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
 	fd, err := unix.Open(c.dev, unix.O_RDWR, 0)
 	if err != nil {
-		c.log.Error("unix.Open failed", slog.String("dev", c.dev), slog.Any("error", err))
+		c.log.LogAttrs(ctx, slog.LevelError,
+			"unix.Open failed",
+			slog.String("dev", c.dev),
+			slog.Any("error", err),
+		)
 		return time.Time{}, 0, err
 	}
-	defer func(log *slog.Logger, dev string) {
+	defer func() {
 		err = unix.Close(fd)
 		if err != nil {
-			log.Info("unix.Close failed", slog.String("dev", c.dev), slog.Any("error", err))
+			c.log.LogAttrs(ctx, slog.LevelError,
+				"unix.Close failed",
+				slog.String("dev", c.dev),
+				slog.Any("error", err),
+			)
 		}
-	}(c.log, c.dev)
+	}()
 
 	off := ptpSysOffsetPrecise{}
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd),
@@ -116,7 +124,11 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 		uintptr(unsafe.Pointer(&off)),
 	)
 	if errno != 0 {
-		c.log.Error("ioctl failed", slog.String("dev", c.dev), slog.Any("errno", errno))
+		c.log.LogAttrs(ctx, slog.LevelError,
+			"ioctl failed",
+			slog.String("dev", c.dev),
+			slog.Uint64("errno", uint64(errno)),
+		)
 		return time.Time{}, 0, errno
 	}
 
@@ -124,7 +136,8 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 	deviceTime := time.Unix(off.device.sec, int64(off.device.nsec)).UTC()
 	offset := deviceTime.Sub(sysRealTime)
 
-	c.log.Debug("PTP hardware clock sample",
+	c.log.LogAttrs(ctx, slog.LevelDebug,
+		"PTP hardware clock sample",
 		slog.Time("sysRealTime", sysRealTime),
 		slog.Time("deviceTime", deviceTime),
 		slog.Duration("offset", offset),

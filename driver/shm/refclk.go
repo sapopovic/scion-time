@@ -46,7 +46,8 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 
 		if (t.mode == 1 && t.count != c.shm.time.count) ||
 			!(t.mode == 0 || t.mode == 1) || t.valid == 0 {
-			c.log.Error("SHM sample temporarily unavailable",
+			c.log.LogAttrs(ctx, slog.LevelError,
+				"SHM sample temporarily unavailable",
 				slog.Int64("mode", int64(t.mode)),
 				slog.Int64("count", int64(t.count)),
 				slog.Int64("valid", int64(t.valid)),
@@ -78,7 +79,8 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 		clockTime := time.Unix(clockTimeSeconds, clockTimeNanoseconds).UTC()
 		offset := clockTime.Sub(receiveTime)
 
-		c.log.Debug("SHM clock sample",
+		c.log.LogAttrs(ctx, slog.LevelDebug,
+			"SHM clock sample",
 			slog.Time("receiveTime", receiveTime),
 			slog.Time("clockTime", clockTime),
 			slog.Duration("offset", offset),
