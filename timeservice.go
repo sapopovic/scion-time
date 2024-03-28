@@ -137,8 +137,8 @@ func initLogger(verbose bool) {
 		&slog.HandlerOptions{Level: level})))
 }
 
-func logFatal(msg string, args ...any) {
-	slog.Error(msg, args...)
+func logFatal(msg string, attrs ...slog.Attr) {
+	slog.LogAttrs(context.Background(), slog.LevelError, msg, attrs...)
 	os.Exit(1)
 }
 
