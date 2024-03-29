@@ -3,22 +3,26 @@ package benchmark
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"net"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
-	"go.uber.org/zap"
 
+	"example.com/scion-time/base/zaplog"
 	"example.com/scion-time/core/client"
 )
 
-func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
+func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
 	// const numClientGoroutine = 8
 	// const numRequestPerClient = 10000
 	const numClientGoroutine = 1
 	const numRequestPerClient = 20_000
+
+	ctx := context.Background()
+
 	var mu sync.Mutex
 	sg := make(chan struct{})
 	var wg sync.WaitGroup
@@ -28,7 +32,6 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 		go func() {
 			var err error
 			hg := hdrhistogram.New(1, 50000, 5)
-			ctx := context.Background()
 
 			c := &client.IPClient{
 				InterleavedMode: true,
@@ -38,7 +41,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 			if contains(authModes, "nts") {
 				ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 				if err != nil {
-					log.Fatal("failed to split NTS-KE host and port", zap.Error(err))
+					logFatal(ctx, log, "failed to split NTS-KE host and port", slog.Any("error", err))
 				}
 				c.Auth.Enabled = true
 				c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
@@ -47,15 +50,18 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 					MinVersion:         tls.VersionTLS13,
 				}
 				c.Auth.NTSKEFetcher.Port = ntskePort
-				c.Auth.NTSKEFetcher.Log = log
+				c.Auth.NTSKEFetcher.Log = zaplog.Logger()
 			}
 
 			defer wg.Done()
 			<-sg
 			for range numRequestPerClient {
-				_, _, err = client.MeasureClockOffsetIP(ctx, log, c, localAddr, remoteAddr)
+				_, _, err = client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c, localAddr, remoteAddr)
 				if err != nil {
-					log.Info("failed to measure clock offset", zap.Error(err))
+					log.LogAttrs(ctx, slog.LevelInfo,
+						"failed to measure clock offset",
+						slog.Any("error", err),
+					)
 				}
 			}
 			mu.Lock()
@@ -66,5 +72,5 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 	t0 := time.Now()
 	close(sg)
 	wg.Wait()
-	log.Info(time.Since(t0).String())
+	log.LogAttrs(ctx, slog.LevelInfo, "time elbasped", slog.Duration("duration", time.Since(t0)))
 }

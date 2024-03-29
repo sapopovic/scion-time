@@ -615,9 +615,10 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 			logFatal("no paths available", slog.Any("to", remoteAddr.IA))
 		}
 	}
-	zaplog.Logger().Debug("available paths",
-		zap.Stringer("to", remoteAddr.IA),
-		zap.Array("via", scion.PathArrayMarshaler{Paths: ps}),
+	log.LogAttrs(ctx, slog.LevelDebug,
+		"available paths",
+		slog.Any("to", remoteAddr.IA),
+		slog.Any("via", ps),
 	)
 
 	laddr := udp.UDPAddrFromSnet(localAddr)
@@ -646,6 +647,8 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 
 func runBenchmark(configFile string) {
 	cfg := loadConfig(configFile)
+	log := slog.Default()
+
 	localAddr := localAddress(cfg)
 	daemonAddr := daemonAddress(cfg)
 	remoteAddr := remoteAddress(cfg)
@@ -654,22 +657,22 @@ func runBenchmark(configFile string) {
 	ntskeServer := ntskeServerFromRemoteAddr(cfg.RemoteAddr)
 
 	if !remoteAddr.IA.IsZero() {
-		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr, cfg.AuthModes, ntskeServer, zaplog.Logger())
+		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
 	} else {
 		if daemonAddr != "" {
 			exitWithUsage()
 		}
-		runIPBenchmark(localAddr, remoteAddr, cfg.AuthModes, ntskeServer, zaplog.Logger())
+		runIPBenchmark(localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
 	}
 }
 
-func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
+func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
 	lclk := &clock.SystemClock{Log: slog.New(logbase.NewNopHandler())}
 	timebase.RegisterClock(lclk)
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authModes, ntskeServer, log)
 }
 
-func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *zap.Logger) {
+func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
 	lclk := &clock.SystemClock{Log: slog.New(logbase.NewNopHandler())}
 	timebase.RegisterClock(lclk)
 	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr, authModes, ntskeServer, log)
