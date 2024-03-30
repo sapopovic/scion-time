@@ -329,8 +329,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 	for _, s := range cfg.SHMReferenceClocks {
 		t := strings.Split(s, ":")
 		if len(t) > 2 || t[0] != shm.ReferenceClockType {
-			logFatal("unexpected SHM reference clock id",
-				slog.String("id", s))
+			logFatal("unexpected SHM reference clock id", slog.String("id", s))
 		}
 		var u int
 		if len(t) > 1 {
@@ -574,7 +573,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	for {
 		ts, off, err := client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c, laddr, raddr)
 		if err != nil {
-			logFatal("failed to measure clock offset", slog.Any("to", raddr), slog.Any("error", err))
+			logFatal("failed to measure clock offset", slog.Any("remote", raddr), slog.Any("error", err))
 		}
 		if !periodic {
 			break
@@ -609,15 +608,15 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	} else {
 		ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 		if err != nil {
-			logFatal("failed to lookup paths", slog.Any("to", remoteAddr.IA), slog.Any("error", err))
+			logFatal("failed to lookup paths", slog.Any("remote", remoteAddr), slog.Any("error", err))
 		}
 		if len(ps) == 0 {
-			logFatal("no paths available", slog.Any("to", remoteAddr.IA))
+			logFatal("no paths available", slog.Any("remote", remoteAddr))
 		}
 	}
 	log.LogAttrs(ctx, slog.LevelDebug,
 		"available paths",
-		slog.Any("to", remoteAddr.IA),
+		slog.Any("remote", remoteAddr),
 		slog.Any("via", ps),
 	)
 
@@ -638,8 +637,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	_, _, err = client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), []*client.SCIONClient{c}, laddr, raddr, ps)
 	if err != nil {
 		logFatal("failed to measure clock offset",
-			slog.Any("remoteIA", raddr.IA),
-			slog.Any("remoteHost", raddr.Host),
+			slog.Any("remote", remoteAddr),
 			slog.Any("error", err),
 		)
 	}
