@@ -169,7 +169,7 @@ func (c *tlsCertCache) loadCert(chi *tls.ClientHelloInfo) (*tls.Certificate, err
 	return c.cert, nil
 }
 
-func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureSkipVerify bool) {
+func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureSkipVerify bool, log *slog.Logger) {
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
 		logFatal("failed to split NTS-KE host and port", slog.Any("error", err))
@@ -182,10 +182,10 @@ func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureS
 		MinVersion:         tls.VersionTLS13,
 	}
 	c.Auth.NTSKEFetcher.Port = ntskePort
-	c.Auth.NTSKEFetcher.Log = zaplog.Logger()
+	c.Auth.NTSKEFetcher.Log = log
 }
 
-func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr, dscp uint8,
+func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockIP {
 	c := &ntpReferenceClockIP{
 		localAddr:  localAddr,
@@ -196,7 +196,7 @@ func newNTPReferenceClockIP(localAddr, remoteAddr *net.UDPAddr, dscp uint8,
 		InterleavedMode: true,
 	}
 	if contains(authModes, authModeNTS) {
-		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify)
+		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
 	return c
 }
@@ -206,7 +206,8 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (
 	return client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c.ntpc, c.localAddr, c.remoteAddr)
 }
 
-func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool, daemonAddr string, localAddr, remoteAddr udp.UDPAddr) {
+func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool,
+	daemonAddr string, localAddr, remoteAddr udp.UDPAddr, log *slog.Logger) {
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
 		logFatal("failed to split NTS-KE host and port", slog.Any("error", err))
@@ -219,14 +220,14 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 		MinVersion:         tls.VersionTLS13,
 	}
 	c.Auth.NTSKEFetcher.Port = ntskePort
-	c.Auth.NTSKEFetcher.Log = zaplog.Logger()
+	c.Auth.NTSKEFetcher.Log = log
 	c.Auth.NTSKEFetcher.QUIC.Enabled = true
 	c.Auth.NTSKEFetcher.QUIC.DaemonAddr = daemonAddr
 	c.Auth.NTSKEFetcher.QUIC.LocalAddr = localAddr
 	c.Auth.NTSKEFetcher.QUIC.RemoteAddr = remoteAddr
 }
 
-func newNTPReferenceClockSCION(daemonAddr string, localAddr, remoteAddr udp.UDPAddr, dscp uint8,
+func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, remoteAddr udp.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
 		localAddr:  localAddr,
@@ -238,7 +239,7 @@ func newNTPReferenceClockSCION(daemonAddr string, localAddr, remoteAddr udp.UDPA
 			InterleavedMode: true,
 		}
 		if contains(authModes, authModeNTS) {
-			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr)
+			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr, log)
 		}
 	}
 	return c
@@ -353,6 +354,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		ntskeServer := ntskeServerFromRemoteAddr(s)
 		if !remoteAddr.IA.IsZero() {
 			refClocks = append(refClocks, newNTPReferenceClockSCION(
+				log,
 				cfg.DaemonAddr,
 				udp.UDPAddrFromSnet(localAddr),
 				udp.UDPAddrFromSnet(remoteAddr),
@@ -364,6 +366,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		} else {
 			refClocks = append(refClocks, newNTPReferenceClockIP(
+				log,
 				localAddr.Host,
 				remoteAddr.Host,
 				dscp,
@@ -384,6 +387,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		}
 		ntskeServer := ntskeServerFromRemoteAddr(s)
 		netClocks = append(netClocks, newNTPReferenceClockSCION(
+			log,
 			cfg.DaemonAddr,
 			udp.UDPAddrFromSnet(localAddr),
 			udp.UDPAddrFromSnet(remoteAddr),
@@ -398,7 +402,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 	daemonAddr := daemonAddress(cfg)
 	if daemonAddr != "" {
 		ctx := context.Background()
-		pather := scion.StartPather(ctx, zaplog.Logger(), daemonAddr, dstIAs)
+		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
 		var drkeyFetcher *scion.Fetcher
 		if contains(cfg.AuthModes, authModeSPAO) {
 			drkeyFetcher = scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
@@ -465,11 +469,11 @@ func runServer(configFile string) {
 	provider := ntske.NewProvider()
 
 	localAddr.Host.Port = ntp.ServerPortIP
-	server.StartNTSKEServerIP(ctx, zaplog.Logger(), copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
+	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
 	server.StartIPServer(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	localAddr.Host.Port = ntp.ServerPortSCION
-	server.StartNTSKEServerSCION(ctx, zaplog.Logger(), udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
+	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
 	server.StartSCIONServer(ctx, zaplog.Logger(), daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	runMonitor()
@@ -504,11 +508,11 @@ func runRelay(configFile string) {
 	provider := ntske.NewProvider()
 
 	localAddr.Host.Port = ntp.ServerPortIP
-	server.StartNTSKEServerIP(ctx, zaplog.Logger(), copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
+	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
 	server.StartIPServer(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	localAddr.Host.Port = ntp.ServerPortSCION
-	server.StartNTSKEServerSCION(ctx, zaplog.Logger(), udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
+	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
 	server.StartSCIONServer(ctx, zaplog.Logger(), daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	runMonitor()
@@ -567,7 +571,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 		InterleavedMode: true,
 	}
 	if contains(authModes, authModeNTS) {
-		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify)
+		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
 
 	for {
@@ -631,7 +635,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
 	}
 	if contains(authModes, authModeNTS) {
-		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, daemonAddr, laddr, raddr)
+		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, daemonAddr, laddr, raddr, log)
 	}
 
 	_, _, err = client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), []*client.SCIONClient{c}, laddr, raddr, ps)

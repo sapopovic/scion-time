@@ -2,10 +2,9 @@ package scion
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
-
-	"go.uber.org/zap"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
@@ -15,7 +14,7 @@ import (
 const pathRefreshPeriod = 15 * time.Second
 
 type Pather struct {
-	log     *zap.Logger
+	log     *slog.Logger
 	mu      sync.Mutex
 	localIA addr.IA
 	paths   map[addr.IA][]snet.Path
@@ -40,7 +39,8 @@ func (p *Pather) Paths(dst addr.IA) []snet.Path {
 func update(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.IA) {
 	localIA, err := dc.LocalIA(ctx)
 	if err != nil {
-		p.log.Info("failed to look up local IA", zap.Error(err))
+		p.log.LogAttrs(ctx, slog.LevelInfo,
+			"failed to look up local IA", slog.Any("error", err))
 		return
 	}
 
@@ -51,7 +51,8 @@ func update(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.I
 		}
 		ps, err := dc.Paths(ctx, dstIA, localIA, daemon.PathReqFlags{Refresh: true})
 		if err != nil {
-			p.log.Info("failed to look up paths", zap.Stringer("to", dstIA), zap.Error(err))
+			p.log.LogAttrs(ctx, slog.LevelInfo,
+				"failed to look up paths", slog.Any("to", dstIA), slog.Any("error", err))
 		}
 		paths[dstIA] = append(paths[dstIA], ps...)
 	}
@@ -62,7 +63,7 @@ func update(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.I
 	p.mu.Unlock()
 }
 
-func StartPather(ctx context.Context, log *zap.Logger, daemonAddr string, dstIAs []addr.IA) *Pather {
+func StartPather(ctx context.Context, log *slog.Logger, daemonAddr string, dstIAs []addr.IA) *Pather {
 	p := &Pather{log: log}
 	dc := NewDaemonConnector(ctx, daemonAddr)
 	update(ctx, p, dc, dstIAs)

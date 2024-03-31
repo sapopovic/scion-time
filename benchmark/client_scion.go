@@ -90,7 +90,7 @@ func RunSCIONBenchmark(
 					MinVersion:         tls.VersionTLS13,
 				}
 				c.Auth.NTSKEFetcher.Port = ntskePort
-				c.Auth.NTSKEFetcher.Log = zaplog.Logger()
+				c.Auth.NTSKEFetcher.Log = log
 				c.Auth.NTSKEFetcher.QUIC.Enabled = true
 				c.Auth.NTSKEFetcher.QUIC.DaemonAddr = daemonAddr
 				c.Auth.NTSKEFetcher.QUIC.LocalAddr = laddr

@@ -50,7 +50,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 					MinVersion:         tls.VersionTLS13,
 				}
 				c.Auth.NTSKEFetcher.Port = ntskePort
-				c.Auth.NTSKEFetcher.Log = zaplog.Logger()
+				c.Auth.NTSKEFetcher.Log = log
 			}
 
 			defer wg.Done()
