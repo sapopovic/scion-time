@@ -3,10 +3,12 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
 	"example.com/scion-time/driver/clock"
+	"example.com/scion-time/net/ntp"
 )
 
 func runX() {
@@ -18,4 +20,10 @@ func runX() {
 	log.Debug("local clock", slog.Time("now", clk.Now()))
 	clk.Step(-1 * time.Second)
 	log.Debug("local clock", slog.Time("now", clk.Now()))
+
+	now64 := ntp.Time64FromTime(time.Now())
+	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
+		slog.Any("now", now64))
+	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
+		slog.Any("now", ntp.Time64LogValuer{T: now64}))
 }

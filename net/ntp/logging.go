@@ -1,8 +1,20 @@
 package ntp
 
 import (
+	"log/slog"
+
 	"go.uber.org/zap/zapcore"
 )
+
+type Time32LogValuer struct {
+	T Time32
+}
+
+func (v Time32LogValuer) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Uint64("Seconds", uint64(v.T.Seconds)),
+		slog.Uint64("Fraction", uint64(v.T.Fraction)))
+}
 
 type Time32Marshaler struct {
 	T Time32
@@ -12,6 +24,16 @@ func (m Time32Marshaler) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddUint16("Seconds", m.T.Seconds)
 	enc.AddUint16("Fraction", m.T.Fraction)
 	return nil
+}
+
+type Time64LogValuer struct {
+	T Time64
+}
+
+func (v Time64LogValuer) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Uint64("Seconds", uint64(v.T.Seconds)),
+		slog.Uint64("Fraction", uint64(v.T.Fraction)))
 }
 
 type Time64Marshaler struct {
