@@ -23,7 +23,9 @@ func runX() {
 
 	now64 := ntp.Time64FromTime(time.Now())
 	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
-		slog.Any("now", now64))
-	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
 		slog.Any("now", ntp.Time64LogValuer{T: now64}))
+
+	var pkt ntp.Packet
+	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
+		slog.Any("pkt", ntp.PacketLogValuer{Pkt: &pkt}))
 }
