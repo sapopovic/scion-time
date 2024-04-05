@@ -47,6 +47,7 @@ type SCIONClient struct {
 	Histo *hdrhistogram.Histogram
 	prev  struct {
 		reference   string
+		path        string
 		interleaved bool
 		cTxTime     ntp.Time64
 		cRxTime     ntp.Time64
@@ -104,6 +105,20 @@ func compareIPs(x, y []byte) int {
 
 func (c *SCIONClient) InInterleavedMode() bool {
 	return c.InterleavedMode && c.prev.reference != "" && c.prev.interleaved
+}
+
+func (c *SCIONClient) InterleavedModeReference() string {
+	if !c.InInterleavedMode() {
+		return ""
+	}
+	return c.prev.reference
+}
+
+func (c *SCIONClient) InterleavedModePath() string {
+	if !c.InInterleavedMode() {
+		return ""
+	}
+	return c.prev.path
 }
 
 func (c *SCIONClient) ResetInterleavedMode() {
@@ -548,6 +563,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 		if c.InterleavedMode {
 			c.prev.reference = reference
+			c.prev.path = string(snet.Fingerprint(path))
 			c.prev.interleaved = interleavedResp
 			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
 			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
