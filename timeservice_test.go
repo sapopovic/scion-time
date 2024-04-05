@@ -62,7 +62,7 @@ func TestTimeserviceNTSChrony(t *testing.T) {
 		MinVersion:         tls.VersionTLS13,
 	}
 	c.Auth.NTSKEFetcher.Port = ntskePort
-	c.Auth.NTSKEFetcher.Log = zaplog.Logger()
+	c.Auth.NTSKEFetcher.Log = log
 
 	_, _, err = client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c, laddr, raddr)
 	if err != nil {

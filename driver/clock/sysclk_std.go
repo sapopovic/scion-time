@@ -3,6 +3,7 @@
 package clock
 
 import (
+	"context"
 	"log/slog"
 	"math"
 	"time"
@@ -29,11 +30,15 @@ func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
 }
 
 func (c *SystemClock) Step(offset time.Duration) {
-	c.Log.Debug("SystemClock.Step, not yet implemented", slog.Duration("offset", offset))
+	c.Log.LogAttrs(context.Background(), slog.LevelDebug,
+		"SystemClock.Step, not yet implemented",
+		slog.Duration("offset", offset),
+	)
 }
 
 func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) {
-	c.Log.Debug("SystemClock.Adjust, not yet implemented",
+	c.Log.LogAttrs(context.Background(), slog.LevelDebug,
+		"SystemClock.Adjust, not yet implemented",
 		slog.Duration("offset", offset),
 		slog.Duration("duration", duration),
 		slog.Float64("frequency", frequency),
@@ -41,6 +46,9 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 }
 
 func (c *SystemClock) Sleep(duration time.Duration) {
-	c.Log.Debug("SystemClock.Sleep", slog.Duration("duration", duration))
+	c.Log.LogAttrs(context.Background(), slog.LevelDebug,
+		"SystemClock.Sleep",
+		slog.Duration("duration", duration),
+	)
 	time.Sleep(duration)
 }

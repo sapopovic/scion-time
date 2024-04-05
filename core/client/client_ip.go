@@ -38,6 +38,7 @@ type IPClient struct {
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
+	filter filter
 }
 
 type ipClientMetrics struct {
@@ -116,7 +117,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 
 	var ntskeData ntske.Data
 	if c.Auth.Enabled {
-		ntskeData, err = c.Auth.NTSKEFetcher.FetchData()
+		ntskeData, err = c.Auth.NTSKEFetcher.FetchData(ctx)
 		if err != nil {
 			log.Info("failed to fetch key exchange data", zap.Error(err))
 			return time.Time{}, 0, err
@@ -139,7 +140,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
-		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= 2*time.Second {
+		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= 3*time.Second {
 		interleavedReq = true
 		ntpreq.OriginTime = c.prev.sRxTime
 		ntpreq.ReceiveTime = c.prev.cRxTime
@@ -173,6 +174,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		mtrcs.reqsSentInterleaved.Inc()
 	}
 
+	const maxNumRetries = 1
 	numRetries := 0
 	oob := make([]byte, udp.TimestampLen())
 	for {
@@ -326,7 +328,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		if c.Raw {
 			offset = off
 		} else {
-			offset = filter(log, reference, t0, t1, t2, t3)
+			offset = c.filter.do(log, reference, t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {

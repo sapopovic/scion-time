@@ -47,11 +47,13 @@ type SCIONClient struct {
 	Histo *hdrhistogram.Histogram
 	prev  struct {
 		reference   string
+		path        string
 		interleaved bool
 		cTxTime     ntp.Time64
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
+	filter filter
 }
 
 type scionClientMetrics struct {
@@ -105,6 +107,20 @@ func (c *SCIONClient) InInterleavedMode() bool {
 	return c.InterleavedMode && c.prev.reference != "" && c.prev.interleaved
 }
 
+func (c *SCIONClient) InterleavedModeReference() string {
+	if !c.InInterleavedMode() {
+		return ""
+	}
+	return c.prev.reference
+}
+
+func (c *SCIONClient) InterleavedModePath() string {
+	if !c.InInterleavedMode() {
+		return ""
+	}
+	return c.prev.path
+}
+
 func (c *SCIONClient) ResetInterleavedMode() {
 	c.prev.reference = ""
 }
@@ -145,7 +161,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 	var ntskeData ntske.Data
 	if c.Auth.NTSEnabled {
-		ntskeData, err = c.Auth.NTSKEFetcher.FetchData()
+		ntskeData, err = c.Auth.NTSKEFetcher.FetchData(ctx)
 		if err != nil {
 			log.Info("failed to fetch key exchange data", zap.Error(err))
 			return time.Time{}, 0, err
@@ -181,7 +197,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
-		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= 2*time.Second {
+		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) < 3*time.Second {
 		interleavedReq = true
 		ntpreq.OriginTime = c.prev.sRxTime
 		ntpreq.ReceiveTime = c.prev.cRxTime
@@ -316,6 +332,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		mtrcs.reqsSentInterleaved.Inc()
 	}
 
+	const maxNumRetries = 1
 	numRetries := 0
 	oob := make([]byte, udp.TimestampLen())
 	for {
@@ -546,6 +563,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 
 		if c.InterleavedMode {
 			c.prev.reference = reference
+			c.prev.path = string(snet.Fingerprint(path))
 			c.prev.interleaved = interleavedResp
 			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
 			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
@@ -556,7 +574,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		if c.Raw {
 			offset = off
 		} else {
-			offset = filter(log, reference, t0, t1, t2, t3)
+			offset = c.filter.do(log, reference, t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {

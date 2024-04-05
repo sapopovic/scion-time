@@ -102,20 +102,45 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 	mtrcs := scionMetrics.Load()
 
 	sps := make([]snet.Path, len(ntpcs))
-	n, err := crypto.Sample(ctx, len(sps), len(ps), func(dst, src int) {
-		sps[dst] = ps[src]
+	nsps := 0
+	for i, c := range ntpcs {
+		pf := ntpcs[i].InterleavedModePath()
+		for j := 0; j != len(ps); j++ {
+			if p := ps[j]; snet.Fingerprint(p) == snet.PathFingerprint(pf) {
+				ps[j] = ps[len(ps)-1]
+				ps = ps[:len(ps)-1]
+				sps[i] = p
+				nsps++
+				break
+			}
+		}
+		if sps[i] == nil {
+			c.ResetInterleavedMode()
+		}
+	}
+	n, err := crypto.Sample(ctx, len(sps)-nsps, len(ps), func(dst, src int) {
+		ps[dst] = ps[src]
 	})
 	if err != nil {
 		return time.Time{}, 0, err
 	}
-	if n == 0 {
+	if nsps+n == 0 {
 		return time.Time{}, 0, errNoPath
 	}
-	sps = sps[:n]
+	for i, j := 0, 0; j != n; j++ {
+		for sps[i] != nil {
+			i++
+		}
+		sps[i] = ps[j]
+		nsps++
+	}
 
-	ms := make([]measurements.Measurement, len(sps))
+	ms := make([]measurements.Measurement, nsps)
 	msc := make(chan measurements.Measurement)
-	for i := range len(sps) {
+	for i := range len(ntpcs) {
+		if sps[i] == nil {
+			continue
+		}
 		go func(ctx context.Context, log *zap.Logger, mtrcs *scionClientMetrics,
 			ntpc *SCIONClient, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
 			var err error
@@ -127,7 +152,6 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 				zap.Object("via", scion.PathMarshaler{Path: p}),
 			)
 			if ntpc.InterleavedMode {
-				ntpc.ResetInterleavedMode()
 				n = 3
 			} else {
 				n = 1
@@ -159,7 +183,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 		}(ctx, log, mtrcs, ntpcs[i], localAddr, remoteAddr, sps[i])
 	}
 	collectMeasurements(ctx, ms, msc)
-	m := measurements.Median(ms)
+	m := measurements.FaultTolerantMidpoint(ms)
 	return m.Timestamp, m.Offset, m.Error
 }
 

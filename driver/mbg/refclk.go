@@ -68,15 +68,23 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
 	fd, err := unix.Open(c.dev, unix.O_RDWR, 0)
 	if err != nil {
-		c.log.Error("unix.Open failed", slog.String("dev", c.dev), slog.Any("error", err))
+		c.log.LogAttrs(ctx, slog.LevelError,
+			"unix.Open failed",
+			slog.String("dev", c.dev),
+			slog.Any("error", err),
+		)
 		return time.Time{}, 0, err
 	}
-	defer func(log *slog.Logger, dev string) {
+	defer func() {
 		err = unix.Close(fd)
 		if err != nil {
-			log.Info("unix.Close failed", slog.String("dev", c.dev), slog.Any("error", err))
+			c.log.LogAttrs(ctx, slog.LevelError,
+				"unix.Close failed",
+				slog.String("dev", c.dev),
+				slog.Any("error", err),
+			)
 		}
-	}(c.log, c.dev)
+	}()
 
 	// mbg_chk_dev_has_hr_time functionality:
 	// See https://kb.meinbergglobal.com/mbglib-api/mbgdevio_8h.html
@@ -96,7 +104,11 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 		uintptr(ioctlRequest(ioctlWrite, len(featureData), 'M', 0xa4)),
 		uintptr(unsafe.Pointer(&featureData[0])))
 	if errno != 0 {
-		c.log.Error("ioctl failed (features) or HR time not supported", slog.String("dev", c.dev), slog.Any("errno", errno))
+		c.log.LogAttrs(ctx, slog.LevelError,
+			"ioctl failed (features) or HR time not supported",
+			slog.String("dev", c.dev),
+			slog.Uint64("errno", uint64(errno)),
+		)
 		return time.Time{}, 0, errno
 	}
 
@@ -113,7 +125,11 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 		uintptr(ioctlRequest(ioctlRead, len(cycleFrequencyData), 'M', 0x68)),
 		uintptr(unsafe.Pointer(&cycleFrequencyData[0])))
 	if errno != 0 {
-		c.log.Error("ioctl failed (cycle frequency)", slog.String("dev", c.dev), slog.Any("errno", errno))
+		c.log.LogAttrs(ctx, slog.LevelError,
+			"ioctl failed (cycle frequency)",
+			slog.String("dev", c.dev),
+			slog.Uint64("errno", uint64(errno)),
+		)
 		return time.Time{}, 0, errno
 	}
 
@@ -132,7 +148,11 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 		uintptr(ioctlRequest(ioctlRead, len(timeData), 'M', 0x80)),
 		uintptr(unsafe.Pointer(&timeData[0])))
 	if errno != 0 {
-		c.log.Error("ioctl failed (time)", slog.String("dev", c.dev), slog.Any("errno", errno))
+		c.log.LogAttrs(ctx, slog.LevelError,
+			"ioctl failed (time)",
+			slog.String("dev", c.dev),
+			slog.Uint64("errno", uint64(errno)),
+		)
 		return time.Time{}, 0, errno
 	}
 
@@ -155,7 +175,8 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 	sysTime := time.Unix(sysTimeSeconds, sysTimeNanoseconds).UTC()
 	offset := refTime.Sub(sysTime)
 
-	c.log.Debug("MBG clock sample",
+	c.log.LogAttrs(ctx, slog.LevelDebug,
+		"MBG clock sample",
 		slog.Group("sysTime",
 			slog.Time("time", sysTime),
 			slog.Int64("at", sysTimeCyclesBefore),

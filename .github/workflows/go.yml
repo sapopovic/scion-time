@@ -32,11 +32,12 @@ jobs:
           sh testnet/tls-gen-cert.sh
           sudo systemctl stop chronyd
           sudo /home/ubuntu/chrony-4.3/sbin/chronyd -4 -f /home/runner/work/scion-time/scion-time/testnet/chrony/chronyNTS.conf
+          sleep 10
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22.1'
+          go-version: '1.22.2'
 
       - name: Build
         run: go build -o bin/timeservice timeservice.go timeservicex.go
