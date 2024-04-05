@@ -55,7 +55,7 @@ In an additional session:
 
 ## Installing prerequisites for a SCION test environment
 
-Reference platform: Ubuntu 22.04 LTS, Go 1.21.2
+Reference platform: Ubuntu 22.04 LTS, Go 1.22.2
 
 ```
 sudo apt-get update
