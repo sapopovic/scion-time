@@ -31,6 +31,7 @@ import (
 	"example.com/scion-time/net/udp"
 )
 
+
 type SCIONClient struct {
 	DSCP            uint8
 	InterleavedMode bool
@@ -316,6 +317,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		mtrcs.reqsSentInterleaved.Inc()
 	}
 
+	const maxNumRetries = 1
 	numRetries := 0
 	oob := make([]byte, udp.TimestampLen())
 	for {

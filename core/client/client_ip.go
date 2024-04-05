@@ -173,6 +173,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		mtrcs.reqsSentInterleaved.Inc()
 	}
 
+	const maxNumRetries = 1
 	numRetries := 0
 	oob := make([]byte, udp.TimestampLen())
 	for {

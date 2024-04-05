@@ -11,10 +11,6 @@ import (
 	"example.com/scion-time/core/timebase"
 )
 
-const (
-	maxNumRetries = 1
-)
-
 type filterContext struct {
 	epoch          uint64
 	alo, amid, ahi float64
