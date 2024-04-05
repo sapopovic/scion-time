@@ -31,7 +31,6 @@ import (
 	"example.com/scion-time/net/udp"
 )
 
-
 type SCIONClient struct {
 	DSCP            uint8
 	InterleavedMode bool
@@ -53,6 +52,7 @@ type SCIONClient struct {
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
+	filter filter
 }
 
 type scionClientMetrics struct {
@@ -558,7 +558,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		if c.Raw {
 			offset = off
 		} else {
-			offset = filter(log, reference, t0, t1, t2, t3)
+			offset = c.filter.do(log, reference, t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {

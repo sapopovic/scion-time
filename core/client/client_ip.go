@@ -38,6 +38,7 @@ type IPClient struct {
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
+	filter filter
 }
 
 type ipClientMetrics struct {
@@ -327,7 +328,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		if c.Raw {
 			offset = off
 		} else {
-			offset = filter(log, reference, t0, t1, t2, t3)
+			offset = c.filter.do(log, reference, t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {
