@@ -69,7 +69,7 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 		if mdt < 0 {
 			panic("unexpected clock behavior")
 		}
-		dt := timemath.Seconds(now.Sub(l.t))
+		dt = timemath.Seconds(now.Sub(l.t))
 		if dt < 0.0 {
 			panic("unexpected clock behavior")
 		}
@@ -82,7 +82,7 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 		} else {
 			const (
 				captureTime = 300 * time.Second
-				stiffenRate = 0.999
+				stiffenRate = 0.999999
 				pLimit      = 0.03
 			)
 			if mdt > captureTime && l.a > pLimit {
