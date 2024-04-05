@@ -59,7 +59,7 @@ const (
 
 	tlsCertReloadInterval = time.Minute * 10
 
-	scionRefClockNumClient = 5
+	scionRefClockNumClient = 7
 )
 
 type svcConfig struct {
