@@ -183,7 +183,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 		}(ctx, log, mtrcs, ntpcs[i], localAddr, remoteAddr, sps[i])
 	}
 	collectMeasurements(ctx, ms, msc)
-	m := measurements.Median(ms)
+	m := measurements.FaultTolerantMidpoint(ms)
 	return m.Timestamp, m.Offset, m.Error
 }
 
