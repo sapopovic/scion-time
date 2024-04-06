@@ -82,7 +82,7 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 		} else {
 			const (
 				captureTime = 300 * time.Second
-				stiffenRate = 0.999999
+				stiffenRate = 0.999
 				pLimit      = 0.03
 			)
 			if mdt > captureTime && l.a > pLimit {
