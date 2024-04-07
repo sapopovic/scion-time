@@ -46,7 +46,10 @@ jobs:
         run: go vet ./...
 
       - name: staticcheck
-        run: staticcheck -checks "all,-ST1000" ./...
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          echo $(go env GOPATH)
+          $(go env GOPATH)/staticcheck -checks "all,-ST1000" ./...
 
       - name: golangci-lint
         run: golangci-lint run
