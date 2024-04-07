@@ -51,7 +51,9 @@ jobs:
           $(go env GOPATH)/bin/staticcheck -checks "all,-ST1000" ./...
 
       - name: golangci-lint
-        run: golangci-lint run
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.57.2
+          $(go env GOPATH)/bin/golangci-lint run
 
       - name: go test
         run: go test example.com/scion-time/...
