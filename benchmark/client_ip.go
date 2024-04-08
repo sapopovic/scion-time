@@ -11,7 +11,6 @@ import (
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 
-	"example.com/scion-time/base/zaplog"
 	"example.com/scion-time/core/client"
 )
 
@@ -56,7 +55,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 			defer wg.Done()
 			<-sg
 			for range numRequestPerClient {
-				_, _, err = client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c, localAddr, remoteAddr)
+				_, _, err = client.MeasureClockOffsetIP(ctx, log, c, localAddr, remoteAddr)
 				if err != nil {
 					log.LogAttrs(ctx, slog.LevelInfo,
 						"failed to measure clock offset",

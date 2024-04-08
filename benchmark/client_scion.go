@@ -15,7 +15,6 @@ import (
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/path"
 
-	"example.com/scion-time/base/zaplog"
 	"example.com/scion-time/core/client"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
@@ -101,7 +100,7 @@ func RunSCIONBenchmark(
 			<-sg
 			ntpcs := []*client.SCIONClient{c}
 			for range numRequestPerClient {
-				_, _, err = client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), ntpcs, laddr, raddr, ps)
+				_, _, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps)
 				if err != nil {
 					log.LogAttrs(ctx, slog.LevelInfo,
 						"failed to measure clock offset",

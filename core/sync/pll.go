@@ -3,6 +3,7 @@ package sync
 // Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
 import (
+	"log/slog"
 	"math"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
+	"example.com/scion-time/base/zaplog"
 )
 
 type pll struct {
@@ -21,8 +23,8 @@ type pll struct {
 	a, b, i float64
 }
 
-func newPLL(log *zap.Logger, clk timebase.LocalClock) *pll {
-	return &pll{log: log, clk: clk}
+func newPLL(log *slog.Logger, clk timebase.LocalClock) *pll {
+	return &pll{log: zaplog.Logger(), clk: clk}
 }
 
 func (l *pll) Do(offset time.Duration, weight float64) {

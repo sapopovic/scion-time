@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net"
 	"sync/atomic"
 	"time"
@@ -12,7 +13,10 @@ import (
 	"go.uber.org/zap"
 
 	"example.com/scion-time/base/crypto"
+	"example.com/scion-time/base/zaplog"
+
 	"example.com/scion-time/core/measurements"
+
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
 )
@@ -38,9 +42,10 @@ func init() {
 	scionMetrics.Store(newSCIONClientMetrics())
 }
 
-func MeasureClockOffsetIP(ctx context.Context, log *zap.Logger,
+func MeasureClockOffsetIP(ctx context.Context, _log *slog.Logger,
 	ntpc *IPClient, localAddr, remoteAddr *net.UDPAddr) (
 	ts time.Time, off time.Duration, err error) {
+	log := zaplog.Logger()
 	mtrcs := ipMetrics.Load()
 
 	var nerr, n int
@@ -96,9 +101,10 @@ loop:
 	return j
 }
 
-func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
+func MeasureClockOffsetSCION(ctx context.Context, _log *slog.Logger,
 	ntpcs []*SCIONClient, localAddr, remoteAddr udp.UDPAddr, ps []snet.Path) (
 	time.Time, time.Duration, error) {
+	log := zaplog.Logger()
 	mtrcs := scionMetrics.Load()
 
 	sps := make([]snet.Path, len(ntpcs))
@@ -187,7 +193,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *zap.Logger,
 	return m.Timestamp, m.Offset, m.Error
 }
 
-func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap.Logger,
+func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,
 	refclks []ReferenceClock, ms []measurements.Measurement) {
 	if len(ms) != len(refclks) {
 		panic("number of result offsets must be equal to the number of reference clocks")
@@ -205,14 +211,14 @@ func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context, log *zap
 
 	msc := make(chan measurements.Measurement)
 	for _, refclk := range refclks {
-		go func(ctx context.Context, log *zap.Logger, refclk ReferenceClock) {
+		go func(ctx context.Context, refclk ReferenceClock) {
 			ts, off, err := refclk.MeasureClockOffset(ctx)
 			msc <- measurements.Measurement{
 				Timestamp: ts,
 				Offset:    off,
 				Error:     err,
 			}
-		}(ctx, log, refclk)
+		}(ctx, refclk)
 	}
 	collectMeasurements(ctx, ms, msc)
 }

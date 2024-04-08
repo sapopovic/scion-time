@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 	"crypto/subtle"
+	"log/slog"
 	"net"
 	"net/netip"
-	"log/slog"
 	"strconv"
 	"time"
 
@@ -473,9 +473,9 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 
 func StartSCIONServer(ctx context.Context, log *slog.Logger,
 	daemonAddr string, localHost *net.UDPAddr, dscp uint8, provider *ntske.Provider) {
-	log.Info("server listening via SCION",
-		zap.Stringer("ip", localHost.IP),
-		zap.Int("port", localHost.Port),
+	log.LogAttrs(ctx, slog.LevelInfo,
+		"server listening via SCION",
+		slog.Any("local host", localHost),
 	)
 
 	if localHost.Port == scion.EndhostPort {
@@ -509,9 +509,9 @@ func StartSCIONServer(ctx context.Context, log *slog.Logger,
 
 func StartSCIONDispatcher(ctx context.Context, log *slog.Logger,
 	localHost *net.UDPAddr) {
-	log.Info("dispatcher listening via SCION",
-		zap.Stringer("ip", localHost.IP),
-		zap.Int("port", scion.EndhostPort),
+	log.LogAttrs(ctx, slog.LevelInfo,
+		"dispatcher listening via SCION",
+		slog.Any("local host", localHost),
 	)
 
 	if localHost.Port == scion.EndhostPort {

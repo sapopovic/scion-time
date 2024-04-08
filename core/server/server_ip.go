@@ -209,9 +209,9 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 
 func StartIPServer(ctx context.Context, log *slog.Logger,
 	localHost *net.UDPAddr, dscp uint8, provider *ntske.Provider) {
-	log.Info("server listening via IP",
-		zap.Stringer("ip", localHost.IP),
-		zap.Int("port", localHost.Port),
+	log.LogAttrs(ctx, slog.LevelInfo,
+		"server listening via IP",
+		slog.Any("local host", localHost),
 	)
 
 	mtrcs := newIPServerMetrics()

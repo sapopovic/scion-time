@@ -2,12 +2,11 @@ package sync
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-
-	"go.uber.org/zap"
 
 	"example.com/scion-time/base/metrics"
 	"example.com/scion-time/base/timebase"
@@ -59,23 +58,23 @@ func RegisterClocks(refClocks, netClocks []client.ReferenceClock) {
 	netClkOffsets = make([]measurements.Measurement, len(netClks))
 }
 
-func measureOffsetToRefClocks(log *zap.Logger, timeout time.Duration) (
+func measureOffsetToRefClocks(timeout time.Duration) (
 	time.Time, time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	refClkClient.MeasureClockOffsets(ctx, log, refClks, refClkOffsets)
+	refClkClient.MeasureClockOffsets(ctx, refClks, refClkOffsets)
 	m := measurements.Median(refClkOffsets)
 	return m.Timestamp, m.Offset
 }
 
-func SyncToRefClocks(log *zap.Logger, lclk timebase.LocalClock) {
-	_, corr := measureOffsetToRefClocks(log, refClkTimeout)
+func SyncToRefClocks(log *slog.Logger, lclk timebase.LocalClock) {
+	_, corr := measureOffsetToRefClocks(refClkTimeout)
 	if corr != 0 {
 		lclk.Step(corr)
 	}
 }
 
-func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
+func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 	if refClkImpact <= 1.0 {
 		panic("invalid reference clock impact factor")
 	}
@@ -96,7 +95,7 @@ func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		_, corr := measureOffsetToRefClocks(log, refClkTimeout)
+		_, corr := measureOffsetToRefClocks(refClkTimeout)
 		if timemath.Abs(corr) > refClkCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
@@ -109,16 +108,16 @@ func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	}
 }
 
-func measureOffsetToNetClocks(log *zap.Logger, timeout time.Duration) (
+func measureOffsetToNetClocks(timeout time.Duration) (
 	time.Time, time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	netClkClient.MeasureClockOffsets(ctx, log, netClks, netClkOffsets)
+	netClkClient.MeasureClockOffsets(ctx, netClks, netClkOffsets)
 	m := measurements.FaultTolerantMidpoint(netClkOffsets)
 	return m.Timestamp, m.Offset
 }
 
-func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
+func RunGlobalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 	if netClkImpact <= 1.0 {
 		panic("invalid network clock impact factor")
 	}
@@ -142,7 +141,7 @@ func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		_, corr := measureOffsetToNetClocks(log, netClkTimeout)
+		_, corr := measureOffsetToNetClocks(netClkTimeout)
 		if timemath.Abs(corr) > netClkCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
