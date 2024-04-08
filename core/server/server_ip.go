@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"strconv"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	"example.com/scion-time/base/metrics"
+	"example.com/scion-time/base/zaplog"
 
 	"example.com/scion-time/core/timebase"
 
@@ -49,8 +51,10 @@ func newIPServerMetrics() *ipServerMetrics {
 	}
 }
 
-func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics,
+func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 	conn *net.UDPConn, iface string, dscp uint8, provider *ntske.Provider) {
+	log := zaplog.Logger()
+
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn, iface)
 	if err != nil {
@@ -203,7 +207,7 @@ func runIPServer(log *zap.Logger, mtrcs *ipServerMetrics,
 	}
 }
 
-func StartIPServer(ctx context.Context, log *zap.Logger,
+func StartIPServer(ctx context.Context, log *slog.Logger,
 	localHost *net.UDPAddr, dscp uint8, provider *ntske.Provider) {
 	log.Info("server listening via IP",
 		zap.Stringer("ip", localHost.IP),
@@ -215,17 +219,17 @@ func StartIPServer(ctx context.Context, log *zap.Logger,
 	if ipServerNumGoroutine == 1 {
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
-			log.Fatal("failed to listen for packets", zap.Error(err))
+			logFatal(ctx, log, "failed to listen for packets", slog.Any("error", err))
 		}
-		go runIPServer(log, mtrcs, conn, localHost.Zone, dscp, provider)
+		go runIPServer(ctx, log, mtrcs, conn, localHost.Zone, dscp, provider)
 	} else {
 		for range ipServerNumGoroutine {
 			conn, err := reuseport.ListenPacket("udp",
 				net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port)))
 			if err != nil {
-				log.Fatal("failed to listen for packets", zap.Error(err))
+				logFatal(ctx, log, "failed to listen for packets", slog.Any("error", err))
 			}
-			go runIPServer(log, mtrcs, conn.(*net.UDPConn), localHost.Zone, dscp, provider)
+			go runIPServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, dscp, provider)
 		}
 	}
 }

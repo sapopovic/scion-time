@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"net"
 	"net/netip"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	"example.com/scion-time/base/metrics"
+	"example.com/scion-time/base/zaplog"
 
 	"example.com/scion-time/core/timebase"
 
@@ -68,9 +70,11 @@ func newSCIONServerMetrics() *scionServerMetrics {
 	}
 }
 
-func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetrics,
+func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMetrics,
 	conn *net.UDPConn, localHostIface string, localHostPort int, dscp uint8,
 	fetcher *scion.Fetcher, provider *ntske.Provider) {
+	log := zaplog.Logger()
+
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn, localHostIface)
 	if err != nil {
@@ -467,7 +471,7 @@ func runSCIONServer(ctx context.Context, log *zap.Logger, mtrcs *scionServerMetr
 	}
 }
 
-func StartSCIONServer(ctx context.Context, log *zap.Logger,
+func StartSCIONServer(ctx context.Context, log *slog.Logger,
 	daemonAddr string, localHost *net.UDPAddr, dscp uint8, provider *ntske.Provider) {
 	log.Info("server listening via SCION",
 		zap.Stringer("ip", localHost.IP),
@@ -475,7 +479,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 	)
 
 	if localHost.Port == scion.EndhostPort {
-		log.Fatal("invalid listener port", zap.Int("port", scion.EndhostPort))
+		logFatal(ctx, log, "invalid listener port", slog.Uint64("port", scion.EndhostPort))
 	}
 
 	localHostPort := localHost.Port
@@ -487,7 +491,7 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 		fetcher := scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
-			log.Fatal("failed to listen for packets", zap.Error(err))
+			logFatal(ctx, log, "failed to listen for packets", slog.Any("error", err))
 		}
 		go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHostPort, dscp, fetcher, provider)
 	} else {
@@ -496,14 +500,14 @@ func StartSCIONServer(ctx context.Context, log *zap.Logger,
 			conn, err := reuseport.ListenPacket("udp",
 				net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port)))
 			if err != nil {
-				log.Fatal("failed to listen for packets", zap.Error(err))
+				logFatal(ctx, log, "failed to listen for packets", slog.Any("error", err))
 			}
 			go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, localHostPort, dscp, fetcher, provider)
 		}
 	}
 }
 
-func StartSCIONDispatcher(ctx context.Context, log *zap.Logger,
+func StartSCIONDispatcher(ctx context.Context, log *slog.Logger,
 	localHost *net.UDPAddr) {
 	log.Info("dispatcher listening via SCION",
 		zap.Stringer("ip", localHost.IP),
@@ -511,7 +515,7 @@ func StartSCIONDispatcher(ctx context.Context, log *zap.Logger,
 	)
 
 	if localHost.Port == scion.EndhostPort {
-		log.Fatal("invalid listener port", zap.Int("port", scion.EndhostPort))
+		logFatal(ctx, log, "invalid listener port", slog.Uint64("port", scion.EndhostPort))
 	}
 
 	localHost.Port = scion.EndhostPort
@@ -520,7 +524,7 @@ func StartSCIONDispatcher(ctx context.Context, log *zap.Logger,
 
 	conn, err := net.ListenUDP("udp", localHost)
 	if err != nil {
-		log.Fatal("failed to listen for packets", zap.Error(err))
+		logFatal(ctx, log, "failed to listen for packets", slog.Any("error", err))
 	}
 	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHost.Port,
 		0 /* DSCP */, nil /* DRKey fetcher */, nil /* NTSKE provider */)

@@ -470,11 +470,11 @@ func runServer(configFile string) {
 
 	localAddr.Host.Port = ntp.ServerPortIP
 	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
-	server.StartIPServer(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	localAddr.Host.Port = ntp.ServerPortSCION
 	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
-	server.StartSCIONServer(ctx, zaplog.Logger(), daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	runMonitor()
 }
@@ -509,11 +509,11 @@ func runRelay(configFile string) {
 
 	localAddr.Host.Port = ntp.ServerPortIP
 	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
-	server.StartIPServer(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	localAddr.Host.Port = ntp.ServerPortSCION
 	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
-	server.StartSCIONServer(ctx, zaplog.Logger(), daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	runMonitor()
 }
@@ -541,7 +541,7 @@ func runClient(configFile string) {
 		}
 	}
 	if scionClocksAvailable {
-		server.StartSCIONDispatcher(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host))
+		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
 	if len(refClocks) != 0 {
@@ -597,7 +597,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	timebase.RegisterClock(lclk)
 
 	if dispatcherMode == dispatcherModeInternal {
-		server.StartSCIONDispatcher(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host))
+		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
 	dc := scion.NewDaemonConnector(ctx, daemonAddr)
