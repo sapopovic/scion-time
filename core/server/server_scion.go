@@ -19,10 +19,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/spao"
 
-	"go.uber.org/zap"
-
 	"example.com/scion-time/base/metrics"
-	"example.com/scion-time/base/zaplog"
 
 	"example.com/scion-time/core/timebase"
 
@@ -70,19 +67,17 @@ func newSCIONServerMetrics() *scionServerMetrics {
 	}
 }
 
-func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMetrics,
+func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMetrics,
 	conn *net.UDPConn, localHostIface string, localHostPort int, dscp uint8,
 	fetcher *scion.Fetcher, provider *ntske.Provider) {
-	log := zaplog.Logger()
-
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn, localHostIface)
 	if err != nil {
-		log.Error("failed to enable timestamping", zap.Error(err))
+		log.LogAttrs(ctx, slog.LevelError, "failed to enable timestamping", slog.Any("error", err))
 	}
 	err = udp.SetDSCP(conn, dscp)
 	if err != nil {
-		log.Info("failed to set DSCP", zap.Error(err))
+		log.LogAttrs(ctx, slog.LevelInfo, "failed to set DSCP", slog.Any("error", err))
 	}
 
 	var txID uint32
@@ -125,11 +120,11 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 		oob = oob[:cap(oob)]
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
-			log.Error("failed to read packet", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet", slog.Any("error", err))
 			continue
 		}
 		if flags != 0 {
-			log.Error("failed to read packet", zap.Int("flags", flags))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet", slog.Int64("flags", int64(flags)))
 			continue
 		}
 		oob = oob[:oobn]
@@ -137,20 +132,20 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 		if err != nil {
 			oob = oob[:0]
 			rxt = timebase.Now()
-			log.Error("failed to read packet rx timestamp", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet rx timestamp", slog.Any("error", err))
 		}
 		buf = buf[:n]
 		mtrcs.pktsReceived.Inc()
 
 		err = parser.DecodeLayers(buf, &decoded)
 		if err != nil {
-			log.Info("failed to decode packet", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet", slog.Any("error", err))
 			continue
 		}
 		validType := len(decoded) >= 2 &&
 			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
 		if !validType {
-			log.Info("failed to decode packet", zap.String("cause", "unexpected type or structure"))
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet", slog.String("cause", "unexpected type or structure"))
 			continue
 		}
 
@@ -216,14 +211,16 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 
 			m, err := conn.WriteToUDPAddrPort(buffer.Bytes(), dstAddrPort)
 			if err != nil || m != len(buffer.Bytes()) {
-				log.Error("failed to write packet", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelError, "failed to write packet", slog.Any("error", err))
 				continue
 			}
 			_, id, err := udp.ReadTXTimestamp(conn)
 			if err != nil {
-				log.Error("failed to read packet tx timestamp", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+					slog.Any("error", err))
 			} else if id != txID {
-				log.Error("failed to read packet tx timestamp", zap.Uint32("id", id), zap.Uint32("expected", txID))
+				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txID)))
 				txID = id + 1
 			} else {
 				txID++
@@ -251,7 +248,7 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 							SrcHost:  dstAddr.String(),
 						})
 						if err != nil {
-							log.Error("failed to fetch DRKey level 2: host-AS", zap.Error(err))
+							log.LogAttrs(ctx, slog.LevelError, "failed to fetch DRKey level 2: host-AS", slog.Any("error", err))
 						} else {
 							hostHostKey, err := scion.DeriveHostHostKey(hostASKey, srcAddr.String())
 							if err != nil {
@@ -277,7 +274,7 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 							}
 							authenticated = subtle.ConstantTimeCompare(scion.PacketAuthOptMAC(authOpt), authMAC) != 0
 							if !authenticated {
-								log.Info("failed to authenticate packet")
+								log.LogAttrs(ctx, slog.LevelInfo, "failed to authenticate packet")
 								continue
 							}
 							mtrcs.pktsAuthenticated.Inc()
@@ -289,7 +286,7 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 			var ntpreq ntp.Packet
 			err = ntp.DecodePacket(&ntpreq, udpLayer.Payload)
 			if err != nil {
-				log.Info("failed to decode packet payload", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
 				continue
 			}
 
@@ -299,38 +296,38 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 			if len(udpLayer.Payload) > ntp.PacketLen {
 				err = nts.DecodePacket(&ntsreq, udpLayer.Payload)
 				if err != nil {
-					log.Info("failed to decode NTS packet", zap.Error(err))
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to decode NTS packet", slog.Any("error", err))
 					continue
 				}
 
 				cookie, err := ntsreq.FirstCookie()
 				if err != nil {
-					log.Info("failed to get cookie", zap.Error(err))
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to get cookie", slog.Any("error", err))
 					continue
 				}
 
 				var encryptedCookie ntske.EncryptedServerCookie
 				err = encryptedCookie.Decode(cookie)
 				if err != nil {
-					log.Info("failed to decode cookie", zap.Error(err))
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to decode cookie", slog.Any("error", err))
 					continue
 				}
 
 				key, ok := provider.Get(int(encryptedCookie.ID))
 				if !ok {
-					log.Info("failed to get key")
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to get key")
 					continue
 				}
 
 				serverCookie, err = encryptedCookie.Decrypt(key.Value)
 				if err != nil {
-					log.Info("failed to decrypt cookie", zap.Error(err))
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to decrypt cookie", slog.Any("error", err))
 					continue
 				}
 
 				err = nts.ProcessRequest(udpLayer.Payload, serverCookie.C2S, &ntsreq)
 				if err != nil {
-					log.Info("failed to process NTS packet", zap.Error(err))
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to process NTS packet", slog.Any("error", err))
 					continue
 				}
 				ntsAuthenticated = true
@@ -338,19 +335,19 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 
 			err = ntp.ValidateRequest(&ntpreq, udpLayer.SrcPort)
 			if err != nil {
-				log.Info("failed to validate packet payload", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload", slog.Any("error", err))
 				continue
 			}
 
 			clientID := scionLayer.SrcIA.String() + "," + srcAddr.String()
 
 			mtrcs.reqsAccepted.Inc()
-			log.Debug("received request",
-				zap.Time("at", rxt),
-				zap.String("from", clientID),
-				zap.Bool("auth", authenticated),
-				zap.Bool("ntsauth", ntsAuthenticated),
-				zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq}),
+			log.LogAttrs(ctx, slog.LevelDebug, "received request",
+				slog.Time("at", rxt),
+				slog.String("from", clientID),
+				slog.Bool("auth", authenticated),
+				slog.Bool("ntsauth", ntsAuthenticated),
+				slog.Any("data", ntp.PacketLogValuer{Pkt: &ntpreq}),
 			)
 
 			var txt0 time.Time
@@ -377,7 +374,7 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 				for range len(ntsreq.Cookies) + len(ntsreq.CookiePlaceholders) {
 					encryptedCookie, err := serverCookie.EncryptWithNonce(key.Value, key.ID)
 					if err != nil {
-						log.Info("failed to encrypt cookie", zap.Error(err))
+						log.LogAttrs(ctx, slog.LevelInfo, "failed to encrypt cookie", slog.Any("error", err))
 						continue
 					}
 					cookie := encryptedCookie.Encode()
@@ -385,7 +382,7 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 					addedCookie = true
 				}
 				if !addedCookie {
-					log.Info("failed to add at least one cookie")
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to add at least one cookie")
 					continue
 				}
 
@@ -450,16 +447,18 @@ func runSCIONServer(ctx context.Context, _log *slog.Logger, mtrcs *scionServerMe
 
 			n, err = conn.WriteToUDPAddrPort(buffer.Bytes(), lastHop)
 			if err != nil || n != len(buffer.Bytes()) {
-				log.Error("failed to write packet", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelError, "failed to write packet", slog.Any("error", err))
 				continue
 			}
 			txt1, id, err := udp.ReadTXTimestamp(conn)
 			if err != nil {
 				txt1 = txt0
-				log.Error("failed to read packet tx timestamp", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+					slog.Any("error", err))
 			} else if id != txID {
 				txt1 = txt0
-				log.Error("failed to read packet tx timestamp", zap.Uint32("id", id), zap.Uint32("expected", txID))
+				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txID)))
 				txID = id + 1
 			} else {
 				txID++

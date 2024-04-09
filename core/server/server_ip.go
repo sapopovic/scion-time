@@ -11,10 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"go.uber.org/zap"
-
 	"example.com/scion-time/base/metrics"
-	"example.com/scion-time/base/zaplog"
 
 	"example.com/scion-time/core/timebase"
 
@@ -51,18 +48,16 @@ func newIPServerMetrics() *ipServerMetrics {
 	}
 }
 
-func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
+func runIPServer(ctx context.Context, log *slog.Logger, mtrcs *ipServerMetrics,
 	conn *net.UDPConn, iface string, dscp uint8, provider *ntske.Provider) {
-	log := zaplog.Logger()
-
 	defer conn.Close()
 	err := udp.EnableTimestamping(conn, iface)
 	if err != nil {
-		log.Error("failed to enable timestamping", zap.Error(err))
+		log.LogAttrs(ctx, slog.LevelError, "failed to enable timestamping", slog.Any("error", err))
 	}
 	err = udp.SetDSCP(conn, dscp)
 	if err != nil {
-		log.Info("failed to set DSCP", zap.Error(err))
+		log.LogAttrs(ctx, slog.LevelInfo, "failed to set DSCP", slog.Any("error", err))
 	}
 
 	var txID uint32
@@ -73,11 +68,11 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 		oob = oob[:cap(oob)]
 		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
-			log.Error("failed to read packet", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet", slog.Any("error", err))
 			continue
 		}
 		if flags != 0 {
-			log.Error("failed to read packet", zap.Int("flags", flags))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet", slog.Int64("flags", int64(flags)))
 			continue
 		}
 		oob = oob[:oobn]
@@ -85,7 +80,7 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 		if err != nil {
 			oob = oob[:0]
 			rxt = timebase.Now()
-			log.Error("failed to read packet rx timestamp", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet rx timestamp", slog.Any("error", err))
 		}
 		buf = buf[:n]
 		mtrcs.pktsReceived.Inc()
@@ -93,7 +88,7 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 		var ntpreq ntp.Packet
 		err = ntp.DecodePacket(&ntpreq, buf)
 		if err != nil {
-			log.Info("failed to decode packet payload", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
 			continue
 		}
 
@@ -103,38 +98,38 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 		if len(buf) > ntp.PacketLen {
 			err = nts.DecodePacket(&ntsreq, buf)
 			if err != nil {
-				log.Info("failed to decode NTS packet", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to decode NTS packet", slog.Any("error", err))
 				continue
 			}
 
 			cookie, err := ntsreq.FirstCookie()
 			if err != nil {
-				log.Info("failed to get cookie", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to get cookie", slog.Any("error", err))
 				continue
 			}
 
 			var encryptedCookie ntske.EncryptedServerCookie
 			err = encryptedCookie.Decode(cookie)
 			if err != nil {
-				log.Info("failed to decode cookie", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to decode cookie", slog.Any("error", err))
 				continue
 			}
 
 			key, ok := provider.Get(int(encryptedCookie.ID))
 			if !ok {
-				log.Info("failed to get key")
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to get key")
 				continue
 			}
 
 			serverCookie, err = encryptedCookie.Decrypt(key.Value)
 			if err != nil {
-				log.Info("failed to decrypt cookie", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to decrypt cookie", slog.Any("error", err))
 				continue
 			}
 
 			err = nts.ProcessRequest(buf, serverCookie.C2S, &ntsreq)
 			if err != nil {
-				log.Info("failed to process NTS packet", zap.Error(err))
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to process NTS packet", slog.Any("error", err))
 				continue
 			}
 			authenticated = true
@@ -142,18 +137,18 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 
 		err = ntp.ValidateRequest(&ntpreq, srcAddr.Port())
 		if err != nil {
-			log.Info("failed to validate packet payload", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload", slog.Any("error", err))
 			continue
 		}
 
 		clientID := srcAddr.Addr().String()
 
 		mtrcs.reqsAccepted.Inc()
-		log.Debug("received request",
-			zap.Time("at", rxt),
-			zap.String("from", clientID),
-			zap.Bool("ntsauth", authenticated),
-			zap.Object("data", ntp.PacketMarshaler{Pkt: &ntpreq}),
+		log.LogAttrs(ctx, slog.LevelDebug, "received request",
+			slog.Time("at", rxt),
+			slog.String("from", clientID),
+			slog.Bool("ntsauth", authenticated),
+			slog.Any("data", ntp.PacketLogValuer{Pkt: &ntpreq}),
 		)
 
 		var txt0 time.Time
@@ -169,7 +164,7 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 			for range len(ntsreq.Cookies) + len(ntsreq.CookiePlaceholders) {
 				encryptedCookie, err := serverCookie.EncryptWithNonce(key.Value, key.ID)
 				if err != nil {
-					log.Info("failed to encrypt cookie", zap.Error(err))
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to encrypt cookie", slog.Any("error", err))
 					continue
 				}
 				cookie := encryptedCookie.Encode()
@@ -177,7 +172,7 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 				addedCookie = true
 			}
 			if !addedCookie {
-				log.Info("failed to add at least one cookie")
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to add at least one cookie")
 				continue
 			}
 
@@ -187,16 +182,18 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 
 		n, err = conn.WriteToUDPAddrPort(buf, srcAddr)
 		if err != nil || n != len(buf) {
-			log.Error("failed to write packet", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelError, "failed to write packet", slog.Any("error", err))
 			continue
 		}
 		txt1, id, err := udp.ReadTXTimestamp(conn)
 		if err != nil {
 			txt1 = txt0
-			log.Error("failed to read packet tx timestamp", zap.Error(err))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+				slog.Any("error", err))
 		} else if id != txID {
 			txt1 = txt0
-			log.Error("failed to read packet tx timestamp", zap.Uint32("id", id), zap.Uint32("expected", txID))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+				slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txID)))
 			txID = id + 1
 		} else {
 			txID++
@@ -209,8 +206,7 @@ func runIPServer(ctx context.Context, _log *slog.Logger, mtrcs *ipServerMetrics,
 
 func StartIPServer(ctx context.Context, log *slog.Logger,
 	localHost *net.UDPAddr, dscp uint8, provider *ntske.Provider) {
-	log.LogAttrs(ctx, slog.LevelInfo,
-		"server listening via IP",
+	log.LogAttrs(ctx, slog.LevelInfo, "server listening via IP",
 		slog.Any("local host", localHost),
 	)
 
