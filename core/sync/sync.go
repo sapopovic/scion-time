@@ -8,8 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"go.uber.org/zap"
-
 	"golang.org/x/sys/unix"
 
 	"example.com/scion-time/driver/fb/clock"
@@ -65,17 +63,17 @@ func RegisterClocks(refClocks, netClocks []client.ReferenceClock) {
 	netClkOffsets = make([]measurements.Measurement, len(netClks))
 }
 
-func measureOffsetToRefClocks(log *zap.Logger, timeout time.Duration) (
+func measureOffsetToRefClocks(timeout time.Duration) (
 	time.Time, time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	refClkClient.MeasureClockOffsets(ctx, log, refClks, refClkOffsets)
+	refClkClient.MeasureClockOffsets(ctx, refClks, refClkOffsets)
 	m := measurements.Median(refClkOffsets)
 	return m.Timestamp, m.Offset
 }
 
-func SyncToRefClocks(log *zap.Logger, lclk timebase.LocalClock) {
-	_, corr := measureOffsetToRefClocks(log, refClkTimeout)
+func SyncToRefClocks(log *slog.Logger, lclk timebase.LocalClock) {
+	_, corr := measureOffsetToRefClocks(refClkTimeout)
 	if corr != 0 {
 		lclk.Step(corr)
 	}
@@ -83,19 +81,19 @@ func SyncToRefClocks(log *zap.Logger, lclk timebase.LocalClock) {
 
 func initServo() (*servo.PiServo, error) {
 	/*
-	Copyright (c) Facebook, Inc. and its affiliates.
+		Copyright (c) Facebook, Inc. and its affiliates.
 
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
+		Licensed under the Apache License, Version 2.0 (the "License");
+		you may not use this file except in compliance with the License.
+		You may obtain a copy of the License at
 
-	    http://www.apache.org/licenses/LICENSE-2.0
+		    http://www.apache.org/licenses/LICENSE-2.0
 
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
+		Unless required by applicable law or agreed to in writing, software
+		distributed under the License is distributed on an "AS IS" BASIS,
+		WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+		See the License for the specific language governing permissions and
+		limitations under the License.
 	*/
 
 	freqPPB, clkstate, err := clock.FrequencyPPB(unix.CLOCK_REALTIME)
@@ -126,7 +124,7 @@ func initServo() (*servo.PiServo, error) {
 	return pi, nil
 }
 
-func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
+func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 	if refClkImpact <= 1.0 {
 		panic("invalid reference clock impact factor")
 	}
@@ -151,31 +149,31 @@ func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	// pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		ts, corr := measureOffsetToRefClocks(log, refClkTimeout)
+		ts, corr := measureOffsetToRefClocks(refClkTimeout)
 		if timemath.Abs(corr) > refClkCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
 			// lclk.Adjust(corr, refClkInterval, 0)
 			// pll.Do(corr, 1000.0 /* weight */)
-			slog.Debug("corr", "val", -int64(corr))
+			log.Debug("corr", "val", -int64(corr))
 			freqAdj, state := pi.Sample(-int64(corr), uint64(ts.UnixNano()))
 			if state == servo.StateJump {
-				slog.Debug("Step", "corr", -corr)
+				log.Debug("Step", "corr", -corr)
 				_, err := clock.Step(unix.CLOCK_REALTIME, -corr)
 				if err != nil {
-					slog.Error("failed to step clock", "step", -corr, "error", err)
+					log.Error("failed to step clock", "step", -corr, "error", err)
 					continue
 				}
 			} else {
-				slog.Debug("AdjFreqPPB", "freqAdj", -freqAdj,)
+				log.Debug("AdjFreqPPB", "freqAdj", -freqAdj)
 				_, err := clock.AdjFreqPPB(unix.CLOCK_REALTIME, -freqAdj)
 				if err != nil {
-					slog.Error("failed to adjust clock freq", "freqAdj", -freqAdj, "error", err)
+					log.Error("failed to adjust clock freq", "freqAdj", -freqAdj, "error", err)
 					continue
 				}
 				if err := clock.SetSync(unix.CLOCK_REALTIME); err != nil {
-					slog.Error("failed to set sys clock sync state", "error", err)
+					log.Error("failed to set sys clock sync state", "error", err)
 				}
 			}
 			corrGauge.Set(float64(corr))
@@ -184,16 +182,16 @@ func RunLocalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	}
 }
 
-func measureOffsetToNetClocks(log *zap.Logger, timeout time.Duration) (
+func measureOffsetToNetClocks(timeout time.Duration) (
 	time.Time, time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	netClkClient.MeasureClockOffsets(ctx, log, netClks, netClkOffsets)
+	netClkClient.MeasureClockOffsets(ctx, netClks, netClkOffsets)
 	m := measurements.FaultTolerantMidpoint(netClkOffsets)
 	return m.Timestamp, m.Offset
 }
 
-func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
+func RunGlobalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 	if netClkImpact <= 1.0 {
 		panic("invalid network clock impact factor")
 	}
@@ -217,7 +215,7 @@ func RunGlobalClockSync(log *zap.Logger, lclk timebase.LocalClock) {
 	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		_, corr := measureOffsetToNetClocks(log, netClkTimeout)
+		_, corr := measureOffsetToNetClocks(netClkTimeout)
 		if timemath.Abs(corr) > netClkCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)

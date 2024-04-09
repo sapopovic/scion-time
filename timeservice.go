@@ -80,12 +80,14 @@ type svcConfig struct {
 }
 
 type ntpReferenceClockIP struct {
+	log        *slog.Logger
 	ntpc       *client.IPClient
 	localAddr  *net.UDPAddr
 	remoteAddr *net.UDPAddr
 }
 
 type ntpReferenceClockSCION struct {
+	log        *slog.Logger
 	ntpcs      [scionRefClockNumClient]*client.SCIONClient
 	localAddr  udp.UDPAddr
 	remoteAddr udp.UDPAddr
@@ -188,6 +190,7 @@ func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureS
 func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockIP {
 	c := &ntpReferenceClockIP{
+		log:        log,
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
@@ -203,7 +206,7 @@ func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr
 
 func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
-	return client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c.ntpc, c.localAddr, c.remoteAddr)
+	return client.MeasureClockOffsetIP(ctx, c.log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
 func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool,
@@ -230,6 +233,7 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, remoteAddr udp.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
+		log:        log,
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
@@ -249,7 +253,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, r
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
-	return client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
+	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
 }
 
 func loadConfig(configFile string) svcConfig {
@@ -457,12 +461,12 @@ func runServer(configFile string) {
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
-		sync.SyncToRefClocks(zaplog.Logger(), lclk)
-		go sync.RunLocalClockSync(zaplog.Logger(), lclk)
+		sync.SyncToRefClocks(log, lclk)
+		go sync.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
-		go sync.RunGlobalClockSync(zaplog.Logger(), lclk)
+		go sync.RunGlobalClockSync(log, lclk)
 	}
 
 	dscp := dscp(cfg)
@@ -471,11 +475,11 @@ func runServer(configFile string) {
 
 	localAddr.Host.Port = ntp.ServerPortIP
 	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
-	server.StartIPServer(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	localAddr.Host.Port = ntp.ServerPortSCION
 	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
-	server.StartSCIONServer(ctx, zaplog.Logger(), daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	runMonitor()
 }
@@ -496,8 +500,8 @@ func runRelay(configFile string) {
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
-		sync.SyncToRefClocks(zaplog.Logger(), lclk)
-		go sync.RunLocalClockSync(zaplog.Logger(), lclk)
+		sync.SyncToRefClocks(log, lclk)
+		go sync.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
@@ -510,11 +514,11 @@ func runRelay(configFile string) {
 
 	localAddr.Host.Port = ntp.ServerPortIP
 	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
-	server.StartIPServer(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	localAddr.Host.Port = ntp.ServerPortSCION
 	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
-	server.StartSCIONServer(ctx, zaplog.Logger(), daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	runMonitor()
 }
@@ -542,12 +546,12 @@ func runClient(configFile string) {
 		}
 	}
 	if scionClocksAvailable {
-		server.StartSCIONDispatcher(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host))
+		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
 	if len(refClocks) != 0 {
-		sync.SyncToRefClocks(zaplog.Logger(), lclk)
-		go sync.RunLocalClockSync(zaplog.Logger(), lclk)
+		sync.SyncToRefClocks(log, lclk)
+		go sync.RunLocalClockSync(log, lclk)
 	}
 
 	if len(netClocks) != 0 {
@@ -576,7 +580,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	}
 
 	for {
-		ts, off, err := client.MeasureClockOffsetIP(ctx, zaplog.Logger(), c, laddr, raddr)
+		ts, off, err := client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 		if err != nil {
 			logFatal("failed to measure clock offset", slog.Any("remote", raddr), slog.Any("error", err))
 		}
@@ -598,7 +602,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	timebase.RegisterClock(lclk)
 
 	if dispatcherMode == dispatcherModeInternal {
-		server.StartSCIONDispatcher(ctx, zaplog.Logger(), snet.CopyUDPAddr(localAddr.Host))
+		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
 	dc := scion.NewDaemonConnector(ctx, daemonAddr)
@@ -639,7 +643,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, daemonAddr, laddr, raddr, log)
 	}
 
-	_, _, err = client.MeasureClockOffsetSCION(ctx, zaplog.Logger(), []*client.SCIONClient{c}, laddr, raddr, ps)
+	_, _, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps)
 	if err != nil {
 		logFatal("failed to measure clock offset",
 			slog.Any("remote", remoteAddr),

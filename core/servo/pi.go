@@ -151,7 +151,7 @@ func (s *PiServo) IsSpike(offset int64) bool {
 }
 
 // Sample function to calculate frequency based on the offset
-func (s *PiServo) Sample(offset int64, localTs uint64) (float64, State) {
+func (s *PiServo) Sample(offset int64, localTS uint64) (float64, State) {
 	var kiTerm, freqEstInterval, localDiff float64
 	state := StateInit
 	ppb := s.lastFreq
@@ -163,11 +163,11 @@ func (s *PiServo) Sample(offset int64, localTs uint64) (float64, State) {
 	switch s.count {
 	case 0:
 		s.offset[0] = offset
-		s.local[0] = localTs
+		s.local[0] = localTS
 		s.count = 1
 	case 1:
 		s.offset[1] = offset
-		s.local[1] = localTs
+		s.local[1] = localTS
 
 		if s.local[0] >= s.local[1] {
 			s.count = 0
