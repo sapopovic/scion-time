@@ -3,19 +3,17 @@ package sync
 // Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
 import (
+	"context"
 	"log/slog"
 	"math"
 	"time"
 
-	"go.uber.org/zap"
-
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
-	"example.com/scion-time/base/zaplog"
 )
 
 type pll struct {
-	log     *zap.Logger
+	log     *slog.Logger
 	clk     timebase.LocalClock
 	epoch   uint64
 	mode    uint64
@@ -24,7 +22,7 @@ type pll struct {
 }
 
 func newPLL(log *slog.Logger, clk timebase.LocalClock) *pll {
-	return &pll{log: zaplog.Logger(), clk: clk}
+	return &pll{log: log, clk: clk}
 }
 
 func (l *pll) Do(offset time.Duration, weight float64) {
@@ -107,16 +105,17 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 		panic("unexpected PLL mode")
 	}
 	l.t = now
-	l.log.Debug("PLL iteration",
-		zap.Uint64("mode", l.mode),
-		zap.Float64("dt", dt),
-		zap.Float64("offset", timemath.Seconds(offset)),
-		zap.Float64("weight", weight),
-		zap.Float64("p", p),
-		zap.Float64("d", d),
-		zap.Float64("l.i", l.i),
-		zap.Float64("a", a),
-		zap.Float64("b", b),
+	l.log.LogAttrs(context.Background(), slog.LevelDebug,
+		"PLL iteration",
+		slog.Uint64("mode", l.mode),
+		slog.Float64("dt", dt),
+		slog.Float64("offset", timemath.Seconds(offset)),
+		slog.Float64("weight", weight),
+		slog.Float64("p", p),
+		slog.Float64("d", d),
+		slog.Float64("l.i", l.i),
+		slog.Float64("a", a),
+		slog.Float64("b", b),
 	)
 	if d > 0.0 {
 		l.clk.Adjust(timemath.Duration(p), timemath.Duration(d), l.i)
