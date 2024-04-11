@@ -47,6 +47,7 @@ func TestTimeserviceNTSChrony(t *testing.T) {
 	laddr := localAddrSnet.Host
 	raddr := remoteAddrSnet.Host
 	c := &client.IPClient{
+		Log:             log,
 		InterleavedMode: true,
 	}
 

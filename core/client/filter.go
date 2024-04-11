@@ -1,10 +1,10 @@
 package client
 
 import (
+	"context"
+	"log/slog"
 	"math"
 	"time"
-
-	"go.uber.org/zap"
 
 	"example.com/scion-time/base/timemath"
 	"example.com/scion-time/core/timebase"
@@ -18,7 +18,13 @@ type filterState struct {
 }
 
 type filter struct {
-	state map[string]filterState
+	log    *slog.Logger
+	logCtx context.Context
+	state  map[string]filterState
+}
+
+func newFilter(log *slog.Logger) *filter {
+	return &filter{log: log, logCtx: context.Background()}
 }
 
 func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, weight float64) {
@@ -30,7 +36,7 @@ func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, we
 	return
 }
 
-func (f *filter) do(log *zap.Logger, reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
+func (f *filter) do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration) {
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
@@ -106,17 +112,17 @@ func (f *filter) do(log *zap.Logger, reference string, cTxTime, sRxTime, sTxTime
 
 	offset, weight = combine(timemath.Duration(lo), timemath.Duration(mid), timemath.Duration(hi), trust)
 
-	log.Debug("filtered response",
-		zap.String("from", reference),
-		zap.Int("branch", branch),
-		zap.Float64("lo [s]", lo),
-		zap.Float64("mid [s]", mid),
-		zap.Float64("hi [s]", hi),
-		zap.Float64("loLim [s]", loLim),
-		zap.Float64("amid [s]", fs.amid),
-		zap.Float64("hiLim [s]", hiLim),
-		zap.Float64("offset [s]", timemath.Seconds(offset)),
-		zap.Float64("weight", weight),
+	f.log.LogAttrs(f.logCtx, slog.LevelDebug, "filtered response",
+		slog.String("from", reference),
+		slog.Int("branch", branch),
+		slog.Float64("lo [s]", lo),
+		slog.Float64("mid [s]", mid),
+		slog.Float64("hi [s]", hi),
+		slog.Float64("loLim [s]", loLim),
+		slog.Float64("amid [s]", fs.amid),
+		slog.Float64("hiLim [s]", hiLim),
+		slog.Float64("offset [s]", timemath.Seconds(offset)),
+		slog.Float64("weight", weight),
 	)
 
 	return timemath.Inv(offset)

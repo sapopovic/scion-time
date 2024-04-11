@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/subtle"
+	"log/slog"
 	"net"
 	"net/netip"
 	"time"
@@ -32,6 +33,7 @@ import (
 )
 
 type SCIONClient struct {
+	Log             *slog.Logger
 	DSCP            uint8
 	InterleavedMode bool
 	Auth            struct {
@@ -53,7 +55,7 @@ type SCIONClient struct {
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
-	filter filter
+	filter *filter
 }
 
 type scionClientMetrics struct {
@@ -135,6 +137,12 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		c.Auth.mac = make([]byte, scion.PacketAuthMACLen)
 	}
 	var authKey []byte
+
+	if c.Raw {
+		c.filter = nil
+	} else if c.filter == nil {
+		c.filter = newFilter(c.Log)
+	}
 
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
 	if err != nil {
@@ -574,7 +582,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, log *zap.Logg
 		if c.Raw {
 			offset = off
 		} else {
-			offset = c.filter.do(log, reference, t0, t1, t2, t3)
+			offset = c.filter.do(reference, t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {

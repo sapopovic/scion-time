@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"net/netip"
 	"time"
@@ -23,6 +24,7 @@ import (
 )
 
 type IPClient struct {
+	Log             *slog.Logger
 	DSCP            uint8
 	InterleavedMode bool
 	Auth            struct {
@@ -38,7 +40,7 @@ type IPClient struct {
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
-	filter filter
+	filter *filter
 }
 
 type ipClientMetrics struct {
@@ -94,6 +96,12 @@ func (c *IPClient) ResetInterleavedMode() {
 func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mtrcs *ipClientMetrics,
 	localAddr, remoteAddr *net.UDPAddr) (
 	timestamp time.Time, offset time.Duration, err error) {
+	if c.Raw {
+		c.filter = nil
+	} else if c.filter == nil {
+		c.filter = newFilter(c.Log)
+	}
+
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.IP})
 	if err != nil {
 		return time.Time{}, 0, err
@@ -328,7 +336,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, log *zap.Logger, mt
 		if c.Raw {
 			offset = off
 		} else {
-			offset = c.filter.do(log, reference, t0, t1, t2, t3)
+			offset = c.filter.do(reference, t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {

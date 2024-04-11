@@ -68,6 +68,7 @@ func RunSCIONBenchmark(
 			laddr := udp.UDPAddrFromSnet(localAddr)
 			raddr := udp.UDPAddrFromSnet(remoteAddr)
 			c := &client.SCIONClient{
+				Log:             log,
 				InterleavedMode: true,
 				Histo:           hg,
 			}

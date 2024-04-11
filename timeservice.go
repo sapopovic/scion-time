@@ -195,6 +195,7 @@ func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr
 		remoteAddr: remoteAddr,
 	}
 	c.ntpc = &client.IPClient{
+		Log:             log,
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}
@@ -239,6 +240,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, r
 	}
 	for i := range len(c.ntpcs) {
 		c.ntpcs[i] = &client.SCIONClient{
+			Log:             log,
 			DSCP:            dscp,
 			InterleavedMode: true,
 		}
@@ -571,6 +573,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	laddr := localAddr.Host
 	raddr := remoteAddr.Host
 	c := &client.IPClient{
+		Log:             log,
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}
@@ -631,6 +634,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	laddr := udp.UDPAddrFromSnet(localAddr)
 	raddr := udp.UDPAddrFromSnet(remoteAddr)
 	c := &client.SCIONClient{
+		Log:             log,
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}

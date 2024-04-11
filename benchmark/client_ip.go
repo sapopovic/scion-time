@@ -33,6 +33,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 			hg := hdrhistogram.New(1, 50000, 5)
 
 			c := &client.IPClient{
+				Log:             log,
 				InterleavedMode: true,
 				Histo:           hg,
 			}
