@@ -14,6 +14,7 @@ import (
 
 type pll struct {
 	log     *slog.Logger
+	logCtx  context.Context
 	clk     timebase.LocalClock
 	epoch   uint64
 	mode    uint64
@@ -22,7 +23,7 @@ type pll struct {
 }
 
 func newPLL(log *slog.Logger, clk timebase.LocalClock) *pll {
-	return &pll{log: log, clk: clk}
+	return &pll{log: log, logCtx: context.Background(), clk: clk}
 }
 
 func (l *pll) Do(offset time.Duration, weight float64) {
@@ -105,7 +106,7 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 		panic("unexpected PLL mode")
 	}
 	l.t = now
-	l.log.LogAttrs(context.Background(), slog.LevelDebug,
+	l.log.LogAttrs(l.logCtx, slog.LevelDebug,
 		"PLL iteration",
 		slog.Uint64("mode", l.mode),
 		slog.Float64("dt", dt),
