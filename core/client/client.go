@@ -10,14 +10,10 @@ import (
 
 	"github.com/scionproto/scion/pkg/snet"
 
-	"go.uber.org/zap"
-
 	"example.com/scion-time/base/crypto"
-	"example.com/scion-time/base/zaplog"
 
 	"example.com/scion-time/core/measurements"
 
-	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
 )
 
@@ -42,20 +38,22 @@ func init() {
 	scionMetrics.Store(newSCIONClientMetrics())
 }
 
-func MeasureClockOffsetIP(ctx context.Context, _log *slog.Logger,
+func MeasureClockOffsetIP(ctx context.Context, log *slog.Logger,
 	ntpc *IPClient, localAddr, remoteAddr *net.UDPAddr) (
 	ts time.Time, off time.Duration, err error) {
-	log := zaplog.Logger()
 	mtrcs := ipMetrics.Load()
 
 	var nerr, n int
+	log.LogAttrs(ctx, slog.LevelDebug, "measuring clock offset",
+		slog.Any("to", remoteAddr),
+	)
 	if ntpc.InterleavedMode {
 		n = 3
 	} else {
 		n = 1
 	}
 	for i := range n {
-		t, o, e := ntpc.measureClockOffsetIP(ctx, log, mtrcs, localAddr, remoteAddr)
+		t, o, e := ntpc.measureClockOffsetIP(ctx, mtrcs, localAddr, remoteAddr)
 		if e == nil {
 			ts, off, err = t, o, e
 			if ntpc.InInterleavedMode() {
@@ -66,8 +64,10 @@ func MeasureClockOffsetIP(ctx context.Context, _log *slog.Logger,
 				err = e
 			}
 			nerr++
-			log.Info("failed to measure clock offset",
-				zap.Stringer("to", remoteAddr), zap.Error(e))
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to measure clock offset",
+				slog.Any("to", remoteAddr),
+				slog.Any("error", e),
+			)
 		}
 	}
 	return
@@ -101,10 +101,9 @@ loop:
 	return j
 }
 
-func MeasureClockOffsetSCION(ctx context.Context, _log *slog.Logger,
+func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 	ntpcs []*SCIONClient, localAddr, remoteAddr udp.UDPAddr, ps []snet.Path) (
 	time.Time, time.Duration, error) {
-	log := zaplog.Logger()
 	mtrcs := scionMetrics.Load()
 
 	sps := make([]snet.Path, len(ntpcs))
@@ -147,15 +146,15 @@ func MeasureClockOffsetSCION(ctx context.Context, _log *slog.Logger,
 		if sps[i] == nil {
 			continue
 		}
-		go func(ctx context.Context, log *zap.Logger, mtrcs *scionClientMetrics,
+		go func(ctx context.Context, log *slog.Logger, mtrcs *scionClientMetrics,
 			ntpc *SCIONClient, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
 			var err error
 			var ts time.Time
 			var off time.Duration
 			var nerr, n int
-			log.Debug("measuring clock offset",
-				zap.Stringer("to", remoteAddr.IA),
-				zap.Object("via", scion.PathMarshaler{Path: p}),
+			log.LogAttrs(ctx, slog.LevelDebug, "measuring clock offset",
+				slog.Any("to", remoteAddr),
+				slog.Any("via", p),
 			)
 			if ntpc.InterleavedMode {
 				n = 3
@@ -163,7 +162,7 @@ func MeasureClockOffsetSCION(ctx context.Context, _log *slog.Logger,
 				n = 1
 			}
 			for j := range n {
-				t, o, e := ntpc.measureClockOffsetSCION(ctx, log, mtrcs, localAddr, remoteAddr, p)
+				t, o, e := ntpc.measureClockOffsetSCION(ctx, mtrcs, localAddr, remoteAddr, p)
 				if e == nil {
 					ts, off, err = t, o, e
 					if ntpc.InInterleavedMode() {
@@ -174,10 +173,10 @@ func MeasureClockOffsetSCION(ctx context.Context, _log *slog.Logger,
 						err = e
 					}
 					nerr++
-					log.Info("failed to measure clock offset",
-						zap.Stringer("to", remoteAddr.IA),
-						zap.Object("via", scion.PathMarshaler{Path: p}),
-						zap.Error(e),
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to measure clock offset",
+						slog.Any("to", remoteAddr),
+						slog.Any("via", p),
+						slog.Any("error", e),
 					)
 				}
 			}
