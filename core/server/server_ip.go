@@ -72,7 +72,7 @@ func runIPServer(ctx context.Context, log *slog.Logger, mtrcs *ipServerMetrics,
 			continue
 		}
 		if flags != 0 {
-			log.LogAttrs(ctx, slog.LevelError, "failed to read packet", slog.Int64("flags", int64(flags)))
+			log.LogAttrs(ctx, slog.LevelError, "failed to read packet", slog.Int("flags", flags))
 			continue
 		}
 		oob = oob[:oobn]
