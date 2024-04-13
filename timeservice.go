@@ -27,11 +27,7 @@ import (
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/path"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"example.com/scion-time/base/logbase"
-	"example.com/scion-time/base/zaplog"
 
 	"example.com/scion-time/benchmark"
 
@@ -111,26 +107,6 @@ func contains(s []string, v string) bool {
 }
 
 func initLogger(verbose bool) {
-	zapcfg := zap.NewDevelopmentConfig()
-	zapcfg.DisableStacktrace = true
-	zapcfg.EncoderConfig.EncodeCaller = func(
-		caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
-		// See https://github.com/scionproto/scion/blob/master/pkg/log/log.go
-		p := caller.TrimmedPath()
-		if len(p) > 30 {
-			p = "..." + p[len(p)-27:]
-		}
-		enc.AppendString(fmt.Sprintf("%30s", p))
-	}
-	if !verbose {
-		zapcfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
-	}
-	zaplogger, err := zapcfg.Build()
-	if err != nil {
-		panic(err)
-	}
-	zaplog.SetLogger(zaplogger)
-
 	var level slog.Leveler
 	if verbose {
 		level = slog.LevelDebug
