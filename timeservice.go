@@ -13,6 +13,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -107,16 +109,51 @@ func contains(s []string, v string) bool {
 }
 
 func initLogger(verbose bool) {
-	var level slog.Leveler
+	var (
+		addSource   bool
+		level       slog.Leveler
+		replaceAttr func(groups []string, a slog.Attr) slog.Attr
+	)
 	if verbose {
+		_, f, _, ok := runtime.Caller(0)
+		var basepath string
+		if ok {
+			basepath = filepath.Dir(f)
+		}
+		addSource = true
 		level = slog.LevelDebug
+		replaceAttr = func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.SourceKey {
+				source := a.Value.Any().(*slog.Source)
+				if basepath == "" {
+					source.File = filepath.Base(source.File)
+				} else {
+					relpath, err := filepath.Rel(basepath, source.File)
+					if err != nil {
+						source.File = filepath.Base(source.File)
+					} else {
+						source.File = relpath
+					}
+				}
+			}
+			return a
+		}
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr,
-		&slog.HandlerOptions{Level: level})))
+		&slog.HandlerOptions{
+			AddSource:   addSource,
+			Level:       level,
+			ReplaceAttr: replaceAttr,
+		})))
 }
 
 func logFatal(msg string, attrs ...slog.Attr) {
-	slog.LogAttrs(context.Background(), slog.LevelError, msg, attrs...)
+	// See https://pkg.go.dev/log/slog#hdr-Wrapping_output_methods
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, logFata]
+	r := slog.NewRecord(time.Now(), slog.LevelError, msg, pcs[0])
+	r.AddAttrs(attrs...)
+	_ = slog.Default().Handler().Handle(context.Background(), r)
 	os.Exit(1)
 }
 
