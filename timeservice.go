@@ -147,20 +147,10 @@ func initLogger(verbose bool) {
 		})))
 }
 
-func logFatal(msg string, attrs ...slog.Attr) {
-	// See https://pkg.go.dev/log/slog#hdr-Wrapping_output_methods
-	var pcs [1]uintptr
-	runtime.Callers(2, pcs[:]) // skip [Callers, logFatal]
-	r := slog.NewRecord(time.Now(), slog.LevelError, msg, pcs[0])
-	r.AddAttrs(attrs...)
-	_ = slog.Default().Handler().Handle(context.Background(), r)
-	os.Exit(1)
-}
-
 func runMonitor() {
 	http.Handle("/metrics", promhttp.Handler())
 	err := http.ListenAndServe("127.0.0.1:8080", nil)
-	logFatal("failed to serve metrics", slog.Any("error", err))
+	logbase.Fatal(slog.Default(), "failed to serve metrics", slog.Any("error", err))
 }
 
 func ntskeServerFromRemoteAddr(remoteAddr string) string {
@@ -187,7 +177,7 @@ func (c *tlsCertCache) loadCert(chi *tls.ClientHelloInfo) (*tls.Certificate, err
 func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureSkipVerify bool, log *slog.Logger) {
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
-		logFatal("failed to split NTS-KE host and port", slog.Any("error", err))
+		logbase.Fatal(slog.Default(), "failed to split NTS-KE host and port", slog.Any("error", err))
 	}
 	c.Auth.Enabled = true
 	c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
@@ -227,7 +217,7 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 	daemonAddr string, localAddr, remoteAddr udp.UDPAddr, log *slog.Logger) {
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 	if err != nil {
-		logFatal("failed to split NTS-KE host and port", slog.Any("error", err))
+		logbase.Fatal(slog.Default(), "failed to split NTS-KE host and port", slog.Any("error", err))
 	}
 	c.Auth.NTSEnabled = true
 	c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
@@ -273,36 +263,36 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 func loadConfig(configFile string) svcConfig {
 	raw, err := os.ReadFile(configFile)
 	if err != nil {
-		logFatal("failed to load configuration", slog.Any("error", err))
+		logbase.Fatal(slog.Default(), "failed to load configuration", slog.Any("error", err))
 	}
 	var cfg svcConfig
 	err = toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&cfg)
 	if err != nil {
-		logFatal("failed to decode configuration", slog.Any("error", err))
+		logbase.Fatal(slog.Default(), "failed to decode configuration", slog.Any("error", err))
 	}
 	return cfg
 }
 
 func localAddress(cfg svcConfig) *snet.UDPAddr {
 	if cfg.LocalAddr == "" {
-		logFatal("local_address not specified in config")
+		logbase.Fatal(slog.Default(), "local_address not specified in config")
 	}
 	var localAddr snet.UDPAddr
 	err := localAddr.Set(cfg.LocalAddr)
 	if err != nil {
-		logFatal("failed to parse local address")
+		logbase.Fatal(slog.Default(), "failed to parse local address")
 	}
 	return &localAddr
 }
 
 func remoteAddress(cfg svcConfig) *snet.UDPAddr {
 	if cfg.RemoteAddr == "" {
-		logFatal("remote_address not specified in config")
+		logbase.Fatal(slog.Default(), "remote_address not specified in config")
 	}
 	var remoteAddr snet.UDPAddr
 	err := remoteAddr.Set(cfg.RemoteAddr)
 	if err != nil {
-		logFatal("failed to parse remote address")
+		logbase.Fatal(slog.Default(), "failed to parse remote address")
 	}
 	return &remoteAddr
 }
@@ -313,14 +303,14 @@ func daemonAddress(cfg svcConfig) string {
 
 func dscp(cfg svcConfig) uint8 {
 	if cfg.DSCP > 63 {
-		logFatal("invalid differentiated services codepoint value specified in config")
+		logbase.Fatal(slog.Default(), "invalid differentiated services codepoint value specified in config")
 	}
 	return cfg.DSCP
 }
 
 func tlsConfig(cfg svcConfig) *tls.Config {
 	if cfg.NTSKEServerName == "" || cfg.NTSKECertFile == "" || cfg.NTSKEKeyFile == "" {
-		logFatal("missing parameters in configuration for NTSKE server")
+		logbase.Fatal(slog.Default(), "missing parameters in configuration for NTSKE server")
 	}
 	certCache := tlsCertCache{
 		certFile: cfg.NTSKECertFile,
@@ -349,14 +339,14 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 	for _, s := range cfg.SHMReferenceClocks {
 		t := strings.Split(s, ":")
 		if len(t) > 2 || t[0] != shm.ReferenceClockType {
-			logFatal("unexpected SHM reference clock id", slog.String("id", s))
+			logbase.Fatal(slog.Default(), "unexpected SHM reference clock id", slog.String("id", s))
 		}
 		var u int
 		if len(t) > 1 {
 			var err error
 			u, err = strconv.Atoi(t[1])
 			if err != nil {
-				logFatal("unexpected SHM reference clock id",
+				logbase.Fatal(slog.Default(), "unexpected SHM reference clock id",
 					slog.String("id", s), slog.Any("error", err))
 			}
 		}
@@ -367,7 +357,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 	for _, s := range cfg.NTPReferenceClocks {
 		remoteAddr, err := snet.ParseUDPAddr(s)
 		if err != nil {
-			logFatal("failed to parse reference clock address",
+			logbase.Fatal(slog.Default(), "failed to parse reference clock address",
 				slog.String("address", s), slog.Any("error", err))
 		}
 		ntskeServer := ntskeServerFromRemoteAddr(s)
@@ -399,10 +389,10 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 	for _, s := range cfg.SCIONPeers {
 		remoteAddr, err := snet.ParseUDPAddr(s)
 		if err != nil {
-			logFatal("failed to parse peer address", slog.String("address", s), slog.Any("error", err))
+			logbase.Fatal(slog.Default(), "failed to parse peer address", slog.String("address", s), slog.Any("error", err))
 		}
 		if remoteAddr.IA.IsZero() {
-			logFatal("unexpected peer address", slog.String("address", s), slog.Any("error", err))
+			logbase.Fatal(slog.Default(), "unexpected peer address", slog.String("address", s), slog.Any("error", err))
 		}
 		ntskeServer := ntskeServerFromRemoteAddr(s)
 		netClocks = append(netClocks, newNTPReferenceClockSCION(
@@ -519,7 +509,7 @@ func runRelay(configFile string) {
 	}
 
 	if len(netClocks) != 0 {
-		logFatal("unexpected configuration", slog.Int("number of peers", len(netClocks)))
+		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(netClocks)))
 	}
 
 	dscp := dscp(cfg)
@@ -569,7 +559,7 @@ func runClient(configFile string) {
 	}
 
 	if len(netClocks) != 0 {
-		logFatal("unexpected configuration", slog.Int("number of peers", len(netClocks)))
+		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(netClocks)))
 	}
 
 	runMonitor()
@@ -597,7 +587,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	for {
 		ts, off, err := client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 		if err != nil {
-			logFatal("failed to measure clock offset", slog.Any("remote", raddr), slog.Any("error", err))
+			logbase.Fatal(slog.Default(), "failed to measure clock offset", slog.Any("remote", raddr), slog.Any("error", err))
 		}
 		if !periodic {
 			break
@@ -632,10 +622,10 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	} else {
 		ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 		if err != nil {
-			logFatal("failed to lookup paths", slog.Any("remote", remoteAddr), slog.Any("error", err))
+			logbase.Fatal(slog.Default(), "failed to lookup paths", slog.Any("remote", remoteAddr), slog.Any("error", err))
 		}
 		if len(ps) == 0 {
-			logFatal("no paths available", slog.Any("remote", remoteAddr))
+			logbase.Fatal(slog.Default(), "no paths available", slog.Any("remote", remoteAddr))
 		}
 	}
 	log.LogAttrs(ctx, slog.LevelDebug,
@@ -661,7 +651,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 
 	_, _, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps)
 	if err != nil {
-		logFatal("failed to measure clock offset",
+		logbase.Fatal(slog.Default(), "failed to measure clock offset",
 			slog.Any("remote", remoteAddr),
 			slog.Any("error", err),
 		)

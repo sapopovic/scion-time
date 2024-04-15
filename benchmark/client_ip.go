@@ -11,6 +11,8 @@ import (
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 
+	"example.com/scion-time/base/logbase"
+
 	"example.com/scion-time/core/client"
 )
 
@@ -41,7 +43,8 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 			if contains(authModes, "nts") {
 				ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 				if err != nil {
-					logFatal(ctx, log, "failed to split NTS-KE host and port", slog.Any("error", err))
+					logbase.FatalContext(ctx, log, "failed to split NTS-KE host and port",
+						slog.Any("error", err))
 				}
 				c.Auth.Enabled = true
 				c.Auth.NTSKEFetcher.TLSConfig = tls.Config{

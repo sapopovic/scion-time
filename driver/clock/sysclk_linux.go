@@ -8,12 +8,12 @@ import (
 	"context"
 	"log/slog"
 	"math"
-	"os"
 	"sync"
 	"time"
 
 	"golang.org/x/sys/unix"
 
+	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
 )
@@ -33,16 +33,11 @@ type SystemClock struct {
 
 var _ timebase.LocalClock = (*SystemClock)(nil)
 
-func logFatal(log *slog.Logger, msg string, attrs ...slog.Attr) {
-	log.LogAttrs(context.Background(), slog.LevelError, msg, attrs...)
-	os.Exit(1)
-}
-
 func now(log *slog.Logger) time.Time {
 	var ts unix.Timespec
 	err := unix.ClockGettime(unix.CLOCK_REALTIME, &ts)
 	if err != nil {
-		logFatal(log, "unix.ClockGettime failed", slog.Any("error", err))
+		logbase.Fatal(log, "unix.ClockGettime failed", slog.Any("error", err))
 	}
 	return time.Unix(ts.Unix()).UTC()
 }
@@ -50,18 +45,18 @@ func now(log *slog.Logger) time.Time {
 func sleep(log *slog.Logger, duration time.Duration) {
 	fd, err := unix.TimerfdCreate(unix.CLOCK_REALTIME, unix.TFD_NONBLOCK)
 	if err != nil {
-		logFatal(log, "unix.TimerfdCreate failed", slog.Any("error", err))
+		logbase.Fatal(log, "unix.TimerfdCreate failed", slog.Any("error", err))
 	}
 	ts, err := unix.TimeToTimespec(now(log).Add(duration))
 	if err != nil {
-		logFatal(log, "unix.TimeToTimespec failed", slog.Any("error", err))
+		logbase.Fatal(log, "unix.TimeToTimespec failed", slog.Any("error", err))
 	}
 	err = unix.TimerfdSettime(fd, unix.TFD_TIMER_ABSTIME, &unix.ItimerSpec{Value: ts}, nil /* oldValue */)
 	if err != nil {
-		logFatal(log, "unix.TimerfdSettime failed", slog.Any("error", err))
+		logbase.Fatal(log, "unix.TimerfdSettime failed", slog.Any("error", err))
 	}
 	if fd < math.MinInt32 || math.MaxInt32 < fd {
-		logFatal(log, "unix.TimerfdCreate returned unexpected value")
+		logbase.Fatal(log, "unix.TimerfdCreate returned unexpected value")
 	}
 	pollFds := []unix.PollFd{
 		{Fd: int32(fd), Events: unix.POLLIN},
@@ -72,7 +67,7 @@ func sleep(log *slog.Logger, duration time.Duration) {
 			continue
 		}
 		if err != nil {
-			logFatal(log, "unix.Poll failed", slog.Any("error", err))
+			logbase.Fatal(log, "unix.Poll failed", slog.Any("error", err))
 		}
 		break
 	}
@@ -102,7 +97,7 @@ func setTime(log *slog.Logger, offset time.Duration) {
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 	if err != nil {
-		logFatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
+		logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
 	}
 }
 
@@ -116,7 +111,7 @@ func setFrequency(log *slog.Logger, frequency float64) {
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 	if err != nil {
-		logFatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
+		logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
 	}
 }
 

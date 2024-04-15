@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/base/metrics"
 
 	"example.com/scion-time/core/timebase"
@@ -215,7 +216,7 @@ func StartIPServer(ctx context.Context, log *slog.Logger,
 	if ipServerNumGoroutine == 1 {
 		conn, err := net.ListenUDP("udp", localHost)
 		if err != nil {
-			logFatal(ctx, log, "failed to listen for packets", slog.Any("error", err))
+			logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
 		}
 		go runIPServer(ctx, log, mtrcs, conn, localHost.Zone, dscp, provider)
 	} else {
@@ -223,7 +224,7 @@ func StartIPServer(ctx context.Context, log *slog.Logger,
 			conn, err := reuseport.ListenPacket("udp",
 				net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port)))
 			if err != nil {
-				logFatal(ctx, log, "failed to listen for packets", slog.Any("error", err))
+				logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
 			}
 			go runIPServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, dscp, provider)
 		}

@@ -15,6 +15,7 @@ import (
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/path"
 
+	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/core/client"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
@@ -53,15 +54,17 @@ func RunSCIONBenchmark(
 			} else {
 				ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
 				if err != nil {
-					logFatal(ctx, log, "failed to lookup paths", slog.Any("to", remoteAddr.IA), slog.Any("error", err))
+					logbase.FatalContext(ctx, log, "failed to lookup paths",
+						slog.Any("to", remoteAddr), slog.Any("error", err))
 				}
 				if len(ps) == 0 {
-					logFatal(ctx, log, "no paths available", slog.Any("to", remoteAddr.IA))
+					logbase.FatalContext(ctx, log, "no paths available",
+						slog.Any("to", remoteAddr))
 				}
 			}
 			log.LogAttrs(ctx, slog.LevelDebug,
 				"available paths",
-				slog.Any("to", remoteAddr.IA),
+				slog.Any("to", remoteAddr),
 				slog.Any("via", ps),
 			)
 
@@ -81,7 +84,8 @@ func RunSCIONBenchmark(
 			if contains(authModes, "nts") {
 				ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 				if err != nil {
-					logFatal(ctx, log, "failed to split NTS-KE host and port", slog.Any("error", err))
+					logbase.FatalContext(ctx, log, "failed to split NTS-KE host and port",
+						slog.Any("error", err))
 				}
 				c.Auth.NTSEnabled = true
 				c.Auth.NTSKEFetcher.TLSConfig = tls.Config{
@@ -105,8 +109,7 @@ func RunSCIONBenchmark(
 				if err != nil {
 					log.LogAttrs(ctx, slog.LevelInfo,
 						"failed to measure clock offset",
-						slog.Any("remoteIA", raddr.IA),
-						slog.Any("remoteHost", raddr.Host),
+						slog.Any("remote", raddr),
 						slog.Any("error", err),
 					)
 				}
