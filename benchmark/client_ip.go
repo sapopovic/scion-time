@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -40,7 +41,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 				Histo:           hg,
 			}
 
-			if contains(authModes, "nts") {
+			if slices.Contains(authModes, "nts") {
 				ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
 				if err != nil {
 					logbase.FatalContext(ctx, log, "failed to split NTS-KE host and port",

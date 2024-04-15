@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -97,15 +98,6 @@ type tlsCertCache struct {
 	reloadedAt time.Time
 	certFile   string
 	keyFile    string
-}
-
-func contains(s []string, v string) bool {
-	for _, x := range s {
-		if x == v {
-			return true
-		}
-	}
-	return false
 }
 
 func initLogger(verbose bool) {
@@ -202,7 +194,7 @@ func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}
-	if contains(authModes, authModeNTS) {
+	if slices.Contains(authModes, authModeNTS) {
 		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
 	return c
@@ -247,7 +239,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, r
 			DSCP:            dscp,
 			InterleavedMode: true,
 		}
-		if contains(authModes, authModeNTS) {
+		if slices.Contains(authModes, authModeNTS) {
 			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr, log)
 		}
 	}
@@ -413,7 +405,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		ctx := context.Background()
 		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
 		var drkeyFetcher *scion.Fetcher
-		if contains(cfg.AuthModes, authModeSPAO) {
+		if slices.Contains(cfg.AuthModes, authModeSPAO) {
 			drkeyFetcher = scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
 		}
 		for _, c := range refClocks {
@@ -580,7 +572,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}
-	if contains(authModes, authModeNTS) {
+	if slices.Contains(authModes, authModeNTS) {
 		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
 
@@ -641,11 +633,11 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}
-	if contains(authModes, authModeSPAO) {
+	if slices.Contains(authModes, authModeSPAO) {
 		c.Auth.Enabled = true
 		c.Auth.DRKeyFetcher = scion.NewFetcher(dc)
 	}
-	if contains(authModes, authModeNTS) {
+	if slices.Contains(authModes, authModeNTS) {
 		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, daemonAddr, laddr, raddr, log)
 	}
 
