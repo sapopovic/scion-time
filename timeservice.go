@@ -150,7 +150,7 @@ func initLogger(verbose bool) {
 func logFatal(msg string, attrs ...slog.Attr) {
 	// See https://pkg.go.dev/log/slog#hdr-Wrapping_output_methods
 	var pcs [1]uintptr
-	runtime.Callers(2, pcs[:]) // skip [Callers, logFata]
+	runtime.Callers(2, pcs[:]) // skip [Callers, logFatal]
 	r := slog.NewRecord(time.Now(), slog.LevelError, msg, pcs[0])
 	r.AddAttrs(attrs...)
 	_ = slog.Default().Handler().Handle(context.Background(), r)
