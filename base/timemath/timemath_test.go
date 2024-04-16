@@ -1,6 +1,6 @@
 package timemath_test
 
-// Based on code proposed by GPT-4 by OpenAI
+// Based on an OpenAI GPT-4 interaction
 
 import (
 	"math"
