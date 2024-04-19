@@ -250,8 +250,7 @@ func (c *serverConn) WriteTo(b []byte, addr net.Addr) (int, error) {
 }
 
 func (c *serverConn) Close() error {
-	err := c.baseConn.Close()
-	return err
+	return c.baseConn.Close()
 }
 
 func listenUDP(ctx context.Context, localAddr udp.UDPAddr) (net.PacketConn, error) {
