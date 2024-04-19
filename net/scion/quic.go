@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"net"
 	"net/netip"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -21,13 +19,6 @@ import (
 
 	"example.com/scion-time/net/udp"
 )
-
-func log(b []byte, format string, a ...any) []byte {
-	if false {
-		return fmt.Appendf(b, format, a...)
-	}
-	return b
-}
 
 var (
 	errInvalidListenerPort = errors.New("invalid listener port")
@@ -204,84 +195,24 @@ func (c *baseConn) SyscallConn() (syscall.RawConn, error) {
 	return c.raw.SyscallConn()
 }
 
-type pathItem struct {
-	t       uint64
+var _ net.Addr = (*udpAddrPath)(nil)
+
+type udpAddrPath struct {
+	addr    udp.UDPAddr
 	path    snet.DataplanePath
 	nextHop net.Addr
 }
 
-type pathMap map[string]pathItem
+func (ap udpAddrPath) Network() string {
+	return ap.addr.Network()
+}
+
+func (ap udpAddrPath) String() string {
+	return ap.addr.String()
+}
 
 type serverConn struct {
 	baseConn
-	pathMu sync.Mutex
-	paths  pathMap
-	ticker *time.Ticker
-	ticks  atomic.Uint64
-	done   chan bool
-}
-
-const (
-	tickPeriod   = time.Second
-	maxIdleTicks = 2
-)
-
-func ticks(c *serverConn) uint64 {
-	return c.ticks.Load()
-}
-
-func loadPath(c *serverConn, remoteAddr string) (snet.DataplanePath, net.Addr, bool) {
-	c.pathMu.Lock()
-	defer c.pathMu.Unlock()
-	p, ok := c.paths[remoteAddr]
-	if !ok {
-		return nil, nil, false
-	}
-	p.t = ticks(c)
-	c.paths[remoteAddr] = p
-	return p.path, p.nextHop, true
-}
-
-func storePath(c *serverConn, remoteAddr string, path snet.DataplanePath, nextHop net.Addr) {
-	c.pathMu.Lock()
-	defer c.pathMu.Unlock()
-	c.paths[remoteAddr] = pathItem{
-		t:       ticks(c),
-		path:    path,
-		nextHop: nextHop,
-	}
-}
-
-func run(c *serverConn) {
-	for {
-		select {
-		case <-c.done:
-			return
-		case <-c.ticker.C:
-			t := c.ticks.Add(1)
-			func() {
-				c.pathMu.Lock()
-				defer c.pathMu.Unlock()
-				i := 0
-				var line []byte
-				line = log(line, "QUIC server conn %p, @%d: [", c, t)
-				for addr, p := range c.paths {
-					if i != 0 {
-						line = log(line, ", ")
-					}
-					line = log(line, "{%q: %d}", addr, p.t)
-					if t-p.t > maxIdleTicks {
-						delete(c.paths, addr)
-					}
-					i++
-				}
-				line = log(line, "]")
-				if len(line) != 0 {
-					fmt.Printf("%s\n", line)
-				}
-			}()
-		}
-	}
 }
 
 func (c *serverConn) LocalAddr() net.Addr {
@@ -302,25 +233,24 @@ func (c *serverConn) ReadFrom(b []byte) (int, net.Addr, error) {
 	if err != nil {
 		return 0, nil, errPathReversal
 	}
-	storePath(c, remoteAddr.String(), replyPath, lastHop)
-	return n, remoteAddr, err
+	remoteAddrPath := udpAddrPath{
+		addr:    remoteAddr,
+		path:    replyPath,
+		nextHop: lastHop,
+	}
+	return n, remoteAddrPath, err
 }
 
 func (c *serverConn) WriteTo(b []byte, addr net.Addr) (int, error) {
-	remoteAddr, ok := addr.(udp.UDPAddr)
+	remoteAddrPath, ok := addr.(udpAddrPath)
 	if !ok {
 		return 0, errUnexpectedAddrType
 	}
-	path, nextHop, ok := loadPath(c, remoteAddr.String())
-	if !ok {
-		return 0, errPathAvailability
-	}
-	return c.writePkt(remoteAddr, path, nextHop, b)
+	return c.writePkt(remoteAddrPath.addr, remoteAddrPath.path, remoteAddrPath.nextHop, b)
 }
 
 func (c *serverConn) Close() error {
 	err := c.baseConn.Close()
-	c.done <- true
 	return err
 }
 
@@ -338,11 +268,7 @@ func listenUDP(ctx context.Context, localAddr udp.UDPAddr) (net.PacketConn, erro
 			raw:       raw,
 			localAddr: localAddr,
 		},
-		paths:  make(pathMap),
-		ticker: time.NewTicker(tickPeriod),
-		done:   make(chan bool),
 	}
-	go run(conn)
 	return conn, nil
 }
 
@@ -365,9 +291,6 @@ func ListenQUIC(ctx context.Context, localAddr udp.UDPAddr,
 	}
 	if quicCfg == nil {
 		quicCfg = &quic.Config{}
-	}
-	if quicCfg.KeepAlivePeriod == 0 || quicCfg.KeepAlivePeriod > maxIdleTicks {
-		quicCfg.KeepAlivePeriod = maxIdleTicks * tickPeriod
 	}
 	qlistener, err := quic.Listen(conn, tlsCfg, quicCfg)
 	if err != nil {

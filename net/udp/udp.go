@@ -20,6 +20,8 @@ var (
 	errUnexpectedData    = errors.New("failed to read out of band data")
 )
 
+var _ net.Addr = (*UDPAddr)(nil)
+
 type UDPAddr struct {
 	IA   addr.IA
 	Host *net.UDPAddr
