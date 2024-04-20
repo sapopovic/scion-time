@@ -6,7 +6,7 @@
  * @author Thomas Behn <thomas.behn@meinberg.de>
  *
  * Adjustment algorithm for the system clock (CLOCK_REALTIME) using the standard
- * Linux API function adjtimex.
+ * Linux API.
  *
  * =============================================================================
  *
@@ -46,6 +46,7 @@ import (
 )
 
 const (
+	//lint:ignore ST1003 maintain consistency with package 'unix'
 	unixSTA_RONLY = 65280
 )
 

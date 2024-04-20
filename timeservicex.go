@@ -30,7 +30,6 @@ func runX() {
 	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
 		slog.Any("pkt", ntp.PacketLogValuer{Pkt: &pkt}))
 
-	var a adjustments.Adjustment
-	a = &adjustments.Adjtimex{}
+	var a adjustments.Adjustment = &adjustments.Adjtimex{}
 	_ = a
 }
