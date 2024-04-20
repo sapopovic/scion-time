@@ -45,6 +45,10 @@ import (
 	"example.com/scion-time/base/timemath"
 )
 
+const (
+	unixSTA_RONLY = 65280
+)
+
 type Adjtimex struct {}
 
 func nsecToNsecTimeval(nsec int64) unix.Timeval {
@@ -62,22 +66,29 @@ func nsecToNsecTimeval(nsec int64) unix.Timeval {
 }
 
 func (a *Adjtimex) Do(offset time.Duration) error {
-	panic("TODO")
-
 	log := slog.Default()
 	tx := unix.Timex{}
 	if timemath.Abs(offset) > stepLimit {
 		log.LogAttrs(context.Background(), slog.LevelDebug,
 			"stepping clock", slog.Duration("offset", offset))
-		tx.Modes = unix.ADJ_SETOFFSET | unix.ADJ_NANO
+		tx.Modes |= unix.ADJ_SETOFFSET
+		tx.Modes |= unix.ADJ_NANO
 		tx.Time = nsecToNsecTimeval(offset.Nanoseconds())
 	} else {
 		log.LogAttrs(context.Background(), slog.LevelDebug,
 			"adjusting clock", slog.Duration("offset", offset))
-		tx.Modes = unix.ADJ_OFFSET | unix.ADJ_STATUS | unix.ADJ_NANO
-		tx.Status = unix.STA_PLL | unix.STA_NANO
-		// tx.Status &= ~unix.STA_RONLY
-		// tx.Status &= ~unix.STA_FREQHOLD
+		_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
+		if err != nil {
+			logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
+		}
+		tx.Modes |= unix.ADJ_OFFSET;
+		tx.Modes |= unix.ADJ_STATUS;
+		tx.Modes |= unix.ADJ_NANO;
+		tx.Status |= unix.STA_PLL;
+		tx.Status |= unix.STA_NANO;
+		tx.Status &= ^unixSTA_RONLY
+		tx.Status &= ^unix.STA_FREQHOLD
+		tx.Offset = offset.Nanoseconds()
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 	if err != nil {
