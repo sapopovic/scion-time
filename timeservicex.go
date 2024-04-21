@@ -9,7 +9,6 @@ import (
 
 	"example.com/scion-time/driver/clock"
 	"example.com/scion-time/net/ntp"
-	"example.com/scion-time/core/sync/flash/adjustments"
 )
 
 func runX() {
@@ -30,6 +29,5 @@ func runX() {
 	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
 		slog.Any("pkt", ntp.PacketLogValuer{Pkt: &pkt}))
 
-	var a adjustments.Adjustment = &adjustments.Adjtimex{}
-	_ = a
+	testAdjustments()
 }

@@ -46,11 +46,15 @@ import (
 )
 
 const (
+	adjtimexStepLimitDefault = 500000000 * time.Nanosecond
+)
+
+const (
 	//lint:ignore ST1003 maintain consistency with package 'unix'
 	unixSTA_RONLY = 65280
 )
 
-type Adjtimex struct {}
+type Adjtimex struct{}
 
 func nsecToNsecTimeval(nsec int64) unix.Timeval {
 	sec := nsec / 1e9
@@ -69,7 +73,7 @@ func nsecToNsecTimeval(nsec int64) unix.Timeval {
 func (a *Adjtimex) Do(offset time.Duration) error {
 	log := slog.Default()
 	tx := unix.Timex{}
-	if timemath.Abs(offset) > stepLimit {
+	if timemath.Abs(offset) > adjtimexStepLimitDefault {
 		log.LogAttrs(context.Background(), slog.LevelDebug,
 			"stepping clock", slog.Duration("offset", offset))
 		tx.Modes |= unix.ADJ_SETOFFSET
@@ -82,11 +86,11 @@ func (a *Adjtimex) Do(offset time.Duration) error {
 		if err != nil {
 			logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
 		}
-		tx.Modes |= unix.ADJ_OFFSET;
-		tx.Modes |= unix.ADJ_STATUS;
-		tx.Modes |= unix.ADJ_NANO;
-		tx.Status |= unix.STA_PLL;
-		tx.Status |= unix.STA_NANO;
+		tx.Modes |= unix.ADJ_OFFSET
+		tx.Modes |= unix.ADJ_STATUS
+		tx.Modes |= unix.ADJ_NANO
+		tx.Status |= unix.STA_PLL
+		tx.Status |= unix.STA_NANO
 		tx.Status &= ^unixSTA_RONLY
 		tx.Status &= ^unix.STA_FREQHOLD
 		tx.Offset = offset.Nanoseconds()
