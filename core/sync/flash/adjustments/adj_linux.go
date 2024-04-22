@@ -56,6 +56,8 @@ const (
 
 type Adjtimex struct{}
 
+var _ Adjustment = (*Adjtimex)(nil)
+
 func nsecToNsecTimeval(nsec int64) unix.Timeval {
 	sec := nsec / 1e9
 	nsec = nsec % 1e9
@@ -70,7 +72,7 @@ func nsecToNsecTimeval(nsec int64) unix.Timeval {
 	}
 }
 
-func (a *Adjtimex) Do(offset time.Duration) error {
+func (a *Adjtimex) Do(offset time.Duration, drift float64) error {
 	log := slog.Default()
 	tx := unix.Timex{}
 	if timemath.Abs(offset) > adjtimexStepLimitDefault {

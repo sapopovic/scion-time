@@ -47,15 +47,15 @@ import (
 )
 
 const (
-	PIDControllerPRatioMin = 0.01
+	PIDControllerPRatioMin     = 0.01
 	PIDControllerPRatioDefault = 0.2
-	PIDControllerPRatioMax = 1.0
-	PIDControllerIRatioMin = 0.005
+	PIDControllerPRatioMax     = 1.0
+	PIDControllerIRatioMin     = 0.005
 	PIDControllerIRatioDefault = 0.05
-	PIDControllerIRatioMax = 0.5
-	PIDControllerDRatioMin = 0.0
+	PIDControllerIRatioMax     = 0.5
+	PIDControllerDRatioMin     = 0.0
 	PIDControllerDRatioDefault = 0.0
-	PIDControllerDRatioMax = 1.0
+	PIDControllerDRatioMax     = 1.0
 
 	PIDControllerStepThresholdDefault = 1000000 * time.Nanosecond
 )
@@ -82,4 +82,10 @@ type PIDController struct {
 	// Offset threshold (ns) indicating that - if exceeded - a clock step is to be
 	// applied
 	StepThreshold int64
+}
+
+var _ Adjustment = (*PIDController)(nil)
+
+func (c *PIDController) Do(offset time.Duration, drift float64) error {
+	return nil
 }

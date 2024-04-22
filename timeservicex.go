@@ -9,6 +9,8 @@ import (
 
 	"example.com/scion-time/driver/clock"
 	"example.com/scion-time/net/ntp"
+
+	_ "example.com/scion-time/core/sync/flash/adjustments"
 )
 
 func runX() {
@@ -28,6 +30,4 @@ func runX() {
 	var pkt ntp.Packet
 	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
 		slog.Any("pkt", ntp.PacketLogValuer{Pkt: &pkt}))
-
-	testAdjustments()
 }
