@@ -43,7 +43,13 @@
 package adjustments
 
 import (
+	"context"
+	"log/slog"
 	"time"
+
+	"golang.org/x/sys/unix"
+
+	"example.com/scion-time/base/logbase"
 )
 
 const (
@@ -79,6 +85,8 @@ type PIDController struct {
 
 	p, i, d float64 //lint:ignore U1000 WIP
 
+	freqAddend float64
+
 	// Offset threshold (ns) indicating that - if exceeded - a clock step is to be
 	// applied
 	StepThreshold int64
@@ -87,5 +95,24 @@ type PIDController struct {
 var _ Adjustment = (*PIDController)(nil)
 
 func (c *PIDController) Do(offset time.Duration, drift float64) error {
+	ctx := context.Background()
+	log := slog.Default()
+
+	tx := unix.Timex{}
+	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
+	if err != nil {
+		logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
+	}
+
+	freqAggregate := float64(tx.Freq) / 65536.0 * 1e6
+
+	// "fake integral" (partial reversion of previous adjustment)
+	// Summing up 'integral' for logging purpose
+	c.i += c.freqAddend * c.KI
+	freqAggregate -= c.freqAddend - (c.freqAddend * c.KI)
+
+	_ = freqAggregate
+	_ = ctx
+
 	return nil
 }
