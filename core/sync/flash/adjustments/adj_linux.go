@@ -73,16 +73,17 @@ func nsecToNsecTimeval(nsec int64) unix.Timeval {
 }
 
 func (a *Adjtimex) Do(offset time.Duration, drift float64) error {
+	ctx := context.Background()
 	log := slog.Default()
 	tx := unix.Timex{}
 	if timemath.Abs(offset) > adjtimexStepLimitDefault {
-		log.LogAttrs(context.Background(), slog.LevelDebug,
+		log.LogAttrs(ctx, slog.LevelDebug,
 			"stepping clock", slog.Duration("offset", offset))
 		tx.Modes |= unix.ADJ_SETOFFSET
 		tx.Modes |= unix.ADJ_NANO
 		tx.Time = nsecToNsecTimeval(offset.Nanoseconds())
 	} else {
-		log.LogAttrs(context.Background(), slog.LevelDebug,
+		log.LogAttrs(ctx, slog.LevelDebug,
 			"adjusting clock", slog.Duration("offset", offset))
 		_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 		if err != nil {
