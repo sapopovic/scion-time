@@ -47,33 +47,23 @@ import (
 )
 
 const (
-	//lint:ignore U1000 WIP
-	pidControllerPRatioMin = 0.01
-	//lint:ignore U1000 WIP
-	pidControllerPRatioDefault = 0.2
-	//lint:ignore U1000 WIP
-	pidControllerPRatioMax = 1.0
-	//lint:ignore U1000 WIP
-	pidControllerIRatioMin = 0.005
-	//lint:ignore U1000 WIP
-	pidControllerIRatioDefault = 0.05
-	//lint:ignore U1000 WIP
-	pidControllerIRatioMax = 0.5
-	//lint:ignore U1000 WIP
-	pidControllerDRatioMin = 0.0
-	//lint:ignore U1000 WIP
-	pidControllerDRatioDefault = 0.0
-	//lint:ignore U1000 WIP
-	pidControllerDRatioMax = 1.0
+	PIDControllerPRatioMin = 0.01
+	PIDControllerPRatioDefault = 0.2
+	PIDControllerPRatioMax = 1.0
+	PIDControllerIRatioMin = 0.005
+	PIDControllerIRatioDefault = 0.05
+	PIDControllerIRatioMax = 0.5
+	PIDControllerDRatioMin = 0.0
+	PIDControllerDRatioDefault = 0.0
+	PIDControllerDRatioMax = 1.0
 
-	//lint:ignore U1000 WIP
-	pidControllerStepThresholdDefault = 1000000 * time.Nanosecond
+	PIDControllerStepThresholdDefault = 1000000 * time.Nanosecond
 )
 
 type PIDController struct {
 	// Ratio (gain factor) of the proportional control output value (applied to
 	// the measured offset).
-	kp float64 //lint:ignore U1000 WIP
+	KP float64
 
 	// Ratio of the integral control output value. In this PID controller
 	// implementation, the integral value is applied by reverting only a part of
@@ -81,15 +71,15 @@ type PIDController struct {
 	// adjustment that is to be kept. That means, that the size of the integral
 	// control output depends on all of the configurable ratios (kp, ki or kd) of
 	// the PID controller.
-	ki float64 //lint:ignore U1000 WIP
+	KI float64
 
 	// Ratio of the differential control output value (applied to the measured
 	// drift).
-	kd float64 //lint:ignore U1000 WIP
+	KD float64
 
 	p, i, d float64 //lint:ignore U1000 WIP
 
 	// Offset threshold (ns) indicating that - if exceeded - a clock step is to be
 	// applied
-	stepThreshold int64 //lint:ignore U1000 WIP
+	StepThreshold int64
 }
