@@ -1,7 +1,7 @@
 /*
  * Based on flashptpd, https://github.com/meinberg-sync/flashptpd
  *
- * @file pidController.cpp
+ * @file pidController.h and pidController.cpp
  * @note Copyright 2023, Meinberg Funkuhren GmbH & Co. KG, All rights reserved.
  * @author Thomas Behn <thomas.behn@meinberg.de>
  *
@@ -85,7 +85,7 @@ type PIDController struct {
 	// drift).
 	KD float64
 
-	p, i, d float64 //lint:ignore U1000 WIP
+	p, i, d float64
 
 	freqAddend float64
 

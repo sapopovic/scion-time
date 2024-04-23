@@ -1,7 +1,7 @@
 /*
  * Based on flashptpd, https://github.com/meinberg-sync/flashptpd
  *
- * @file adjtimex.cpp
+ * @file adjtimex.h and adjtimex.cpp
  * @note Copyright 2023, Meinberg Funkuhren GmbH & Co. KG, All rights reserved.
  * @author Thomas Behn <thomas.behn@meinberg.de>
  *
