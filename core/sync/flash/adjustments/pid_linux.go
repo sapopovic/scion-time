@@ -51,6 +51,7 @@ import (
 
 	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/base/timemath"
+	"example.com/scion-time/base/unixutil"
 )
 
 const (
@@ -95,7 +96,7 @@ type PIDController struct {
 
 var _ Adjustment = (*PIDController)(nil)
 
-func (c *PIDController) Do(offset time.Duration, drift float64) error {
+func (c *PIDController) Do(offset time.Duration, drift float64) {
 	ctx := context.Background()
 	log := slog.Default()
 
@@ -104,20 +105,18 @@ func (c *PIDController) Do(offset time.Duration, drift float64) error {
 	if err != nil {
 		logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
 	}
-	freq := float64(tx.Freq) / 65536.0 * 1e6
-
-	off := offset
+	freq := unixutil.FreqFromScaledPPM(tx.Freq)
 
 	// "fake integral" (partial reversion of previous adjustment)
 	// Summing up 'integral' for logging purpose
 	c.i += c.freqAddend * c.KI
 	freq -= c.freqAddend - (c.freqAddend * c.KI)
 
-	if c.StepThreshold != 0 && timemath.Abs(off) > c.StepThreshold {
+	if c.StepThreshold != 0 && timemath.Abs(offset) >= c.StepThreshold {
 		freq += drift
 		c.freqAddend = 0
 	} else {
-		c.p = timemath.Seconds(off) * c.KP
+		c.p = timemath.Seconds(offset) * c.KP
 		c.freqAddend = c.p
 		c.d = 0.0
 		if c.KD != 0.0 {
@@ -125,12 +124,30 @@ func (c *PIDController) Do(offset time.Duration, drift float64) error {
 			c.freqAddend += c.d
 		}
 		freq += c.freqAddend
-		off = 0
+		offset = 0
 	}
 
-	_ = ctx
-	_ = freq
-	_ = off
+	if offset != 0 {
+		log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock",
+			slog.Duration("offset", offset))
+		tx = unix.Timex{
+			Modes: unix.ADJ_SETOFFSET | unix.ADJ_NANO,
+			Time:  unixutil.NsecToNsecTimeval(offset.Nanoseconds()),
+		}
+		_, err = unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
+		if err != nil {
+			logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
+		}
+	}
 
-	return nil
+	log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock frequency",
+		slog.Float64("frequency", freq))
+	tx = unix.Timex{
+		Modes: unix.ADJ_FREQUENCY | unix.ADJ_NANO,
+		Freq:  unixutil.FreqToScaledPPM(freq),
+	}
+	_, err = unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
+	if err != nil {
+		logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
+	}
 }

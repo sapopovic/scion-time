@@ -43,10 +43,7 @@ import (
 
 	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/base/timemath"
-)
-
-const (
-	adjtimexStepLimitDefault = 500000000 * time.Nanosecond
+	"example.com/scion-time/base/unixutil"
 )
 
 const (
@@ -54,34 +51,24 @@ const (
 	unixSTA_RONLY = 65280
 )
 
+const (
+	adjStepLimit = 500 * time.Millisecond
+)
+
 type Adjtimex struct{}
 
 var _ Adjustment = (*Adjtimex)(nil)
 
-func nsecToNsecTimeval(nsec int64) unix.Timeval {
-	sec := nsec / 1e9
-	nsec = nsec % 1e9
-	// The field unix.Timeval.Usec must always be non-negative.
-	if nsec < 0 {
-		sec -= 1
-		nsec += 1e9
-	}
-	return unix.Timeval{
-		Sec:  sec,
-		Usec: nsec,
-	}
-}
-
-func (a *Adjtimex) Do(offset time.Duration, drift float64) error {
+func (a *Adjtimex) Do(offset time.Duration, drift float64) {
 	ctx := context.Background()
 	log := slog.Default()
 	tx := unix.Timex{}
-	if timemath.Abs(offset) > adjtimexStepLimitDefault {
+	if timemath.Abs(offset) > adjStepLimit {
 		log.LogAttrs(ctx, slog.LevelDebug, "stepping clock",
 			slog.Duration("offset", offset))
 		tx.Modes |= unix.ADJ_SETOFFSET
 		tx.Modes |= unix.ADJ_NANO
-		tx.Time = nsecToNsecTimeval(offset.Nanoseconds())
+		tx.Time = unixutil.NsecToNsecTimeval(offset.Nanoseconds())
 	} else {
 		log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock",
 			slog.Duration("offset", offset))
@@ -102,5 +89,4 @@ func (a *Adjtimex) Do(offset time.Duration, drift float64) error {
 	if err != nil {
 		logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
 	}
-	return nil
 }

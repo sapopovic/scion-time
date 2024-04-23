@@ -16,6 +16,7 @@ import (
 	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
+	"example.com/scion-time/base/unixutil"
 )
 
 type adjustment struct {
@@ -74,26 +75,12 @@ func sleep(log *slog.Logger, duration time.Duration) {
 	_ = unix.Close(fd)
 }
 
-func nsecToNsecTimeval(nsec int64) unix.Timeval {
-	sec := nsec / 1e9
-	nsec = nsec % 1e9
-	// The field unix.Timeval.Usec must always be non-negative.
-	if nsec < 0 {
-		sec -= 1
-		nsec += 1e9
-	}
-	return unix.Timeval{
-		Sec:  sec,
-		Usec: nsec,
-	}
-}
-
 func setTime(log *slog.Logger, offset time.Duration) {
 	log.LogAttrs(context.Background(), slog.LevelDebug,
 		"setting time", slog.Duration("offset", offset))
 	tx := unix.Timex{
 		Modes: unix.ADJ_SETOFFSET | unix.ADJ_NANO,
-		Time:  nsecToNsecTimeval(offset.Nanoseconds()),
+		Time:  unixutil.NsecToNsecTimeval(offset.Nanoseconds()),
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 	if err != nil {
@@ -106,7 +93,7 @@ func setFrequency(log *slog.Logger, frequency float64) {
 		"setting frequency", slog.Float64("frequency", frequency))
 	tx := unix.Timex{
 		Modes:  unix.ADJ_FREQUENCY,
-		Freq:   int64(math.Floor(frequency * 65536 * 1e6)),
+		Freq:   unixutil.FreqToScaledPPM(frequency),
 		Status: unix.STA_PLL,
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
