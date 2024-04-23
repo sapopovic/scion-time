@@ -55,15 +55,15 @@ import (
 )
 
 const (
-	PIDControllerPRatioMin     = 0.01
-	PIDControllerPRatioDefault = 0.2
-	PIDControllerPRatioMax     = 1.0
-	PIDControllerIRatioMin     = 0.005
-	PIDControllerIRatioDefault = 0.05
-	PIDControllerIRatioMax     = 0.5
-	PIDControllerDRatioMin     = 0.0
-	PIDControllerDRatioDefault = 0.0
-	PIDControllerDRatioMax     = 1.0
+	PIDControllerMinPRatio     = 0.01
+	PIDControllerDefaultPRatio = 0.2
+	PIDControllerMaxPRatio     = 1.0
+	PIDControllerMinIRatio     = 0.005
+	PIDControllerDefaultIRatio = 0.05
+	PIDControllerMaxIRatio     = 0.5
+	PIDControllerMinDRatio     = 0.0
+	PIDControllerDefaultDRatio = 0.0
+	PIDControllerMaxDRatio     = 1.0
 
 	PIDControllerStepThresholdDefault = 1 * time.Millisecond
 )
