@@ -13,7 +13,7 @@ import (
 	"example.com/scion-time/base/timemath"
 
 	"example.com/scion-time/core/client"
-	"example.com/scion-time/core/measurements"
+	"example.com/scion-time/core/measurement"
 )
 
 const (
@@ -31,10 +31,10 @@ type localReferenceClock struct{}
 
 var (
 	refClks       []client.ReferenceClock
-	refClkOffsets []measurements.Measurement
+	refClkOffsets []measurement.Measurement
 	refClkClient  client.ReferenceClockClient
 	netClks       []client.ReferenceClock
-	netClkOffsets []measurements.Measurement
+	netClkOffsets []measurement.Measurement
 	netClkClient  client.ReferenceClockClient
 )
 
@@ -49,13 +49,13 @@ func RegisterClocks(refClocks, netClocks []client.ReferenceClock) {
 	}
 
 	refClks = refClocks
-	refClkOffsets = make([]measurements.Measurement, len(refClks))
+	refClkOffsets = make([]measurement.Measurement, len(refClks))
 
 	netClks = netClocks
 	if len(netClks) != 0 {
 		netClks = append(netClks, &localReferenceClock{})
 	}
-	netClkOffsets = make([]measurements.Measurement, len(netClks))
+	netClkOffsets = make([]measurement.Measurement, len(netClks))
 }
 
 func measureOffsetToRefClocks(timeout time.Duration) (
@@ -63,7 +63,7 @@ func measureOffsetToRefClocks(timeout time.Duration) (
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	refClkClient.MeasureClockOffsets(ctx, refClks, refClkOffsets)
-	m := measurements.Median(refClkOffsets)
+	m := measurement.Median(refClkOffsets)
 	return m.Timestamp, m.Offset
 }
 
@@ -113,7 +113,7 @@ func measureOffsetToNetClocks(timeout time.Duration) (
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	netClkClient.MeasureClockOffsets(ctx, netClks, netClkOffsets)
-	m := measurements.FaultTolerantMidpoint(netClkOffsets)
+	m := measurement.FaultTolerantMidpoint(netClkOffsets)
 	return m.Timestamp, m.Offset
 }
 

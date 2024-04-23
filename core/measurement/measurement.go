@@ -1,4 +1,4 @@
-package measurements
+package measurement
 
 import (
 	"sort"
