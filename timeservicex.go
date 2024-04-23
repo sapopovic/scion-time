@@ -10,7 +10,7 @@ import (
 	"example.com/scion-time/driver/clock"
 	"example.com/scion-time/net/ntp"
 
-	_ "example.com/scion-time/core/sync/flash/adjustments"
+	_ "example.com/scion-time/core/sync/flash/adjustment"
 )
 
 func runX() {
