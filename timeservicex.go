@@ -11,6 +11,7 @@ import (
 	"example.com/scion-time/net/ntp"
 
 	_ "example.com/scion-time/core/sync/flash/adjustment"
+	_ "example.com/scion-time/core/sync/flash/filter"
 )
 
 func runX() {
