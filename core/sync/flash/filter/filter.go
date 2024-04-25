@@ -14,9 +14,3 @@ type measurement struct {
 	sTxTime time.Time
 	cRxTime time.Time
 }
-
-type Filter interface {
-	Size() int
-	Pick() int
-	Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (offset time.Duration)
-}

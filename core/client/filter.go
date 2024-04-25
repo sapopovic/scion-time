@@ -8,6 +8,8 @@ import (
 
 	"example.com/scion-time/base/timemath"
 	"example.com/scion-time/core/timebase"
+
+	"example.com/scion-time/core/measurement"
 )
 
 type filterState struct {
@@ -23,6 +25,8 @@ type filter struct {
 	state  map[string]filterState
 }
 
+var _ measurement.Filter = (*filter)(nil)
+
 func newFilter(log *slog.Logger) *filter {
 	return &filter{log: log, logCtx: context.Background()}
 }
@@ -36,7 +40,7 @@ func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, we
 	return
 }
 
-func (f *filter) do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
+func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration) {
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
