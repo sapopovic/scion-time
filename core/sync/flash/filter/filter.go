@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"sort"
 	"time"
 
 	"example.com/scion-time/net/ntp"
@@ -9,7 +10,8 @@ import (
 )
 
 const (
-	defaultFilterSize = 16
+	defaultFilterCap  = 16
+	defaultFilterPick = 7
 )
 
 type filterItem struct {
@@ -20,6 +22,7 @@ type filterItem struct {
 type filter struct {
 	reference string
 	state     []filterItem
+	luckyPkts []filterItem
 }
 
 func NewLuckyPacketFilter() measurement.Filter {
@@ -36,13 +39,28 @@ func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Ti
 			panic("filter must be used with a single reference")
 		}
 		f.reference = reference
+		f.state = make([]filterItem, 0, defaultFilterCap)
+		f.luckyPkts = make([]filterItem, 0, defaultFilterCap)
 	}
-	if len(f.state) == defaultFilterSize {
+	if len(f.state) == cap(f.state) {
 		f.state = f.state[1:]
 	}
 	f.state = append(f.state, filterItem{
 		off: ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime),
 		rtd: ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime),
 	})
-	return f.state[len(f.state)-1].off
+	f.luckyPkts = f.luckyPkts[:len(f.state)]
+	copy(f.luckyPkts, f.state)
+	sort.Slice(f.luckyPkts, func(i, j int) bool {
+		return f.luckyPkts[i].rtd < f.luckyPkts[j].rtd
+	})
+	f.luckyPkts = f.luckyPkts[:min(defaultFilterPick, len(f.luckyPkts))]
+	sort.Slice(f.luckyPkts, func(i, j int) bool {
+		return f.luckyPkts[i].off < f.luckyPkts[j].off
+	})
+	i := len(f.luckyPkts) / 2
+	if len(f.luckyPkts)%2 != 0 {
+		return f.luckyPkts[i].off
+	}
+	return f.luckyPkts[i-1].off + (f.luckyPkts[i].off-f.luckyPkts[i-1].off)/2
 }
