@@ -10,7 +10,7 @@ import (
 )
 
 func TestFilter(t *testing.T) {
-	f := filter.NewLuckyPacketFilter()
+	f := filter.NewLuckyPacketFilter(filter.DefaultCapacity, filter.DefaultPick)
 
 	cTxTime := time.Time{}
 	sRxTime := cTxTime.Add(9 * time.Millisecond)

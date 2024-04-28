@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	defaultFilterCap  = 16
-	defaultFilterPick = 7
+	DefaultCapacity = 16
+	DefaultPick     = 7
 )
 
 type filterItem struct {
@@ -20,27 +20,31 @@ type filterItem struct {
 }
 
 type filter struct {
+	cap, pick int
 	reference string
 	state     []filterItem
 	luckyPkts []filterItem
 }
 
-func NewLuckyPacketFilter() measurement.Filter {
-	return &filter{}
+func NewLuckyPacketFilter(cap, pick int) measurement.Filter {
+	if pick > cap {
+		panic("pick must not be greater than cap")
+	}
+	return &filter{cap: cap, pick: pick}
 }
 
 func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration) {
 	if reference == "" {
-		panic("invalid argument: reference must not be \"\"")
+		panic("reference must not be empty")
 	}
 	if reference != f.reference {
 		if f.reference != "" {
 			panic("filter must be used with a single reference")
 		}
 		f.reference = reference
-		f.state = make([]filterItem, 0, defaultFilterCap)
-		f.luckyPkts = make([]filterItem, 0, defaultFilterCap)
+		f.state = make([]filterItem, 0, f.cap)
+		f.luckyPkts = make([]filterItem, 0, f.cap)
 	}
 	if len(f.state) == cap(f.state) {
 		f.state = f.state[1:]
@@ -54,7 +58,7 @@ func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Ti
 	sort.Slice(f.luckyPkts, func(i, j int) bool {
 		return f.luckyPkts[i].rtd < f.luckyPkts[j].rtd
 	})
-	f.luckyPkts = f.luckyPkts[:min(defaultFilterPick, len(f.luckyPkts))]
+	f.luckyPkts = f.luckyPkts[:min(f.pick, len(f.luckyPkts))]
 	sort.Slice(f.luckyPkts, func(i, j int) bool {
 		return f.luckyPkts[i].off < f.luckyPkts[j].off
 	})
