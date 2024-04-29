@@ -1,7 +1,8 @@
 package filter
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 	"time"
 
 	"example.com/scion-time/net/ntp"
@@ -20,17 +21,24 @@ type filterItem struct {
 }
 
 type filter struct {
-	cap, pick int
-	reference string
+	pick      int
 	state     []filterItem
 	luckyPkts []filterItem
+	reference string
 }
 
 func NewLuckyPacketFilter(cap, pick int) measurement.Filter {
+	if cap == 0 {
+		panic("cap must not be zero")
+	}
 	if pick > cap {
 		panic("pick must not be greater than cap")
 	}
-	return &filter{cap: cap, pick: pick}
+	return &filter{
+		pick:      pick,
+		state:     make([]filterItem, 0, cap),
+		luckyPkts: make([]filterItem, 0, cap),
+	}
 }
 
 func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
@@ -43,8 +51,6 @@ func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Ti
 			panic("filter must be used with a single reference")
 		}
 		f.reference = reference
-		f.state = make([]filterItem, 0, f.cap)
-		f.luckyPkts = make([]filterItem, 0, f.cap)
 	}
 	if len(f.state) == cap(f.state) {
 		f.state = f.state[1:]
@@ -55,12 +61,14 @@ func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Ti
 	})
 	f.luckyPkts = f.luckyPkts[:len(f.state)]
 	copy(f.luckyPkts, f.state)
-	sort.Slice(f.luckyPkts, func(i, j int) bool {
-		return f.luckyPkts[i].rtd < f.luckyPkts[j].rtd
-	})
-	f.luckyPkts = f.luckyPkts[:min(f.pick, len(f.luckyPkts))]
-	sort.Slice(f.luckyPkts, func(i, j int) bool {
-		return f.luckyPkts[i].off < f.luckyPkts[j].off
+	if f.pick < len(f.luckyPkts) {
+		slices.SortFunc(f.luckyPkts, func(a, b filterItem) int {
+			return cmp.Compare(a.rtd, b.rtd)
+		})
+		f.luckyPkts = f.luckyPkts[:f.pick]
+	}
+	slices.SortFunc(f.luckyPkts, func(a, b filterItem) int {
+		return cmp.Compare(a.off, b.off)
 	})
 	i := len(f.luckyPkts) / 2
 	if len(f.luckyPkts)%2 != 0 {
