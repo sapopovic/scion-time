@@ -12,7 +12,7 @@ import (
 
 	"example.com/scion-time/base/crypto"
 
-	"example.com/scion-time/core/measurement"
+	"example.com/scion-time/core/measurements"
 
 	"example.com/scion-time/net/udp"
 )
@@ -73,7 +73,7 @@ func MeasureClockOffsetIP(ctx context.Context, log *slog.Logger,
 	return
 }
 
-func collectMeasurements(ctx context.Context, ms []measurement.Measurement, msc chan measurement.Measurement) int {
+func collectMeasurements(ctx context.Context, ms []measurements.Measurement, msc chan measurements.Measurement) int {
 	i := 0
 	j := 0
 	n := len(ms)
@@ -140,8 +140,8 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 		nsps++
 	}
 
-	ms := make([]measurement.Measurement, nsps)
-	msc := make(chan measurement.Measurement)
+	ms := make([]measurements.Measurement, nsps)
+	msc := make(chan measurements.Measurement)
 	for i := range len(ntpcs) {
 		if sps[i] == nil {
 			continue
@@ -180,7 +180,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 					)
 				}
 			}
-			msc <- measurement.Measurement{
+			msc <- measurements.Measurement{
 				Timestamp: ts,
 				Offset:    off,
 				Error:     err,
@@ -188,12 +188,12 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 		}(ctx, log, mtrcs, ntpcs[i], localAddr, remoteAddr, sps[i])
 	}
 	collectMeasurements(ctx, ms, msc)
-	m := measurement.FaultTolerantMidpoint(ms)
+	m := measurements.FaultTolerantMidpoint(ms)
 	return m.Timestamp, m.Offset, m.Error
 }
 
 func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,
-	refclks []ReferenceClock, ms []measurement.Measurement) {
+	refclks []ReferenceClock, ms []measurements.Measurement) {
 	if len(ms) != len(refclks) {
 		panic("number of result offsets must be equal to the number of reference clocks")
 	}
@@ -208,11 +208,11 @@ func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,
 		}
 	}(&c.numOpsInProgress)
 
-	msc := make(chan measurement.Measurement)
+	msc := make(chan measurements.Measurement)
 	for _, refclk := range refclks {
 		go func(ctx context.Context, refclk ReferenceClock) {
 			ts, off, err := refclk.MeasureClockOffset(ctx)
-			msc <- measurement.Measurement{
+			msc <- measurements.Measurement{
 				Timestamp: ts,
 				Offset:    off,
 				Error:     err,

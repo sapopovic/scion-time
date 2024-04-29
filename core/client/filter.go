@@ -9,7 +9,7 @@ import (
 	"example.com/scion-time/base/timemath"
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/core/measurement"
+	"example.com/scion-time/core/measurements"
 )
 
 type filterState struct {
@@ -25,7 +25,7 @@ type filter struct {
 	state  map[string]filterState
 }
 
-var _ measurement.Filter = (*filter)(nil)
+var _ measurements.Filter = (*filter)(nil)
 
 func newFilter(log *slog.Logger) *filter {
 	return &filter{log: log, logCtx: context.Background()}

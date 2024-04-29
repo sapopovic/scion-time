@@ -7,7 +7,7 @@ import (
 
 	"example.com/scion-time/net/ntp"
 
-	"example.com/scion-time/core/measurement"
+	"example.com/scion-time/core/measurements"
 )
 
 const (
@@ -27,7 +27,7 @@ type Filter struct {
 	reference string
 }
 
-var _ measurement.Filter = (*Filter)(nil)
+var _ measurements.Filter = (*Filter)(nil)
 
 func NewLuckyPacketFilter(cap, pick int) *Filter {
 	if cap <= 0 {
