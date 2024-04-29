@@ -32,7 +32,7 @@
  *
  */
 
-package adjustment
+package adjustments
 
 import (
 	"context"

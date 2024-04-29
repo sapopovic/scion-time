@@ -1,4 +1,4 @@
-package adjustment
+package adjustments
 
 import "time"
 
