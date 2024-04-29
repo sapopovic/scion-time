@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"example.com/scion-time/driver/clock"
+	"example.com/scion-time/driver/clocks"
 	"example.com/scion-time/net/ntp"
 
 	_ "example.com/scion-time/core/sync/flash/adjustments"
@@ -19,7 +19,7 @@ func runX() {
 
 	log := slog.Default()
 
-	clk := &clock.SystemClock{Log: log}
+	clk := &clocks.SystemClock{Log: log}
 	log.Debug("local clock", slog.Time("now", clk.Now()))
 	clk.Step(-1 * time.Second)
 	log.Debug("local clock", slog.Time("now", clk.Now()))

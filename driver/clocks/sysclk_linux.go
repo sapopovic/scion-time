@@ -1,6 +1,6 @@
 //go:build linux
 
-package clock
+package clocks
 
 // Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 

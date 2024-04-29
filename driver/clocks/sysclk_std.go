@@ -1,6 +1,6 @@
 //go:build !linux
 
-package clock
+package clocks
 
 import (
 	"context"

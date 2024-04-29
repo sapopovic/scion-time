@@ -10,13 +10,13 @@ import (
 	"example.com/scion-time/core/server"
 	"example.com/scion-time/core/timebase"
 
-	"example.com/scion-time/driver/clock"
+	"example.com/scion-time/driver/clocks"
 
 	"example.com/scion-time/net/ntp"
 )
 
 func init() {
-	lclk := &clock.SystemClock{Log: slog.New(logbase.NewNopHandler())}
+	lclk := &clocks.SystemClock{Log: slog.New(logbase.NewNopHandler())}
 	timebase.RegisterClock(lclk)
 }
 
