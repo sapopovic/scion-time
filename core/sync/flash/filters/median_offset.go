@@ -1,16 +1,16 @@
 /*
  * Based on flashptpd, https://github.com/meinberg-sync/flashptpd
  *
- * @file luckyPacket.h and luckyPacket.cpp
+ * @file medianOffset.h and medianOffset.cpp
  * @note Copyright 2023, Meinberg Funkuhren GmbH & Co. KG, All rights reserved.
  * @author Thomas Behn <thomas.behn@meinberg.de>
  *
- * Lucky packet filter algorithm. As soon as the configured amount (size) of
+ * Median offset filter algorithm. As soon as the configured amount (size) of
  * measurements have been completed, the filter selects the configured amount
- * (pick) of measurements with the lowest measured path delay (lucky packets).
- * Effectively this helps select for those packets which had the least
- * interference through the network. The filter should only be used with small
- * request intervals (at least 8 requests per second).
+ * (pick) of measurements with the median measured offset. Especially in
+ * combination with the lucky packet filter (select one median offset out of n
+ * lucky packets), the algorithm can help to reduce noise (i.e., timestamping
+ * errors).
  *
  * =============================================================================
  *
@@ -36,4 +36,4 @@
  *
  */
 
-package filter
+package filters

@@ -1,4 +1,4 @@
-package filter
+package filters
 
 import (
 	"cmp"
@@ -10,40 +10,35 @@ import (
 	"example.com/scion-time/core/measurements"
 )
 
-const (
-	DefaultCapacity = 16
-	DefaultPick     = 7
-)
-
 type filterItem struct {
 	off time.Duration
 	rtd time.Duration
 }
 
-type Filter struct {
+type LuckyPacketFilter struct {
 	pick      int
 	state     []filterItem
 	luckyPkts []filterItem
 	reference string
 }
 
-var _ measurements.Filter = (*Filter)(nil)
+var _ measurements.Filter = (*LuckyPacketFilter)(nil)
 
-func NewLuckyPacketFilter(cap, pick int) *Filter {
+func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
 	if cap <= 0 {
 		panic("cap must be greater than 0")
 	}
 	if pick <= 0 {
 		panic("pick must be greater than 0")
 	}
-	return &Filter{
+	return &LuckyPacketFilter{
 		pick:      min(pick, cap),
 		state:     make([]filterItem, 0, cap),
 		luckyPkts: make([]filterItem, 0, cap),
 	}
 }
 
-func (f *Filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
+func (f *LuckyPacketFilter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration) {
 	if reference == "" {
 		panic("reference must not be empty")

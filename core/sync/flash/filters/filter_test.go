@@ -1,4 +1,4 @@
-package filter_test
+package filters_test
 
 import (
 	"testing"
@@ -6,11 +6,11 @@ import (
 
 	"example.com/scion-time/net/ntp"
 
-	"example.com/scion-time/core/sync/flash/filter"
+	"example.com/scion-time/core/sync/flash/filters"
 )
 
 func TestFilter(t *testing.T) {
-	f := filter.NewLuckyPacketFilter(filter.DefaultCapacity, filter.DefaultPick)
+	f := filters.NewLuckyPacketFilter(3 /* cap */, 1 /* pick */)
 
 	cTxTime := time.Time{}
 	sRxTime := cTxTime.Add(9 * time.Millisecond)
