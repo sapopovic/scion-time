@@ -20,28 +20,30 @@ type filterItem struct {
 	rtd time.Duration
 }
 
-type filter struct {
+type Filter struct {
 	pick      int
 	state     []filterItem
 	luckyPkts []filterItem
 	reference string
 }
 
-func NewLuckyPacketFilter(cap, pick int) measurement.Filter {
-	if cap == 0 {
-		panic("cap must not be zero")
+var _ measurement.Filter = (*Filter)(nil)
+
+func NewLuckyPacketFilter(cap, pick int) *Filter {
+	if cap <= 0 {
+		panic("cap must be greater than 0")
 	}
-	if pick > cap {
-		panic("pick must not be greater than cap")
+	if pick <= 0 {
+		panic("pick must be greater than 0")
 	}
-	return &filter{
-		pick:      pick,
+	return &Filter{
+		pick:      min(pick, cap),
 		state:     make([]filterItem, 0, cap),
 		luckyPkts: make([]filterItem, 0, cap),
 	}
 }
 
-func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
+func (f *Filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration) {
 	if reference == "" {
 		panic("reference must not be empty")
@@ -51,6 +53,9 @@ func (f *filter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Ti
 			panic("filter must be used with a single reference")
 		}
 		f.reference = reference
+	}
+	if cap(f.state) == 0 {
+		return ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
 	}
 	if len(f.state) == cap(f.state) {
 		f.state = f.state[1:]
