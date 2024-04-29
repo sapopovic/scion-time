@@ -10,15 +10,15 @@ import (
 	"example.com/scion-time/core/measurements"
 )
 
-type filterItem struct {
+type measurement struct {
 	off time.Duration
 	rtd time.Duration
 }
 
 type LuckyPacketFilter struct {
 	pick      int
-	state     []filterItem
-	luckyPkts []filterItem
+	state     []measurement
+	luckyPkts []measurement
 	reference string
 }
 
@@ -33,8 +33,8 @@ func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
 	}
 	return &LuckyPacketFilter{
 		pick:      min(pick, cap),
-		state:     make([]filterItem, 0, cap),
-		luckyPkts: make([]filterItem, 0, cap),
+		state:     make([]measurement, 0, cap),
+		luckyPkts: make([]measurement, 0, cap),
 	}
 }
 
@@ -55,19 +55,19 @@ func (f *LuckyPacketFilter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxT
 	if len(f.state) == cap(f.state) {
 		f.state = f.state[1:]
 	}
-	f.state = append(f.state, filterItem{
+	f.state = append(f.state, measurement{
 		off: ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime),
 		rtd: ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime),
 	})
 	f.luckyPkts = f.luckyPkts[:len(f.state)]
 	copy(f.luckyPkts, f.state)
 	if f.pick < len(f.luckyPkts) {
-		slices.SortFunc(f.luckyPkts, func(a, b filterItem) int {
+		slices.SortFunc(f.luckyPkts, func(a, b measurement) int {
 			return cmp.Compare(a.rtd, b.rtd)
 		})
 		f.luckyPkts = f.luckyPkts[:f.pick]
 	}
-	slices.SortFunc(f.luckyPkts, func(a, b filterItem) int {
+	slices.SortFunc(f.luckyPkts, func(a, b measurement) int {
 		return cmp.Compare(a.off, b.off)
 	})
 	i := len(f.luckyPkts) / 2
