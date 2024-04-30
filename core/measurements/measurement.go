@@ -1,7 +1,8 @@
 package measurements
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 	"time"
 )
 
@@ -27,8 +28,8 @@ func Median(ms []Measurement) Measurement {
 	if n == 0 {
 		panic("unexpected number of duration values")
 	}
-	sort.Slice(ms, func(i, j int) bool {
-		return ms[i].Offset < ms[j].Offset
+	slices.SortFunc(ms, func(a, b Measurement) int {
+		return cmp.Compare(a.Offset, b.Offset)
 	})
 	i := n / 2
 	if n%2 != 0 {
@@ -45,8 +46,8 @@ func FaultTolerantMidpoint(ms []Measurement) Measurement {
 	if n == 0 {
 		panic("unexpected number of duration values")
 	}
-	sort.Slice(ms, func(i, j int) bool {
-		return ms[i].Offset < ms[j].Offset
+	slices.SortFunc(ms, func(a, b Measurement) int {
+		return cmp.Compare(a.Offset, b.Offset)
 	})
 	f := (n - 1) / 3
 	return midpoint(ms[f], ms[n-1-f])
