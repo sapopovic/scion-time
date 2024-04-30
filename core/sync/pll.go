@@ -1,6 +1,7 @@
 package sync
 
 // Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
+// See also https://phk.freebsd.dk/time/
 
 import (
 	"context"
