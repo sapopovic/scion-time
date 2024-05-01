@@ -1,5 +1,18 @@
 package filters
 
+// Lucky packet filter combined with median offset filter based on flashptpd,
+// https://github.com/meinberg-sync/flashptpd
+//
+// The filter stores measurements in a FIFO window of configurable capacity and
+// picks a predefined number measurements with the lowest round-trip delay
+// (lucky packets) assuming that those packets experienced the least amount of
+// jitter across the network. Based on the selected set of lucky packets the
+// median clock offset value is subsequently calculated and returned as the
+// result of each filter step. A filter configuration with a set of exactly one
+// lucky packet behaves like a pure lucky packet filter; if the set of lucky
+// packets is configured to be equal to the filter's capacity, the resulting
+// behavior is equivalent to a pure median offset filter.
+
 import (
 	"cmp"
 	"slices"
