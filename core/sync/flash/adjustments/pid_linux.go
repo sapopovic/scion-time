@@ -85,13 +85,13 @@ type PIDController struct {
 	// drift).
 	KD float64
 
-	p, i, d float64
-
-	freqAddend float64
-
 	// Offset threshold (ns) indicating that - if exceeded - a clock step is to be
 	// applied
 	StepThreshold time.Duration
+
+	p, i, d float64
+
+	freqAddend float64
 }
 
 var _ Adjustment = (*PIDController)(nil)
