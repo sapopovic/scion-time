@@ -32,7 +32,6 @@ type LuckyPacketFilter struct {
 	pick      int
 	state     []measurement
 	luckyPkts []measurement
-	reference string
 }
 
 var _ measurements.Filter = (*LuckyPacketFilter)(nil)
@@ -51,17 +50,8 @@ func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
 	}
 }
 
-func (f *LuckyPacketFilter) Do(reference string, cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
+func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration) {
-	if reference == "" {
-		panic("reference must not be empty")
-	}
-	if reference != f.reference {
-		if f.reference != "" {
-			panic("filter must be used with a single reference")
-		}
-		f.reference = reference
-	}
 	if cap(f.state) == 0 {
 		return ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
 	}
