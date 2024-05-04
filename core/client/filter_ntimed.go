@@ -12,7 +12,7 @@ import (
 	"example.com/scion-time/core/measurements"
 )
 
-type filter struct {
+type NtimedFilter struct {
 	log            *slog.Logger
 	logCtx         context.Context
 	epoch          uint64
@@ -21,10 +21,10 @@ type filter struct {
 	navg           float64
 }
 
-var _ measurements.Filter = (*filter)(nil)
+var _ measurements.Filter = (*NtimedFilter)(nil)
 
-func newFilter(log *slog.Logger) *filter {
-	return &filter{log: log, logCtx: context.Background()}
+func NewNtimedFilter(log *slog.Logger) *NtimedFilter {
+	return &NtimedFilter{log: log, logCtx: context.Background()}
 }
 
 func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, weight float64) {
@@ -36,7 +36,7 @@ func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, we
 	return
 }
 
-func (f *filter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
+func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration) {
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
@@ -105,17 +105,19 @@ func (f *filter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 
 	offset, weight = combine(timemath.Duration(lo), timemath.Duration(mid), timemath.Duration(hi), trust)
 
-	f.log.LogAttrs(f.logCtx, slog.LevelDebug, "filtered response",
-		slog.Int("branch", branch),
-		slog.Float64("lo [s]", lo),
-		slog.Float64("mid [s]", mid),
-		slog.Float64("hi [s]", hi),
-		slog.Float64("loLim [s]", loLim),
-		slog.Float64("amid [s]", f.amid),
-		slog.Float64("hiLim [s]", hiLim),
-		slog.Float64("offset [s]", timemath.Seconds(offset)),
-		slog.Float64("weight", weight),
-	)
+	if f.log != nil {
+		f.log.LogAttrs(f.logCtx, slog.LevelDebug, "filtered response",
+			slog.Int("branch", branch),
+			slog.Float64("lo [s]", lo),
+			slog.Float64("mid [s]", mid),
+			slog.Float64("hi [s]", hi),
+			slog.Float64("loLim [s]", loLim),
+			slog.Float64("amid [s]", f.amid),
+			slog.Float64("hiLim [s]", hiLim),
+			slog.Float64("offset [s]", timemath.Seconds(offset)),
+			slog.Float64("weight", weight),
+		)
+	}
 
 	return timemath.Inv(offset)
 }

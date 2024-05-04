@@ -1,4 +1,4 @@
-package filters_test
+package client_test
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 	"example.com/scion-time/net/ntp"
 
-	"example.com/scion-time/core/client/flash/filters"
+	"example.com/scion-time/core/client"
 )
 
 type measurement struct {
@@ -22,12 +22,12 @@ func offset(m measurement) time.Duration {
 	return ntp.ClockOffset(m.cTxTime, m.sRxTime, m.sTxTime, m.cRxTime)
 }
 
-func filter(f *filters.LuckyPacketFilter, m measurement) time.Duration {
+func filter(f *client.LuckyPacketFilter, m measurement) time.Duration {
 	return f.Do(m.cTxTime, m.sRxTime, m.sTxTime, m.cRxTime)
 }
 
 func TestFilter0(t *testing.T) {
-	f := &filters.LuckyPacketFilter{}
+	f := &client.LuckyPacketFilter{}
 	x := measurement{cTxTime: at(0), sRxTime: at(10), sTxTime: at(10), cRxTime: at(20)}
 	off0, off1 := filter(f, x), offset(x)
 	if off0 != off1 {
@@ -36,7 +36,7 @@ func TestFilter0(t *testing.T) {
 }
 
 func TestFilter1(t *testing.T) {
-	f := &filters.LuckyPacketFilter{}
+	f := &client.LuckyPacketFilter{}
 	x := measurement{cTxTime: at(0), sRxTime: at(9), sTxTime: at(9), cRxTime: at(20)}
 	off0, off1 := filter(f, x), offset(x)
 	if off0 != off1 {
@@ -45,7 +45,7 @@ func TestFilter1(t *testing.T) {
 }
 
 func TestFilter2(t *testing.T) {
-	f := &filters.LuckyPacketFilter{}
+	f := &client.LuckyPacketFilter{}
 	x := measurement{cTxTime: at(0), sRxTime: at(11), sTxTime: at(11), cRxTime: at(20)}
 	off0, off1 := filter(f, x), offset(x)
 	if off0 != off1 {
@@ -54,7 +54,7 @@ func TestFilter2(t *testing.T) {
 }
 
 func TestFilter3(t *testing.T) {
-	f := filters.NewLuckyPacketFilter(3 /* cap */, 1 /* pick */)
+	f := client.NewLuckyPacketFilter(3 /* cap */, 1 /* pick */)
 	a := measurement{cTxTime: at(0), sRxTime: at(19), sTxTime: at(19), cRxTime: at(40)}
 	x := measurement{cTxTime: at(0), sRxTime: at(10), sTxTime: at(10), cRxTime: at(20)}
 	var off0, off1 time.Duration
@@ -77,7 +77,7 @@ func TestFilter3(t *testing.T) {
 }
 
 func TestFilter4(t *testing.T) {
-	f := filters.NewLuckyPacketFilter(5 /* cap */, 1 /* pick */)
+	f := client.NewLuckyPacketFilter(5 /* cap */, 1 /* pick */)
 	a := measurement{cTxTime: at(0), sRxTime: at(19), sTxTime: at(19), cRxTime: at(40)}
 	x := measurement{cTxTime: at(0), sRxTime: at(10), sTxTime: at(10), cRxTime: at(20)}
 	_ = filter(f, a)
@@ -93,7 +93,7 @@ func TestFilter4(t *testing.T) {
 }
 
 func TestFilter5(t *testing.T) {
-	f := filters.NewLuckyPacketFilter(5 /* cap */, 5 /* pick */)
+	f := client.NewLuckyPacketFilter(5 /* cap */, 5 /* pick */)
 	a := measurement{cTxTime: at(0), sRxTime: at(19), sTxTime: at(19), cRxTime: at(40)}
 	b := measurement{cTxTime: at(0), sRxTime: at(21), sTxTime: at(21), cRxTime: at(40)}
 	x := measurement{cTxTime: at(0), sRxTime: at(10), sTxTime: at(10), cRxTime: at(20)}
@@ -109,7 +109,7 @@ func TestFilter5(t *testing.T) {
 }
 
 func TestFilter6(t *testing.T) {
-	f := filters.NewLuckyPacketFilter(5 /* cap */, 3 /* pick */)
+	f := client.NewLuckyPacketFilter(5 /* cap */, 3 /* pick */)
 	a := measurement{cTxTime: at(0), sRxTime: at(29), sTxTime: at(29), cRxTime: at(60)}
 	b := measurement{cTxTime: at(0), sRxTime: at(19), sTxTime: at(19), cRxTime: at(40)}
 	c := measurement{cTxTime: at(0), sRxTime: at(21), sTxTime: at(21), cRxTime: at(40)}

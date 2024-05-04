@@ -10,7 +10,6 @@ import (
 	"example.com/scion-time/driver/clocks"
 	"example.com/scion-time/net/ntp"
 
-	_ "example.com/scion-time/core/client/flash/filters"
 	_ "example.com/scion-time/core/sync/flash/adjustments"
 )
 

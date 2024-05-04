@@ -13,6 +13,7 @@ import (
 
 	"example.com/scion-time/base/metrics"
 
+	"example.com/scion-time/core/measurements"
 	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/net/ntp"
@@ -29,16 +30,15 @@ type IPClient struct {
 		Enabled      bool
 		NTSKEFetcher ntske.Fetcher
 	}
-	Raw   bool
-	Histo *hdrhistogram.Histogram
-	prev  struct {
+	Filter measurements.Filter
+	Histo  *hdrhistogram.Histogram
+	prev   struct {
 		reference   string
 		interleaved bool
 		cTxTime     ntp.Time64
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
-	filter *filter
 }
 
 type ipClientMetrics struct {
@@ -94,11 +94,6 @@ func (c *IPClient) ResetInterleavedMode() {
 func (c *IPClient) measureClockOffsetIP(ctx context.Context, mtrcs *ipClientMetrics,
 	localAddr, remoteAddr *net.UDPAddr) (
 	timestamp time.Time, offset time.Duration, err error) {
-	if c.Raw {
-		c.filter = nil
-	} else if c.filter == nil {
-		c.filter = newFilter(c.Log)
-	}
 
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.IP})
 	if err != nil {
@@ -331,10 +326,10 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, mtrcs *ipClientMetr
 		}
 
 		timestamp = cRxTime
-		if c.Raw {
+		if c.Filter == nil {
 			offset = off
 		} else {
-			offset = c.filter.Do(t0, t1, t2, t3)
+			offset = c.Filter.Do(t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {

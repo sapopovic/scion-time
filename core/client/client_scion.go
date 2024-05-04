@@ -21,6 +21,7 @@ import (
 
 	"example.com/scion-time/base/metrics"
 
+	"example.com/scion-time/core/measurements"
 	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/net/ntp"
@@ -43,9 +44,9 @@ type SCIONClient struct {
 		mac          []byte
 		NTSKEFetcher ntske.Fetcher
 	}
-	Raw   bool
-	Histo *hdrhistogram.Histogram
-	prev  struct {
+	Filter measurements.Filter
+	Histo  *hdrhistogram.Histogram
+	prev   struct {
 		reference   string
 		path        string
 		interleaved bool
@@ -53,7 +54,6 @@ type SCIONClient struct {
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
-	filter *filter
 }
 
 type scionClientMetrics struct {
@@ -135,12 +135,6 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		c.Auth.mac = make([]byte, scion.PacketAuthMACLen)
 	}
 	var authKey []byte
-
-	if c.Raw {
-		c.filter = nil
-	} else if c.filter == nil {
-		c.filter = newFilter(c.Log)
-	}
 
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
 	if err != nil {
@@ -577,10 +571,10 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		}
 
 		timestamp = cRxTime
-		if c.Raw {
+		if c.Filter == nil {
 			offset = off
 		} else {
-			offset = c.filter.Do(t0, t1, t2, t3)
+			offset = c.Filter.Do(t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {

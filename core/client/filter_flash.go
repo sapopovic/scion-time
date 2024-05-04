@@ -1,4 +1,4 @@
-package filters
+package client
 
 // Lucky packet filter combined with median offset filter based on flashptpd,
 // https://github.com/meinberg-sync/flashptpd

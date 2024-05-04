@@ -194,6 +194,7 @@ func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}
+	c.ntpc.Filter = client.NewNtimedFilter(log)
 	if slices.Contains(authModes, authModeNTS) {
 		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
@@ -239,6 +240,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, r
 			DSCP:            dscp,
 			InterleavedMode: true,
 		}
+		c.ntpcs[i].Filter = client.NewNtimedFilter(log)
 		if slices.Contains(authModes, authModeNTS) {
 			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr, log)
 		}
