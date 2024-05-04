@@ -6,7 +6,7 @@ import (
 
 	"example.com/scion-time/net/ntp"
 
-	"example.com/scion-time/core/sync/flash/filters"
+	"example.com/scion-time/core/client/flash/filters"
 )
 
 type measurement struct {
