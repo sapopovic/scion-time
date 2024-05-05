@@ -23,7 +23,14 @@ func main() {
 	for s.Scan() {
 		l := s.Text()
 		ts := strings.Fields(l) // Tokenize the line
-		fmt.Println(ts)
+		if len(ts) >= 6 && ts[0] == "GNS181PEX:" {
+			t := ts[1] + "T" + ts[2]
+			off := ts[5]
+			if len(off) != 0 && off[len(off)-1] == ',' {
+				off = off[:len(off)-1]
+			}
+			fmt.Println(t + "," + off)
+		}
 	}
 	if err := s.Err(); err != nil {
 		log.Fatalf("error during scan: %s", err)
