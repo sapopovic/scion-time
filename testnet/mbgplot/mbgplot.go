@@ -1,3 +1,13 @@
+// Simple tool to parse the output of Meinberg's Service Daemon mbgsvcd and plot
+// the recorded offset values over time.
+//
+// Example command to get input data: mbgsvcd -f -Q -s 1
+//
+// See also:
+// - https://kb.meinbergglobal.com/kb/driver_software/command_line_tools_mbgtools#mbgsvcd
+// - https://git.meinbergglobal.com/drivers/mbgtools-lx.git/tree/mbgsvcd/mbgsvcd.c
+// - https://www.meinbergglobal.com/english/sw/#linux
+
 package main
 
 import (
