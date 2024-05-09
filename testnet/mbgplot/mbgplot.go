@@ -12,6 +12,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"log"
 	"math"
 	"os"
@@ -28,22 +29,20 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatalf("failed to open file: no argument provided")
-	}
+	var limit float64
+	flag.Float64Var(&limit, "l", 0.0, "limit")
+	flag.Parse()
 
-	fn0 := os.Args[1]
+	fn0 := flag.Arg(0)
 	f0, err := os.Open(fn0)
 	if err != nil {
-		log.Fatalf("failed to open file: %s, %s", fn0, err)
+		log.Fatalf("failed to open file: '%s', %s", fn0, err)
 	}
 	defer f0.Close()
 
 	n := 0
 	var t0 time.Time
 	var data plotter.XYs
-	minOff := math.Inf(1)
-	maxOff := math.Inf(-1)
 
 	s := bufio.NewScanner(f0)
 	for s.Scan() {
@@ -66,8 +65,6 @@ func main() {
 			if n == 0 {
 				t0 = t
 			}
-			minOff = math.Min(minOff, off)
-			maxOff = math.Max(maxOff, off)
 			data = append(data, plotter.XY{
 				X: float64(t.Unix() - t0.Unix()),
 				Y: off,
@@ -84,8 +81,6 @@ func main() {
 	p.X.Label.Padding = vg.Points(5)
 	p.Y.Label.Text = "Offset [s]"
 	p.Y.Label.Padding = vg.Points(5)
-	p.Y.Max = maxOff
-	p.Y.Min = minOff
 
 	p.Add(plotter.NewGrid())
 
@@ -94,6 +89,11 @@ func main() {
 		log.Fatalf("error during plot: %s", err)
 	}
 	p.Add(line)
+
+	if limit != 0.0 {
+		p.Y.Max = math.Abs(limit)
+		p.Y.Min = -math.Abs(limit)
+	}
 
 	c := vgpdf.New(8.5*vg.Inch, 3*vg.Inch)
 	c.EmbedFonts(true)
