@@ -93,3 +93,8 @@ func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	}
 	return f.luckyPkts[i-1].off + (f.luckyPkts[i].off-f.luckyPkts[i-1].off)/2
 }
+
+func (f *LuckyPacketFilter) Reset() {
+	f.state = f.state[:0]
+	f.drift = 0.0
+}

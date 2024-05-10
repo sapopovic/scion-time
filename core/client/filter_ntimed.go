@@ -48,13 +48,7 @@ func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	mid := (lo + hi) / 2
 
 	if f.epoch != timebase.Epoch() {
-		f.epoch = timebase.Epoch()
-		f.alo = 0.0
-		f.amid = 0.0
-		f.ahi = 0.0
-		f.alolo = 0.0
-		f.ahihi = 0.0
-		f.navg = 0.0
+		f.Reset()
 	}
 
 	const (
@@ -120,4 +114,14 @@ func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	}
 
 	return timemath.Inv(offset)
+}
+
+func (f *NtimedFilter) Reset() {
+	f.epoch = timebase.Epoch()
+	f.alo = 0.0
+	f.amid = 0.0
+	f.ahi = 0.0
+	f.alolo = 0.0
+	f.ahihi = 0.0
+	f.navg = 0.0
 }
