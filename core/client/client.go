@@ -19,6 +19,7 @@ import (
 
 type ReferenceClock interface {
 	MeasureClockOffset(ctx context.Context) (time.Time, time.Duration, error)
+	Drift() (drift float64, ok bool)
 }
 
 type ReferenceClockClient struct {

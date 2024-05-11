@@ -52,8 +52,8 @@ func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
 	}
 }
 
-func (f *LuckyPacketFilter) Drift() float64 {
-	return f.drift
+func (f *LuckyPacketFilter) Drift() (float64, bool) {
+	return f.drift, len(f.state) >= 2
 }
 
 func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (

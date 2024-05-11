@@ -43,6 +43,10 @@ func (c *localReferenceClock) MeasureClockOffset(context.Context) (
 	return time.Time{}, 0, nil
 }
 
+func (c *localReferenceClock) Drift() (float64, bool) {
+	return 0.0, false
+}
+
 func RegisterClocks(refClocks, netClocks []client.ReferenceClock) {
 	if refClks != nil || netClks != nil {
 		panic("reference clocks already registered")
