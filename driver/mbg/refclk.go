@@ -198,4 +198,3 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 func (c *ReferenceClock) Drift() (float64, bool) {
 	return 0.0, false
 }
-

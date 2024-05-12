@@ -282,7 +282,6 @@ func (c *ntpReferenceClockSCION) Drift() (float64, bool) {
 	return d / float64(n), true
 }
 
-
 func loadConfig(configFile string) svcConfig {
 	raw, err := os.ReadFile(configFile)
 	if err != nil {
@@ -444,7 +443,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 			if ok {
 				scionclk.pather = pather
 				if drkeyFetcher != nil {
-					for i := 0; i != len(scionclk.ntpcs); i++ {
+					for i := range len(scionclk.ntpcs) {
 						scionclk.ntpcs[i].Auth.Enabled = true
 						scionclk.ntpcs[i].Auth.DRKeyFetcher = drkeyFetcher
 					}
@@ -456,7 +455,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 			if ok {
 				scionclk.pather = pather
 				if drkeyFetcher != nil {
-					for i := 0; i != len(scionclk.ntpcs); i++ {
+					for i := range len(scionclk.ntpcs) {
 						scionclk.ntpcs[i].Auth.Enabled = true
 						scionclk.ntpcs[i].Auth.DRKeyFetcher = drkeyFetcher
 					}
