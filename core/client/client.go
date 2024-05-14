@@ -74,6 +74,15 @@ func MeasureClockOffsetIP(ctx context.Context, log *slog.Logger,
 	return
 }
 
+func ClockDriftIP(ntpc *IPClient) (float64, bool) {
+	var d float64
+	f, ok := ntpc.Filter.(*LuckyPacketFilter)
+	if ok {
+		d, ok = f.Drift()
+	}
+	return d, ok
+}
+
 func collectMeasurements(ctx context.Context, ms []measurements.Measurement, msc chan measurements.Measurement) int {
 	i := 0
 	j := 0
@@ -192,6 +201,25 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 	collectMeasurements(ctx, ms, msc)
 	m := measurements.FaultTolerantMidpoint(ms)
 	return m.Timestamp, m.Offset, m.Error
+}
+
+func ClockDriftSCION(ntpcs []*SCIONClient) (float64, bool) {
+	var d float64
+	var n int
+	for _, ntpc := range ntpcs {
+		f, ok := ntpc.Filter.(*LuckyPacketFilter)
+		if ok {
+			dd, ok := f.Drift()
+			if ok {
+				d += dd
+				n++
+			}
+		}
+	}
+	if n == 0 {
+		return 0.0, false
+	}
+	return d / float64(n), true
 }
 
 func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,

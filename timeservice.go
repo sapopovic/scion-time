@@ -207,12 +207,7 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (
 }
 
 func (c *ntpReferenceClockIP) Drift() (float64, bool) {
-	var d float64
-	f, ok := c.ntpc.Filter.(*client.LuckyPacketFilter)
-	if ok {
-		d, ok = f.Drift()
-	}
-	return d, ok
+	return client.ClockDriftIP(c.ntpc)
 }
 
 func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool,
@@ -264,22 +259,7 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 }
 
 func (c *ntpReferenceClockSCION) Drift() (float64, bool) {
-	var d float64
-	var n int
-	for _, ntpc := range c.ntpcs {
-		f, ok := ntpc.Filter.(*client.LuckyPacketFilter)
-		if ok {
-			dd, ok := f.Drift()
-			if ok {
-				d += dd
-				n++
-			}
-		}
-	}
-	if n == 0 {
-		return 0.0, false
-	}
-	return d / float64(n), true
+	return client.ClockDriftSCION(c.ntpcs[:])
 }
 
 func loadConfig(configFile string) svcConfig {
