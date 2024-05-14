@@ -1,11 +1,11 @@
-package client
+package floats
 
 import (
 	"cmp"
 	"slices"
 )
 
-func median(fs []float64) float64 {
+func Median(fs []float64) float64 {
 	n := len(fs)
 	if n == 0 {
 		panic("unexpected number of values")

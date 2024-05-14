@@ -11,6 +11,7 @@ import (
 	"github.com/scionproto/scion/pkg/snet"
 
 	"example.com/scion-time/base/crypto"
+	"example.com/scion-time/base/floats"
 
 	"example.com/scion-time/core/measurements"
 
@@ -217,7 +218,7 @@ func ClockDriftSCION(ntpcs []*SCIONClient) (float64, bool) {
 	if len(ds) == 0 {
 		return 0.0, false
 	}
-	return median(ds), true
+	return floats.Median(ds), true
 }
 
 func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,

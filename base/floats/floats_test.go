@@ -1,9 +1,11 @@
-package client
+package floats_test
 
 // Based on an OpenAI GPT-4o interaction
 
 import (
 	"testing"
+
+	"example.com/scion-time/base/floats"
 )
 
 func TestMedian(t *testing.T) {
@@ -31,9 +33,9 @@ func TestMedian(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			result := median(test.input)
+			result := floats.Median(test.input)
 			if result != test.expected {
-				t.Errorf("median(%v) = %v; expected %v", test.input, result, test.expected)
+				t.Errorf("floats.Median(%v) = %v; expected %v", test.input, result, test.expected)
 			}
 		})
 	}
@@ -41,18 +43,18 @@ func TestMedian(t *testing.T) {
 	t.Run("NilSlice", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r == nil {
-				t.Errorf("median of nil slice did not panic")
+				t.Errorf("floats.Median of nil slice did not panic")
 			}
 		}()
-		median(nil)
+		floats.Median(nil)
 	})
 
 	t.Run("EmptySlice", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r == nil {
-				t.Errorf("median of empty slice did not panic")
+				t.Errorf("floats.Median of empty slice did not panic")
 			}
 		}()
-		median([]float64{})
+		floats.Median([]float64{})
 	})
 }
