@@ -204,22 +204,20 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 }
 
 func ClockDriftSCION(ntpcs []*SCIONClient) (float64, bool) {
-	var d float64
-	var n int
+	var ds []float64
 	for _, ntpc := range ntpcs {
 		f, ok := ntpc.Filter.(*LuckyPacketFilter)
 		if ok {
-			dd, ok := f.Drift()
+			d, ok := f.Drift()
 			if ok {
-				d += dd
-				n++
+				ds = append(ds, d)
 			}
 		}
 	}
-	if n == 0 {
+	if len(ds) == 0 {
 		return 0.0, false
 	}
-	return d / float64(n), true
+	return median(ds), true
 }
 
 func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,

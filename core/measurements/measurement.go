@@ -26,7 +26,7 @@ func midpoint(x, y Measurement) Measurement {
 func Median(ms []Measurement) Measurement {
 	n := len(ms)
 	if n == 0 {
-		panic("unexpected number of duration values")
+		panic("unexpected number of values")
 	}
 	slices.SortFunc(ms, func(a, b Measurement) int {
 		return cmp.Compare(a.Offset, b.Offset)
@@ -44,7 +44,7 @@ func Median(ms []Measurement) Measurement {
 func FaultTolerantMidpoint(ms []Measurement) Measurement {
 	n := len(ms)
 	if n == 0 {
-		panic("unexpected number of duration values")
+		panic("unexpected number of values")
 	}
 	slices.SortFunc(ms, func(a, b Measurement) int {
 		return cmp.Compare(a.Offset, b.Offset)
