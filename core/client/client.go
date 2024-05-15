@@ -132,7 +132,9 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 		}
 		if sps[i] == nil {
 			c.ResetInterleavedMode()
-			c.Filter.Reset()
+			if c.Filter != nil {
+				c.Filter.Reset()
+			}
 		}
 	}
 	n, err := crypto.Sample(ctx, len(sps)-nsps, len(ps), func(dst, src int) {
