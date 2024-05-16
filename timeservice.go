@@ -472,7 +472,7 @@ func runServer(configFile string) {
 	}
 
 	if len(netClocks) != 0 {
-		go sync.RunGlobalClockSync(log, lclk)
+		go sync.RunNetworkClockSync(log, lclk)
 	}
 
 	dscp := dscp(cfg)

@@ -135,7 +135,7 @@ func driftOfNetClocks() float64 {
 	return floats.FaultTolerantMidpoint(ds)
 }
 
-func RunGlobalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
+func RunNetworkClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 	if netClkImpact <= 1.0 {
 		panic("invalid network clock impact factor")
 	}
@@ -153,8 +153,8 @@ func RunGlobalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 		panic("invalid network clock max correction")
 	}
 	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
-		Name: metrics.SyncGlobalCorrN,
-		Help: metrics.SyncGlobalCorrH,
+		Name: metrics.SyncNetworkCorrN,
+		Help: metrics.SyncNetworkCorrH,
 	})
 	pll := newPLL(log, lclk)
 	for {
