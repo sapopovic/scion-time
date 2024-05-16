@@ -10,51 +10,186 @@ import (
 
 func TestMedian(t *testing.T) {
 	tests := []struct {
-		input    []float64
-		expected float64
+		name      string
+		input     []float64
+		want      float64
+		wantPanic bool
 	}{
-		// Test with an odd number of elements
-		{input: []float64{1, 3, 2}, expected: 2},
-		{input: []float64{7, 1, 3, 2, 5}, expected: 3},
-		{input: []float64{10}, expected: 10},
-
-		// Test with an even number of elements
-		{input: []float64{1, 2, 3, 4}, expected: 2.5},
-		{input: []float64{5, 1, 3, 2}, expected: 2.5},
-
-		// Test with repeated elements
-		{input: []float64{1, 2, 2, 3, 3}, expected: 2},
-		{input: []float64{1, 1, 1, 1}, expected: 1},
-
-		// Test with sorted input
-		{input: []float64{1, 2, 3}, expected: 2},
-		{input: []float64{1, 2, 3, 4}, expected: 2.5},
+		{
+			name:      "Nil slice",
+			input:     nil,
+			wantPanic: true,
+		},
+		{
+			name:      "Empty slice",
+			input:     []float64{},
+			wantPanic: true,
+		},
+		{
+			name:  "Single element",
+			input: []float64{42.0},
+			want:  42.0,
+		},
+		{
+			name:  "Two elements",
+			input: []float64{1.0, 2.0},
+			want:  1.5,
+		},
+		{
+			name:  "Three elements",
+			input: []float64{3.0, 1.0, 2.0},
+			want:  2.0,
+		},
+		{
+			name:  "Four elements",
+			input: []float64{4.0, 1.0, 3.0, 2.0},
+			want:  2.5,
+		},
+		{
+			name:  "Five elements",
+			input: []float64{5.0, 4.0, 3.0, 2.0, 1.0},
+			want:  3.0,
+		},
+		{
+			name:  "Six elements",
+			input: []float64{6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
+			want:  3.5,
+		},
+		{
+			name:  "Seven elements",
+			input: []float64{7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
+			want:  4.0,
+		},
+		{
+			name:  "Eight elements",
+			input: []float64{8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
+			want:  4.5,
+		},
+		{
+			name:  "Duplicate values",
+			input: []float64{1.0, 2.0, 2.0, 3.0, 3.0, 4.0},
+			want:  2.5,
+		},
+		{
+			name:  "Negative values",
+			input: []float64{-1.0, -2.0, -3.0, -4.0, -5.0},
+			want:  -3.0,
+		},
+		{
+			name:  "Mixed positive and negative values",
+			input: []float64{-1.0, 2.0, -3.0, 4.0, -5.0, 6.0},
+			want:  0.5,
+		},
 	}
 
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			result := floats.Median(test.input)
-			if result != test.expected {
-				t.Errorf("floats.Median(%v) = %v; expected %v", test.input, result, test.expected)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("expected panic, got none")
+					}
+				}()
+				_ = floats.Median(tt.input)
+			} else {
+				got := floats.Median(tt.input)
+				if got != tt.want {
+					t.Errorf("Median(%v) = %v, want %v", tt.input, got, tt.want)
+				}
 			}
 		})
 	}
+}
 
-	t.Run("NilSlice", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("floats.Median of nil slice did not panic")
-			}
-		}()
-		floats.Median(nil)
-	})
+func TestFaultTolerantMidpoint(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     []float64
+		want      float64
+		wantPanic bool
+	}{
+		{
+			name:      "Nil slice",
+			input:     nil,
+			wantPanic: true,
+		},
+		{
+			name:      "Empty slice",
+			input:     []float64{},
+			wantPanic: true,
+		},
+		{
+			name:  "Single element",
+			input: []float64{42.0},
+			want:  42.0,
+		},
+		{
+			name:  "Two elements",
+			input: []float64{1.0, 2.0},
+			want:  1.5,
+		},
+		{
+			name:  "Three elements",
+			input: []float64{3.0, 1.0, 2.0},
+			want:  2.0,
+		},
+		{
+			name:  "Four elements",
+			input: []float64{4.0, 1.0, 3.0, 2.0},
+			want:  2.5,
+		},
+		{
+			name:  "Five elements",
+			input: []float64{5.0, 4.0, 3.0, 2.0, 1.0},
+			want:  3.0,
+		},
+		{
+			name:  "Six elements",
+			input: []float64{6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
+			want:  3.5,
+		},
+		{
+			name:  "Seven elements",
+			input: []float64{7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
+			want:  4.0,
+		},
+		{
+			name:  "Eight elements",
+			input: []float64{8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
+			want:  4.5,
+		},
+		{
+			name:  "Duplicate values",
+			input: []float64{1.0, 2.0, 2.0, 3.0, 3.0, 4.0},
+			want:  2.5,
+		},
+		{
+			name:  "Negative values",
+			input: []float64{-1.0, -2.0, -3.0, -4.0, -5.0},
+			want:  -3.0,
+		},
+		{
+			name:  "Mixed positive and negative values",
+			input: []float64{-1.0, 2.0, -3.0, 4.0, -5.0, 6.0},
+			want:  0.5,
+		},
+	}
 
-	t.Run("EmptySlice", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("floats.Median of empty slice did not panic")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("expected panic, got none")
+					}
+				}()
+				_ = floats.FaultTolerantMidpoint(tt.input)
+			} else {
+				got := floats.FaultTolerantMidpoint(tt.input)
+				if got != tt.want {
+					t.Errorf("FaultTolerantMidpoint(%v) = %v, want %v", tt.input, got, tt.want)
+				}
 			}
-		}()
-		floats.Median([]float64{})
-	})
+		})
+	}
 }

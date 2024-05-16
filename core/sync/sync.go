@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"example.com/scion-time/base/floats"
 	"example.com/scion-time/base/metrics"
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
@@ -104,7 +105,6 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
-			// lclk.Adjust(corr, refClkInterval, 0)
 			pll.Do(corr, 1000.0 /* weight */)
 			corrGauge.Set(float64(corr))
 		}
@@ -119,6 +119,20 @@ func measureOffsetToNetClocks(timeout time.Duration) (
 	netClkClient.MeasureClockOffsets(ctx, netClks, netClkOffsets)
 	m := measurements.FaultTolerantMidpoint(netClkOffsets)
 	return m.Timestamp, m.Offset
+}
+
+func driftOfNetClocks() float64 {
+	var ds []float64
+	for _, netClk := range netClks {
+		d, ok := netClk.Drift()
+		if ok {
+			ds = append(ds, d)
+		}
+	}
+	if len(ds) == 0 {
+		return 0.0
+	}
+	return floats.FaultTolerantMidpoint(ds)
 }
 
 func RunGlobalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
@@ -146,11 +160,11 @@ func RunGlobalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 	for {
 		corrGauge.Set(0)
 		_, corr := measureOffsetToNetClocks(netClkTimeout)
+		_ = driftOfNetClocks()
 		if timemath.Abs(corr) > netClkCutoff {
 			if float64(timemath.Abs(corr)) > maxCorr {
 				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
 			}
-			// lclk.Adjust(corr, netClkInterval, 0)
 			pll.Do(corr, 1000.0 /* weight */)
 			corrGauge.Set(float64(corr))
 		}

@@ -1,21 +1,32 @@
 package floats
 
 import (
-	"cmp"
 	"slices"
 )
+
+func midpoint(x, y float64) float64 {
+	return x + (y-x)/2.0
+}
 
 func Median(fs []float64) float64 {
 	n := len(fs)
 	if n == 0 {
 		panic("unexpected number of values")
 	}
-	slices.SortFunc(fs, func(a, b float64) int {
-		return cmp.Compare(a, b)
-	})
+	slices.Sort(fs)
 	i := n / 2
 	if n%2 != 0 {
 		return fs[i]
 	}
-	return fs[i-1] + (fs[i]-fs[i-1])/2
+	return midpoint(fs[i-1], fs[i])
+}
+
+func FaultTolerantMidpoint(fs []float64) float64 {
+	n := len(fs)
+	if n == 0 {
+		panic("unexpected number of values")
+	}
+	slices.Sort(fs)
+	f := (n - 1) / 3
+	return midpoint(fs[f], fs[n-1-f])
 }
