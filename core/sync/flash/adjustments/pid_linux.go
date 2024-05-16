@@ -50,7 +50,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"example.com/scion-time/base/logbase"
-	"example.com/scion-time/base/timemath"
 	"example.com/scion-time/base/unixutil"
 )
 
@@ -96,7 +95,7 @@ type PIDController struct {
 
 var _ Adjustment = (*PIDController)(nil)
 
-func (c *PIDController) Do(offset time.Duration, drift float64) {
+func (c *PIDController) Do(offset, drift time.Duration) {
 	ctx := context.Background()
 	log := slog.Default()
 
@@ -112,15 +111,15 @@ func (c *PIDController) Do(offset time.Duration, drift float64) {
 	c.i += c.freqAddend * c.KI
 	freq -= c.freqAddend - (c.freqAddend * c.KI)
 
-	if c.StepThreshold != 0 && timemath.Abs(offset) >= c.StepThreshold {
-		freq += drift
+	if c.StepThreshold != 0 && offset.Abs() >= c.StepThreshold {
+		freq += float64(drift)
 		c.freqAddend = 0
 	} else {
-		c.p = timemath.Seconds(offset) * c.KP
+		c.p = offset.Seconds() * c.KP
 		c.freqAddend = c.p
 		c.d = 0.0
 		if c.KD != 0.0 {
-			c.d = drift * c.KD
+			c.d = float64(drift) * c.KD
 			c.freqAddend += c.d
 		}
 		freq += c.freqAddend

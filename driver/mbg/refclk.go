@@ -195,6 +195,6 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 	return sysTime, offset, nil
 }
 
-func (c *ReferenceClock) Drift() (float64, bool) {
-	return 0.0, false
+func (c *ReferenceClock) Drift() (time.Duration, bool) {
+	return 0, false
 }

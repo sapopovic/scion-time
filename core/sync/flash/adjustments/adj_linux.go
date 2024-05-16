@@ -42,7 +42,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"example.com/scion-time/base/logbase"
-	"example.com/scion-time/base/timemath"
 	"example.com/scion-time/base/unixutil"
 )
 
@@ -59,11 +58,11 @@ type Adjtimex struct{}
 
 var _ Adjustment = (*Adjtimex)(nil)
 
-func (a *Adjtimex) Do(offset time.Duration, drift float64) {
+func (a *Adjtimex) Do(offset, drift time.Duration) {
 	ctx := context.Background()
 	log := slog.Default()
 	tx := unix.Timex{}
-	if timemath.Abs(offset) > adjStepLimit {
+	if offset.Abs() > adjStepLimit {
 		log.LogAttrs(ctx, slog.LevelDebug, "stepping clock",
 			slog.Duration("offset", offset))
 		tx.Modes |= unix.ADJ_SETOFFSET

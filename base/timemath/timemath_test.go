@@ -1,6 +1,6 @@
 package timemath_test
 
-// Based on an OpenAI GPT-4 interaction
+// Based on an OpenAI GPT-4 and GPT-4o interaction
 
 import (
 	"math"
@@ -36,58 +36,35 @@ func TestSeconds(t *testing.T) {
 		want     float64
 	}{
 		{1500 * time.Millisecond, 1.5},
-		{time.Second, 1},
-		{0, 0},
-		{-time.Second, -1},
+		{time.Second, 1.0},
+		{0, 0.0},
+		{-time.Second, -1.0},
 		{-1500 * time.Millisecond, -1.5},
 	}
 
 	for _, tt := range tests {
-		got := timemath.Seconds(tt.duration)
+		got := tt.duration.Seconds()
 		if got != tt.want {
-			t.Errorf("timemath.Seconds(%v) = %v, want %v", tt.duration, got, tt.want)
+			t.Errorf("(%v).Seconds() = %v, want %v", tt.duration, got, tt.want)
 		}
 	}
 }
 
-func TestAbs(t *testing.T) {
-	tests := []struct {
-		duration time.Duration
-		want     time.Duration
-	}{
-		{time.Second, time.Second},
-		{-time.Second, time.Second},
-		{0, 0},
-	}
 
-	for _, tt := range tests {
-		got := timemath.Abs(tt.duration)
-		if got != tt.want {
-			t.Errorf("timemath.Abs(%v) = %v, want %v", tt.duration, got, tt.want)
-		}
-	}
-
-	// Testing panic for timemath.Abs with math.MinInt64
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("timemath.Abs(%v), did not panic", math.MinInt64)
-		}
-	}()
-	timemath.Abs(math.MinInt64)
-}
-
-func TestSign(t *testing.T) {
+func TestSgn(t *testing.T) {
 	tests := []struct {
 		duration time.Duration
 		want     int
 	}{
-		{time.Second, 1},
-		{-time.Second, -1},
 		{0, 0},
+		{-time.Second, -1},
+		{time.Second, 1},
+		{math.MinInt64, -1},
+		{math.MaxInt64, 1},
 	}
 
 	for _, tt := range tests {
-		got := timemath.Sign(tt.duration)
+		got := timemath.Sgn(tt.duration)
 		if got != tt.want {
 			t.Errorf("timemath.Sign(%v) = %v, want %v", tt.duration, got, tt.want)
 		}
@@ -99,9 +76,11 @@ func TestInv(t *testing.T) {
 		duration time.Duration
 		want     time.Duration
 	}{
-		{time.Second, -time.Second},
-		{-time.Second, time.Second},
 		{0, 0},
+		{-time.Second, time.Second},
+		{time.Second, -time.Second},
+		{math.MinInt64, math.MaxInt64},
+		{math.MaxInt64, -math.MaxInt64},
 	}
 
 	for _, tt := range tests {
@@ -110,12 +89,190 @@ func TestInv(t *testing.T) {
 			t.Errorf("timemath.Inv(%v) = %v, want %v", tt.duration, got, tt.want)
 		}
 	}
+}
 
-	// Testing panic for Inv with math.MinInt64
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("timemath.Inv(%v), did not panic", math.MinInt64)
-		}
-	}()
-	timemath.Inv(math.MinInt64)
+func TestMedian(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     []time.Duration
+		want      time.Duration
+		wantPanic bool
+	}{
+		{
+			name:      "Nil slice",
+			input:     nil,
+			wantPanic: true,
+		},
+		{
+			name:      "Empty slice",
+			input:     []time.Duration{},
+			wantPanic: true,
+		},
+		{
+			name:  "Single element",
+			input: []time.Duration{42},
+			want:  42,
+		},
+		{
+			name:  "Two elements",
+			input: []time.Duration{10, 20},
+			want:  15,
+		},
+		{
+			name:  "Three elements",
+			input: []time.Duration{30, 10, 20},
+			want:  20,
+		},
+		{
+			name:  "Four elements",
+			input: []time.Duration{40, 10, 30, 20},
+			want:  25,
+		},
+		{
+			name:  "Five elements",
+			input: []time.Duration{50, 40, 30, 20, 10},
+			want:  30,
+		},
+		{
+			name:  "Six elements",
+			input: []time.Duration{60, 50, 40, 30, 20, 10},
+			want:  35,
+		},
+		{
+			name:  "Seven elements",
+			input: []time.Duration{70, 60, 50, 40, 30, 20, 10},
+			want:  40,
+		},
+		{
+			name:  "Eight elements",
+			input: []time.Duration{80, 70, 60, 50, 40, 30, 20, 10},
+			want:  45,
+		},
+		{
+			name:  "Duplicate values",
+			input: []time.Duration{10, 20, 20, 30, 30, 40},
+			want:  25,
+		},
+		{
+			name:  "Negative values",
+			input: []time.Duration{-10, -20, -30, -40, -50},
+			want:  -30,
+		},
+		{
+			name:  "Mixed positive and negative values",
+			input: []time.Duration{-10, 20, -30, 40, -50, 60},
+			want:  5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("expected panic, got none")
+					}
+				}()
+				_ = timemath.Median(tt.input)
+			} else {
+				got := timemath.Median(tt.input)
+				if got != tt.want {
+					t.Errorf("Median(%v) = %v, want %v", tt.input, got, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestFaultTolerantMidpoint(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     []time.Duration
+		want      time.Duration
+		wantPanic bool
+	}{
+		{
+			name:      "Nil slice",
+			input:     nil,
+			wantPanic: true,
+		},
+		{
+			name:      "Empty slice",
+			input:     []time.Duration{},
+			wantPanic: true,
+		},
+		{
+			name:  "Single element",
+			input: []time.Duration{42},
+			want:  42,
+		},
+		{
+			name:  "Two elements",
+			input: []time.Duration{10, 20},
+			want:  15,
+		},
+		{
+			name:  "Three elements",
+			input: []time.Duration{30, 10, 20},
+			want:  20,
+		},
+		{
+			name:  "Four elements",
+			input: []time.Duration{40, 10, 30, 20},
+			want:  25,
+		},
+		{
+			name:  "Five elements",
+			input: []time.Duration{50, 40, 30, 20, 10},
+			want:  30,
+		},
+		{
+			name:  "Six elements",
+			input: []time.Duration{60, 50, 40, 30, 20, 10},
+			want:  35,
+		},
+		{
+			name:  "Seven elements",
+			input: []time.Duration{70, 60, 50, 40, 30, 20, 10},
+			want:  40,
+		},
+		{
+			name:  "Eight elements",
+			input: []time.Duration{80, 70, 60, 50, 40, 30, 20, 10},
+			want:  45,
+		},
+		{
+			name:  "Duplicate values",
+			input: []time.Duration{10, 20, 20, 30, 30, 40},
+			want:  25,
+		},
+		{
+			name:  "Negative values",
+			input: []time.Duration{-10, -20, -30, -40, -50},
+			want:  -30,
+		},
+		{
+			name:  "Mixed positive and negative values",
+			input: []time.Duration{-10, 20, -30, 40, -50, 60},
+			want:  5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("expected panic, got none")
+					}
+				}()
+				_ = timemath.FaultTolerantMidpoint(tt.input)
+			} else {
+				got := timemath.FaultTolerantMidpoint(tt.input)
+				if got != tt.want {
+					t.Errorf("FaultTolerantMidpoint(%v) = %v, want %v", tt.input, got, tt.want)
+				}
+			}
+		})
+	}
 }

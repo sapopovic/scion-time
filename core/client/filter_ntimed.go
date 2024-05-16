@@ -29,7 +29,7 @@ func NewNtimedFilter(log *slog.Logger) *NtimedFilter {
 
 func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, weight float64) {
 	offset = mid
-	weight = 0.001 + trust*2.0/timemath.Seconds(hi-lo)
+	weight = 0.001 + trust*2.0/(hi-lo).Seconds()
 	if weight < 1.0 {
 		weight = 1.0
 	}
@@ -43,8 +43,8 @@ func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 
 	var weight float64
 
-	lo := timemath.Seconds(cTxTime.Sub(sRxTime))
-	hi := timemath.Seconds(cRxTime.Sub(sTxTime))
+	lo := cTxTime.Sub(sRxTime).Seconds()
+	hi := cRxTime.Sub(sTxTime).Seconds()
 	mid := (lo + hi) / 2
 
 	if f.epoch != timebase.Epoch() {
@@ -108,7 +108,7 @@ func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 			slog.Float64("loLim [s]", loLim),
 			slog.Float64("amid [s]", f.amid),
 			slog.Float64("hiLim [s]", hiLim),
-			slog.Float64("offset [s]", timemath.Seconds(offset)),
+			slog.Float64("offset [s]", offset.Seconds()),
 			slog.Float64("weight", weight),
 		)
 	}

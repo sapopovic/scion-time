@@ -2,6 +2,7 @@ package timemath
 
 import (
 	"math"
+	"slices"
 	"time"
 )
 
@@ -9,33 +10,49 @@ func Duration(seconds float64) time.Duration {
 	return time.Duration(seconds * float64(time.Second))
 }
 
-func Seconds(duration time.Duration) float64 {
-	return float64(duration) / float64(time.Second)
-}
-
-func Abs(d time.Duration) time.Duration {
-	if d == math.MinInt64 {
-		panic("unexpected duration value (math.MinInt64)")
-	}
-	if d < 0 {
-		d = -d
-	}
-	return d
-}
-
-func Sign(d time.Duration) int {
-	if d < 0 {
+func Sgn(d time.Duration) int {
+	switch {
+	case d < 0:
 		return -1
-	}
-	if d > 0 {
+	case d > 0:
 		return 1
+	default:
+		return 0
 	}
-	return 0
 }
 
 func Inv(d time.Duration) time.Duration {
-	if d == math.MinInt64 {
-		panic("unexpected duration value (math.MinInt64)")
+	switch {
+	case d == math.MinInt64:
+		return math.MaxInt64
+	default:
+		return -d
 	}
-	return -d
+}
+
+func midpoint(x, y time.Duration) time.Duration {
+	return x + (y-x)/2.0
+}
+
+func Median(ds []time.Duration) time.Duration {
+	n := len(ds)
+	if n == 0 {
+		panic("unexpected number of values")
+	}
+	slices.Sort(ds)
+	i := n / 2
+	if n%2 != 0 {
+		return ds[i]
+	}
+	return midpoint(ds[i-1], ds[i])
+}
+
+func FaultTolerantMidpoint(ds []time.Duration) time.Duration {
+	n := len(ds)
+	if n == 0 {
+		panic("unexpected number of values")
+	}
+	slices.Sort(ds)
+	f := (n - 1) / 3
+	return midpoint(ds[f], ds[n-1-f])
 }

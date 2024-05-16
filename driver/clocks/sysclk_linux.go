@@ -15,7 +15,6 @@ import (
 
 	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/base/timebase"
-	"example.com/scion-time/base/timemath"
 	"example.com/scion-time/base/unixutil"
 )
 
@@ -143,7 +142,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 	if duration == 0 {
 		duration = time.Second
 	}
-	setFrequency(c.Log, frequency+timemath.Seconds(offset)/timemath.Seconds(duration))
+	setFrequency(c.Log, frequency+offset.Seconds()/duration.Seconds())
 	c.adjustment = &adjustment{
 		clock:     c,
 		duration:  duration,

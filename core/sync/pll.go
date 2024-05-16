@@ -45,7 +45,7 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 			panic("unexpected clock behavior")
 		}
 		if mdt > 2*time.Second && weight > 3 {
-			if timemath.Abs(offset) > 1*time.Millisecond {
+			if offset.Abs() > 1*time.Millisecond {
 				l.clk.Step(timemath.Inv(offset))
 			}
 			l.t0 = now
@@ -71,7 +71,7 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 		if mdt < 0 {
 			panic("unexpected clock behavior")
 		}
-		dt = timemath.Seconds(now.Sub(l.t))
+		dt = now.Sub(l.t).Seconds()
 		if dt < 0.0 {
 			panic("unexpected clock behavior")
 		}
@@ -94,7 +94,7 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 			a = l.a
 			b = l.b
 		}
-		p = timemath.Seconds(timemath.Inv(offset)) * a
+		p = timemath.Inv(offset).Seconds() * a
 		d = math.Ceil(dt)
 		l.i += p * b
 		if p > d*500e-6 {
@@ -111,7 +111,7 @@ func (l *pll) Do(offset time.Duration, weight float64) {
 		"PLL iteration",
 		slog.Uint64("mode", l.mode),
 		slog.Float64("dt", dt),
-		slog.Float64("offset", timemath.Seconds(offset)),
+		slog.Float64("offset", offset.Seconds()),
 		slog.Float64("weight", weight),
 		slog.Float64("p", p),
 		slog.Float64("d", d),

@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"example.com/scion-time/base/floats"
 	"example.com/scion-time/base/metrics"
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
@@ -44,8 +43,8 @@ func (c *localReferenceClock) MeasureClockOffset(context.Context) (
 	return time.Time{}, 0, nil
 }
 
-func (c *localReferenceClock) Drift() (float64, bool) {
-	return 0.0, false
+func (c *localReferenceClock) Drift() (time.Duration, bool) {
+	return 0, false
 }
 
 func RegisterClocks(refClocks, netClocks []client.ReferenceClock) {
@@ -101,9 +100,9 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 	for {
 		corrGauge.Set(0)
 		_, corr := measureOffsetToRefClocks(refClkTimeout)
-		if timemath.Abs(corr) > refClkCutoff {
-			if float64(timemath.Abs(corr)) > maxCorr {
-				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
+		if corr.Abs() > refClkCutoff {
+			if float64(corr.Abs()) > maxCorr {
+				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)
 			}
 			pll.Do(corr, 1000.0 /* weight */)
 			corrGauge.Set(float64(corr))
@@ -121,8 +120,8 @@ func measureOffsetToNetClocks(timeout time.Duration) (
 	return m.Timestamp, m.Offset
 }
 
-func driftOfNetClocks() float64 {
-	var ds []float64
+func driftOfNetClocks() time.Duration {
+	var ds []time.Duration
 	for _, netClk := range netClks {
 		d, ok := netClk.Drift()
 		if ok {
@@ -132,7 +131,7 @@ func driftOfNetClocks() float64 {
 	if len(ds) == 0 {
 		return 0.0
 	}
-	return floats.FaultTolerantMidpoint(ds)
+	return timemath.FaultTolerantMidpoint(ds)
 }
 
 func RunNetworkClockSync(log *slog.Logger, lclk timebase.LocalClock) {
@@ -161,9 +160,9 @@ func RunNetworkClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 		corrGauge.Set(0)
 		_, corr := measureOffsetToNetClocks(netClkTimeout)
 		_ = driftOfNetClocks()
-		if timemath.Abs(corr) > netClkCutoff {
-			if float64(timemath.Abs(corr)) > maxCorr {
-				corr = time.Duration(float64(timemath.Sign(corr)) * maxCorr)
+		if corr.Abs() > netClkCutoff {
+			if float64(corr.Abs()) > maxCorr {
+				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)
 			}
 			pll.Do(corr, 1000.0 /* weight */)
 			corrGauge.Set(float64(corr))

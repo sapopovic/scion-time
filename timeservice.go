@@ -206,7 +206,7 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (
 	return client.MeasureClockOffsetIP(ctx, c.log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
-func (c *ntpReferenceClockIP) Drift() (float64, bool) {
+func (c *ntpReferenceClockIP) Drift() (time.Duration, bool) {
 	return client.ClockDriftIP(c.ntpc)
 }
 
@@ -258,7 +258,7 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
 }
 
-func (c *ntpReferenceClockSCION) Drift() (float64, bool) {
+func (c *ntpReferenceClockSCION) Drift() (time.Duration, bool) {
 	return client.ClockDriftSCION(c.ntpcs[:])
 }
 
