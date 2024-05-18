@@ -327,7 +327,7 @@ func tlsConfig(cfg svcConfig) *tls.Config {
 }
 
 func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
-	refClocks, netClocks []client.ReferenceClock) {
+	refClocks, peerClocks []client.ReferenceClock) {
 	dscp := dscp(cfg)
 
 	for _, s := range cfg.MBGReferenceClocks {
@@ -397,7 +397,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 			logbase.Fatal(slog.Default(), "unexpected peer address", slog.String("address", s), slog.Any("error", err))
 		}
 		ntskeServer := ntskeServerFromRemoteAddr(s)
-		netClocks = append(netClocks, newNTPReferenceClockSCION(
+		peerClocks = append(peerClocks, newNTPReferenceClockSCION(
 			log,
 			cfg.DaemonAddr,
 			udp.UDPAddrFromSnet(localAddr),
@@ -430,7 +430,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 				}
 			}
 		}
-		for _, c := range netClocks {
+		for _, c := range peerClocks {
 			scionclk, ok := c.(*ntpReferenceClockSCION)
 			if ok {
 				scionclk.pather = pather
@@ -460,8 +460,8 @@ func runServer(configFile string) {
 	daemonAddr := daemonAddress(cfg)
 
 	localAddr.Host.Port = 0
-	refClocks, netClocks := createClocks(cfg, localAddr, log)
-	sync.RegisterClocks(refClocks, netClocks)
+	refClocks, peerClocks := createClocks(cfg, localAddr, log)
+	sync.RegisterClocks(refClocks, peerClocks)
 
 	lclk := &clocks.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -471,7 +471,7 @@ func runServer(configFile string) {
 		go sync.RunLocalClockSync(log, lclk)
 	}
 
-	if len(netClocks) != 0 {
+	if len(peerClocks) != 0 {
 		go sync.RunNetworkClockSync(log, lclk)
 	}
 
@@ -499,8 +499,8 @@ func runRelay(configFile string) {
 	daemonAddr := daemonAddress(cfg)
 
 	localAddr.Host.Port = 0
-	refClocks, netClocks := createClocks(cfg, localAddr, log)
-	sync.RegisterClocks(refClocks, netClocks)
+	refClocks, peerClocks := createClocks(cfg, localAddr, log)
+	sync.RegisterClocks(refClocks, peerClocks)
 
 	lclk := &clocks.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -510,8 +510,8 @@ func runRelay(configFile string) {
 		go sync.RunLocalClockSync(log, lclk)
 	}
 
-	if len(netClocks) != 0 {
-		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(netClocks)))
+	if len(peerClocks) != 0 {
+		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(peerClocks)))
 	}
 
 	dscp := dscp(cfg)
@@ -537,8 +537,8 @@ func runClient(configFile string) {
 	localAddr := localAddress(cfg)
 
 	localAddr.Host.Port = 0
-	refClocks, netClocks := createClocks(cfg, localAddr, log)
-	sync.RegisterClocks(refClocks, netClocks)
+	refClocks, peerClocks := createClocks(cfg, localAddr, log)
+	sync.RegisterClocks(refClocks, peerClocks)
 
 	lclk := &clocks.SystemClock{Log: log}
 	timebase.RegisterClock(lclk)
@@ -560,8 +560,8 @@ func runClient(configFile string) {
 		go sync.RunLocalClockSync(log, lclk)
 	}
 
-	if len(netClocks) != 0 {
-		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(netClocks)))
+	if len(peerClocks) != 0 {
+		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(peerClocks)))
 	}
 
 	runMonitor()
