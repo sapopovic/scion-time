@@ -50,7 +50,6 @@ func TestSeconds(t *testing.T) {
 	}
 }
 
-
 func TestSgn(t *testing.T) {
 	tests := []struct {
 		duration time.Duration
