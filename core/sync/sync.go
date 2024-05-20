@@ -29,15 +29,6 @@ const (
 
 type localReferenceClock struct{}
 
-var (
-	refClks        []client.ReferenceClock
-	refClkOffsets  []measurements.Measurement
-	refClkClient   client.ReferenceClockClient
-	peerClks       []client.ReferenceClock
-	peerClkOffsets []measurements.Measurement
-	peerClkClient  client.ReferenceClockClient
-)
-
 func (c *localReferenceClock) MeasureClockOffset(context.Context) (
 	time.Time, time.Duration, error) {
 	return time.Time{}, 0, nil
@@ -47,23 +38,9 @@ func (c *localReferenceClock) Drift() (time.Duration, bool) {
 	return 0, false
 }
 
-func RegisterClocks(refClocks, peerClocks []client.ReferenceClock) {
-	if refClks != nil || peerClks != nil {
-		panic("reference clocks already registered")
-	}
-
-	refClks = refClocks
-	refClkOffsets = make([]measurements.Measurement, len(refClks))
-
-	peerClks = peerClocks
-	if len(peerClks) != 0 {
-		peerClks = append(peerClks, &localReferenceClock{})
-	}
-	peerClkOffsets = make([]measurements.Measurement, len(peerClks))
-}
-
-func measureOffsetToRefClocks(timeout time.Duration) (
-	time.Time, time.Duration) {
+func measureOffsetToRefClocks(refClkClient client.ReferenceClockClient,
+	refClks []client.ReferenceClock, refClkOffsets []measurements.Measurement,
+	timeout time.Duration) (time.Time, time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	refClkClient.MeasureClockOffsets(ctx, refClks, refClkOffsets)
@@ -71,14 +48,7 @@ func measureOffsetToRefClocks(timeout time.Duration) (
 	return m.Timestamp, m.Offset
 }
 
-func SyncToRefClocks(log *slog.Logger, lclk timebase.LocalClock) {
-	_, corr := measureOffsetToRefClocks(refClkTimeout)
-	if corr != 0 {
-		lclk.Step(corr)
-	}
-}
-
-func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
+func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []client.ReferenceClock) {
 	if refClkImpact <= 1.0 {
 		panic("invalid reference clock impact factor")
 	}
@@ -96,10 +66,12 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 		Name: metrics.SyncLocalCorrN,
 		Help: metrics.SyncLocalCorrH,
 	})
+	var refClkClient client.ReferenceClockClient
+	refClkOffsets := make([]measurements.Measurement, len(refClks))
 	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		_, corr := measureOffsetToRefClocks(refClkTimeout)
+		_, corr := measureOffsetToRefClocks(refClkClient, refClks, refClkOffsets, refClkTimeout)
 		if corr.Abs() > refClkCutoff {
 			if float64(corr.Abs()) > maxCorr {
 				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)
@@ -111,8 +83,9 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock) {
 	}
 }
 
-func measureOffsetToPeerClocks(timeout time.Duration) (
-	time.Time, time.Duration) {
+func measureOffsetToPeerClocks(peerClkClient client.ReferenceClockClient,
+	peerClks []client.ReferenceClock, peerClkOffsets []measurements.Measurement,
+	timeout time.Duration) (time.Time, time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	peerClkClient.MeasureClockOffsets(ctx, peerClks, peerClkOffsets)
@@ -120,7 +93,7 @@ func measureOffsetToPeerClocks(timeout time.Duration) (
 	return m.Timestamp, m.Offset
 }
 
-func driftOfPeerClocks() time.Duration {
+func driftOfPeerClocks(peerClks []client.ReferenceClock) time.Duration {
 	var ds []time.Duration
 	for _, peerClk := range peerClks {
 		d, ok := peerClk.Drift()
@@ -134,32 +107,38 @@ func driftOfPeerClocks() time.Duration {
 	return timemath.FaultTolerantMidpoint(ds)
 }
 
-func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock) {
+func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []client.ReferenceClock) {
 	if peerClkImpact <= 1.0 {
-		panic("invalid network clock impact factor")
+		panic("invalid peer clock impact factor")
 	}
 	if peerClkImpact-1.0 <= refClkImpact {
-		panic("invalid network clock impact factor")
+		panic("invalid peer clock impact factor")
 	}
 	if peerClkInterval < refClkInterval {
-		panic("invalid network clock sync interval")
+		panic("invalid peer clock sync interval")
 	}
 	if peerClkTimeout < 0 || peerClkTimeout > peerClkInterval/2 {
-		panic("invalid network clock sync timeout")
+		panic("invalid peer clock sync timeout")
 	}
 	maxCorr := peerClkImpact * float64(lclk.MaxDrift(peerClkInterval))
 	if maxCorr <= 0 {
-		panic("invalid network clock max correction")
+		panic("invalid peer clock max correction")
 	}
 	corrGauge := promauto.NewGauge(prometheus.GaugeOpts{
 		Name: metrics.SyncNetworkCorrN,
 		Help: metrics.SyncNetworkCorrH,
 	})
+	var peerClkClient client.ReferenceClockClient
+	if len(peerClks) != 0 {
+		peerClks = append(peerClks, &localReferenceClock{})
+	}
+	peerClkOffsets := make([]measurements.Measurement, len(peerClks))
 	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		_, corr := measureOffsetToPeerClocks(peerClkTimeout)
-		_ = driftOfPeerClocks()
+		_, corr := measureOffsetToPeerClocks(
+			peerClkClient, peerClks, peerClkOffsets, peerClkTimeout)
+		_ = driftOfPeerClocks(peerClks)
 		if corr.Abs() > peerClkCutoff {
 			if float64(corr.Abs()) > maxCorr {
 				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)
