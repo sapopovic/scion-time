@@ -95,6 +95,10 @@ type PIDController struct {
 
 var _ Adjustment = (*PIDController)(nil)
 
+func freqOffset(offset time.Duration) float64 {
+	return offset.Seconds()
+}
+
 func (c *PIDController) Do(offset, drift time.Duration) {
 	ctx := context.Background()
 	log := slog.Default()
@@ -115,7 +119,7 @@ func (c *PIDController) Do(offset, drift time.Duration) {
 		freq += float64(drift)
 		c.freqAddend = 0
 	} else {
-		c.p = offset.Seconds() * c.KP
+		c.p = freqOffset(offset) * c.KP
 		c.freqAddend = c.p
 		c.d = 0.0
 		if c.KD != 0.0 {
