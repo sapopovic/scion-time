@@ -38,14 +38,28 @@ func (c *localReferenceClock) Drift() (time.Duration, bool) {
 	return 0, false
 }
 
-func measureOffsetToRefClocks(refClkClient client.ReferenceClockClient,
+func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 	refClks []client.ReferenceClock, refClkOffsets []measurements.Measurement,
 	timeout time.Duration) (time.Time, time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	refClkClient.MeasureClockOffsets(ctx, refClks, refClkOffsets)
-	m := measurements.Median(refClkOffsets)
+	m := measurements.FaultTolerantMidpoint(refClkOffsets)
 	return m.Timestamp, m.Offset
+}
+
+func driftOfRefClks(refClks []client.ReferenceClock) time.Duration {
+	var ds []time.Duration
+	for _, refClk := range refClks {
+		d, ok := refClk.Drift()
+		if ok {
+			ds = append(ds, d)
+		}
+	}
+	if len(ds) == 0 {
+		return 0.0
+	}
+	return timemath.FaultTolerantMidpoint(ds)
 }
 
 func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []client.ReferenceClock) {
@@ -71,7 +85,7 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []cli
 	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		_, corr := measureOffsetToRefClocks(refClkClient, refClks, refClkOffsets, refClkTimeout)
+		_, corr := measureOffsetToRefClks(refClkClient, refClks, refClkOffsets, refClkTimeout)
 		if corr.Abs() > refClkCutoff {
 			if float64(corr.Abs()) > maxCorr {
 				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)
@@ -81,30 +95,6 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []cli
 		}
 		lclk.Sleep(refClkInterval)
 	}
-}
-
-func measureOffsetToPeerClocks(peerClkClient client.ReferenceClockClient,
-	peerClks []client.ReferenceClock, peerClkOffsets []measurements.Measurement,
-	timeout time.Duration) (time.Time, time.Duration) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	peerClkClient.MeasureClockOffsets(ctx, peerClks, peerClkOffsets)
-	m := measurements.FaultTolerantMidpoint(peerClkOffsets)
-	return m.Timestamp, m.Offset
-}
-
-func driftOfPeerClocks(peerClks []client.ReferenceClock) time.Duration {
-	var ds []time.Duration
-	for _, peerClk := range peerClks {
-		d, ok := peerClk.Drift()
-		if ok {
-			ds = append(ds, d)
-		}
-	}
-	if len(ds) == 0 {
-		return 0.0
-	}
-	return timemath.FaultTolerantMidpoint(ds)
 }
 
 func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []client.ReferenceClock) {
@@ -136,9 +126,9 @@ func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []cli
 	pll := newPLL(log, lclk)
 	for {
 		corrGauge.Set(0)
-		_, corr := measureOffsetToPeerClocks(
+		_, corr := measureOffsetToRefClks(
 			peerClkClient, peerClks, peerClkOffsets, peerClkTimeout)
-		_ = driftOfPeerClocks(peerClks)
+		_ = driftOfRefClks(peerClks)
 		if corr.Abs() > peerClkCutoff {
 			if float64(corr.Abs()) > maxCorr {
 				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)
