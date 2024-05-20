@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"example.com/scion-time/base/floats"
 	"example.com/scion-time/base/metrics"
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
@@ -34,8 +35,8 @@ func (c *localReferenceClock) MeasureClockOffset(context.Context) (
 	return time.Time{}, 0, nil
 }
 
-func (c *localReferenceClock) Drift() (time.Duration, bool) {
-	return 0, false
+func (c *localReferenceClock) Drift() (float64, bool) {
+	return 0.0, false
 }
 
 func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
@@ -48,8 +49,8 @@ func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 	return m.Timestamp, m.Offset
 }
 
-func driftOfRefClks(refClks []client.ReferenceClock) time.Duration {
-	var ds []time.Duration
+func driftOfRefClks(refClks []client.ReferenceClock) float64 {
+	var ds []float64
 	for _, refClk := range refClks {
 		d, ok := refClk.Drift()
 		if ok {
@@ -59,7 +60,7 @@ func driftOfRefClks(refClks []client.ReferenceClock) time.Duration {
 	if len(ds) == 0 {
 		return 0.0
 	}
-	return timemath.FaultTolerantMidpoint(ds)
+	return floats.FaultTolerantMidpoint(ds)
 }
 
 func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []client.ReferenceClock) {

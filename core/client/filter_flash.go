@@ -33,7 +33,7 @@ type LuckyPacketFilter struct {
 	pick      int
 	state     []measurement
 	luckyPkts []measurement
-	drift     time.Duration
+	drift     float64
 }
 
 var _ measurements.Filter = (*LuckyPacketFilter)(nil)
@@ -52,7 +52,7 @@ func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
 	}
 }
 
-func (f *LuckyPacketFilter) Drift() (time.Duration, bool) {
+func (f *LuckyPacketFilter) Drift() (float64, bool) {
 	return f.drift, len(f.state) >= 2
 }
 
@@ -75,7 +75,7 @@ func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 			float64(f.state[i].stamp.Sub(f.state[i-1].stamp).Nanoseconds())
 	}
 	d /= float64(len(f.state))
-	f.drift = time.Duration(d)
+	f.drift = d
 	f.luckyPkts = f.luckyPkts[:len(f.state)]
 	copy(f.luckyPkts, f.state)
 	if f.pick < len(f.luckyPkts) {
