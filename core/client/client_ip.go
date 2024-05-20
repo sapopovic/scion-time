@@ -87,7 +87,7 @@ func (c *IPClient) InInterleavedMode() bool {
 	return c.InterleavedMode && c.prev.reference != "" && c.prev.interleaved
 }
 
-func (c *SCIONClient) InterleavedModeReference() string {
+func (c *IPClient) InterleavedModeReference() string {
 	if !c.InInterleavedMode() {
 		return ""
 	}
