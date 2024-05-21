@@ -69,13 +69,15 @@ func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 		off:   ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime),
 		rtd:   ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime),
 	})
-	var d float64
-	for i := 1; i != len(f.state); i++ {
-		d += float64((f.state[i].off - f.state[i-1].off).Nanoseconds()) /
-			float64(f.state[i].stamp.Sub(f.state[i-1].stamp).Nanoseconds())
+	if len(f.state) >= 2 {
+		var d float64
+		for i := 1; i != len(f.state); i++ {
+			d += float64((f.state[i].off - f.state[i-1].off).Nanoseconds()) /
+				float64(f.state[i].stamp.Sub(f.state[i-1].stamp).Nanoseconds())
+		}
+		d /= float64(len(f.state) - 1)
+		f.drift = d
 	}
-	d /= float64(len(f.state))
-	f.drift = d
 	f.luckyPkts = f.luckyPkts[:len(f.state)]
 	copy(f.luckyPkts, f.state)
 	if f.pick < len(f.luckyPkts) {
