@@ -11,7 +11,6 @@ import (
 	"github.com/scionproto/scion/pkg/snet"
 
 	"example.com/scion-time/base/crypto"
-	"example.com/scion-time/base/floats"
 
 	"example.com/scion-time/core/measurements"
 
@@ -20,7 +19,6 @@ import (
 
 type ReferenceClock interface {
 	MeasureClockOffset(ctx context.Context) (time.Time, time.Duration, error)
-	Drift() (drift float64, ok bool)
 }
 
 type ReferenceClockClient struct {
@@ -73,15 +71,6 @@ func MeasureClockOffsetIP(ctx context.Context, log *slog.Logger,
 		}
 	}
 	return
-}
-
-func ClockDriftIP(ntpc *IPClient) (float64, bool) {
-	var d float64
-	f, ok := ntpc.Filter.(*LuckyPacketFilter)
-	if ok {
-		d, ok = f.Drift()
-	}
-	return d, ok
 }
 
 func collectMeasurements(ctx context.Context, ms []measurements.Measurement, msc chan measurements.Measurement) int {
@@ -204,23 +193,6 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 	collectMeasurements(ctx, ms, msc)
 	m := measurements.FaultTolerantMidpoint(ms)
 	return m.Timestamp, m.Offset, m.Error
-}
-
-func ClockDriftSCION(ntpcs []*SCIONClient) (float64, bool) {
-	var ds []float64
-	for _, ntpc := range ntpcs {
-		f, ok := ntpc.Filter.(*LuckyPacketFilter)
-		if ok {
-			d, ok := f.Drift()
-			if ok {
-				ds = append(ds, d)
-			}
-		}
-	}
-	if len(ds) == 0 {
-		return 0.0, false
-	}
-	return floats.Median(ds), true
 }
 
 func (c *ReferenceClockClient) MeasureClockOffsets(ctx context.Context,

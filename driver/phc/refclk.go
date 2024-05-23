@@ -145,7 +145,3 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 
 	return sysRealTime, offset, nil
 }
-
-func (c *ReferenceClock) Drift() (float64, bool) {
-	return 0.0, false
-}

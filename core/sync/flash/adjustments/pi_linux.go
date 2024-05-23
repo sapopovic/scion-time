@@ -5,16 +5,9 @@
  * @note Copyright 2023, Meinberg Funkuhren GmbH & Co. KG, All rights reserved.
  * @author Thomas Behn <thomas.behn@meinberg.de>
  *
- * PID controller adjustment algorithm. Unlike many other PID controller
- * implementations, this one applies an integral adjustment part by keeping a
- * small part of the previous adjustment when performing a new adjustment with a
- * proportional and (optional) differential part. Ratios of all parts (iRatio,
- * pRatio, dRatio) as well as a step threshold in nanoseconds can be configured,
- * individually.
- *
- * Minimum:     p = 0.01, i = 0.005, d = 0.0
- * Maximum:     p = 1.0, i = 0.5, d = 1.0
- * Default:     p = 0.2, i = 0.05, d = 0.0
+ * PI controller adjustment algorithm; applies an integral adjustment part by
+ * keeping a small part of the previous adjustment when performing a new
+ * adjustment with a proportional part.
  *
  * =============================================================================
  *
@@ -54,52 +47,37 @@ import (
 )
 
 const (
-	PIDControllerMinPRatio     = 0.01
-	PIDControllerDefaultPRatio = 0.2
-	PIDControllerMaxPRatio     = 1.0
-	PIDControllerMinIRatio     = 0.005
-	PIDControllerDefaultIRatio = 0.05
-	PIDControllerMaxIRatio     = 0.5
-	PIDControllerMinDRatio     = 0.0
-	PIDControllerDefaultDRatio = 0.0
-	PIDControllerMaxDRatio     = 1.0
+	PIControllerMinPRatio     = 0.01
+	PIControllerDefaultPRatio = 0.2
+	PIControllerMaxPRatio     = 1.0
+	PIControllerMinIRatio     = 0.005
+	PIControllerDefaultIRatio = 0.05
+	PIControllerMaxIRatio     = 0.5
 
-	PIDControllerStepThresholdDefault = 1 * time.Millisecond
+	PIControllerStepThresholdDefault = 1 * time.Millisecond
 )
 
-type PIDController struct {
+type PIController struct {
 	// Ratio (gain factor) of the proportional control output value (applied to
 	// the measured offset).
 	KP float64
 
-	// Ratio of the integral control output value. In this PID controller
-	// implementation, the integral value is applied by reverting only a part of
-	// the previous adjustment. This ratio defines the part of the previous
-	// adjustment that is to be kept. That means, that the size of the integral
-	// control output depends on all of the configurable ratios (kp, ki or kd) of
-	// the PID controller.
+	// Ratio of the integral control output value. The integral value is applied
+	// by reverting only a part of the previous adjustment. This ratio defines the
+	// part of the previous adjustment that is to be kept. That means, that the
+	// size of the integral control output depends on both of the configurable
+	// ratios of the PI controller.
 	KI float64
 
-	// Ratio of the differential control output value (applied to the measured
-	// drift).
-	KD float64
-
-	// Offset threshold (ns) indicating that - if exceeded - a clock step is to be
-	// applied
+	// Offset threshold indicating that, if raeched, a clock step is to be applied
 	StepThreshold time.Duration
 
-	p, i, d float64
-
-	freqAddend float64
+	p, i, freqAddend float64
 }
 
-var _ Adjustment = (*PIDController)(nil)
+var _ Adjustment = (*PIController)(nil)
 
-func freqOffset(offset time.Duration) float64 {
-	return offset.Seconds()
-}
-
-func (c *PIDController) Do(offset, drift time.Duration) {
+func (c *PIController) Do(offset time.Duration) {
 	ctx := context.Background()
 	log := slog.Default()
 
@@ -111,26 +89,11 @@ func (c *PIDController) Do(offset, drift time.Duration) {
 	freq := unixutil.FreqFromScaledPPM(tx.Freq)
 
 	// "fake integral" (partial reversion of previous adjustment)
-	// Summing up 'integral' for logging purpose
 	c.i += c.freqAddend * c.KI
 	freq -= c.freqAddend - (c.freqAddend * c.KI)
 
 	if c.StepThreshold != 0 && offset.Abs() >= c.StepThreshold {
-		freq += float64(drift)
 		c.freqAddend = 0
-	} else {
-		c.p = freqOffset(offset) * c.KP
-		c.freqAddend = c.p
-		c.d = 0.0
-		if c.KD != 0.0 {
-			c.d = float64(drift) * c.KD
-			c.freqAddend += c.d
-		}
-		freq += c.freqAddend
-		offset = 0
-	}
-
-	if offset != 0 {
 		log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock",
 			slog.Duration("offset", offset))
 		tx = unix.Timex{
@@ -141,16 +104,19 @@ func (c *PIDController) Do(offset, drift time.Duration) {
 		if err != nil {
 			logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
 		}
-	}
-
-	log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock frequency",
-		slog.Float64("frequency", freq))
-	tx = unix.Timex{
-		Modes: unix.ADJ_FREQUENCY | unix.ADJ_NANO,
-		Freq:  unixutil.FreqToScaledPPM(freq),
-	}
-	_, err = unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
-	if err != nil {
-		logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
+	} else {
+		c.freqAddend = offset.Seconds() * c.KP
+		c.p = c.freqAddend
+		freq += c.freqAddend
+		log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock frequency",
+			slog.Float64("frequency", freq))
+		tx = unix.Timex{
+			Modes: unix.ADJ_FREQUENCY | unix.ADJ_NANO,
+			Freq:  unixutil.FreqToScaledPPM(freq),
+		}
+		_, err = unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
+		if err != nil {
+			logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
+		}
 	}
 }

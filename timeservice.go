@@ -206,10 +206,6 @@ func (c *ntpReferenceClockIP) MeasureClockOffset(ctx context.Context) (
 	return client.MeasureClockOffsetIP(ctx, c.log, c.ntpc, c.localAddr, c.remoteAddr)
 }
 
-func (c *ntpReferenceClockIP) Drift() (float64, bool) {
-	return client.ClockDriftIP(c.ntpc)
-}
-
 func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeInsecureSkipVerify bool,
 	daemonAddr string, localAddr, remoteAddr udp.UDPAddr, log *slog.Logger) {
 	ntskeHost, ntskePort, err := net.SplitHostPort(ntskeServer)
@@ -256,10 +252,6 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
 	paths := c.pather.Paths(c.remoteAddr.IA)
 	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
-}
-
-func (c *ntpReferenceClockSCION) Drift() (float64, bool) {
-	return client.ClockDriftSCION(c.ntpcs[:])
 }
 
 func loadConfig(configFile string) svcConfig {

@@ -33,7 +33,6 @@ type LuckyPacketFilter struct {
 	pick      int
 	state     []measurement
 	luckyPkts []measurement
-	drift     float64
 }
 
 var _ measurements.Filter = (*LuckyPacketFilter)(nil)
@@ -52,10 +51,6 @@ func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
 	}
 }
 
-func (f *LuckyPacketFilter) Drift() (float64, bool) {
-	return f.drift, len(f.state) >= 2
-}
-
 func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	offset time.Duration) {
 	if cap(f.state) == 0 {
@@ -69,15 +64,6 @@ func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 		off:   ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime),
 		rtd:   ntp.RoundTripDelay(cTxTime, sRxTime, sTxTime, cRxTime),
 	})
-	var d float64
-	if len(f.state) >= 2 {
-		for i := 1; i != len(f.state); i++ {
-			d += float64((f.state[i].off - f.state[i-1].off).Nanoseconds()) /
-				float64(f.state[i].stamp.Sub(f.state[i-1].stamp).Nanoseconds())
-		}
-		d /= float64(len(f.state) - 1)
-	}
-	f.drift = d
 	f.luckyPkts = f.luckyPkts[:len(f.state)]
 	copy(f.luckyPkts, f.state)
 	if f.pick < len(f.luckyPkts) {
@@ -98,5 +84,4 @@ func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 
 func (f *LuckyPacketFilter) Reset() {
 	f.state = f.state[:0]
-	f.drift = 0.0
 }

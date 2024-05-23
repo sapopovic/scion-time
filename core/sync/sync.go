@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"example.com/scion-time/base/floats"
 	"example.com/scion-time/base/metrics"
 	"example.com/scion-time/base/timebase"
 	"example.com/scion-time/base/timemath"
@@ -35,10 +34,6 @@ func (c *localReferenceClock) MeasureClockOffset(context.Context) (
 	return time.Time{}, 0, nil
 }
 
-func (c *localReferenceClock) Drift() (float64, bool) {
-	return 0.0, false
-}
-
 func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 	refClks []client.ReferenceClock, refClkOffsets []measurements.Measurement,
 	timeout time.Duration) (time.Time, time.Duration) {
@@ -47,20 +42,6 @@ func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 	refClkClient.MeasureClockOffsets(ctx, refClks, refClkOffsets)
 	m := measurements.FaultTolerantMidpoint(refClkOffsets)
 	return m.Timestamp, m.Offset
-}
-
-func driftOfRefClks(refClks []client.ReferenceClock) float64 {
-	var ds []float64
-	for _, refClk := range refClks {
-		d, ok := refClk.Drift()
-		if ok {
-			ds = append(ds, d)
-		}
-	}
-	if len(ds) == 0 {
-		return 0.0
-	}
-	return floats.FaultTolerantMidpoint(ds)
 }
 
 func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []client.ReferenceClock) {
@@ -129,7 +110,6 @@ func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []cli
 		corrGauge.Set(0)
 		_, corr := measureOffsetToRefClks(
 			peerClkClient, peerClks, peerClkOffsets, peerClkTimeout)
-		_ = driftOfRefClks(peerClks)
 		if corr.Abs() > peerClkCutoff {
 			if float64(corr.Abs()) > maxCorr {
 				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)

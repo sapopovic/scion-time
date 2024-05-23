@@ -50,19 +50,15 @@ const (
 	unixSTA_RONLY = 65280
 )
 
-const (
-	adjStepLimit = 500 * time.Millisecond
-)
-
 type Adjtimex struct{}
 
 var _ Adjustment = (*Adjtimex)(nil)
 
-func (a *Adjtimex) Do(offset, drift time.Duration) {
+func (a *Adjtimex) Do(offset time.Duration) {
 	ctx := context.Background()
 	log := slog.Default()
 	tx := unix.Timex{}
-	if offset.Abs() > adjStepLimit {
+	if offset.Abs() > 500 * time.Millisecond {
 		log.LogAttrs(ctx, slog.LevelDebug, "stepping clock",
 			slog.Duration("offset", offset))
 		tx.Modes |= unix.ADJ_SETOFFSET
