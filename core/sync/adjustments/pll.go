@@ -1,4 +1,4 @@
-package sync
+package adjustments
 
 // Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 // See also https://phk.freebsd.dk/time/
@@ -13,7 +13,7 @@ import (
 	"example.com/scion-time/base/timemath"
 )
 
-type pll struct {
+type Pll struct {
 	log     *slog.Logger
 	logCtx  context.Context
 	clk     timebase.LocalClock
@@ -23,11 +23,11 @@ type pll struct {
 	a, b, i float64
 }
 
-func newPLL(log *slog.Logger, clk timebase.LocalClock) *pll {
-	return &pll{log: log, logCtx: context.Background(), clk: clk}
+func NewPLL(log *slog.Logger, clk timebase.LocalClock) *Pll {
+	return &Pll{log: log, logCtx: context.Background(), clk: clk}
 }
 
-func (l *pll) Do(offset time.Duration, weight float64) {
+func (l *Pll) Do(offset time.Duration, weight float64) {
 	offset = timemath.Inv(offset)
 	if l.epoch != l.clk.Epoch() {
 		l.epoch = l.clk.Epoch()

@@ -58,7 +58,7 @@ func (a *Adjtimex) Do(offset time.Duration) {
 	ctx := context.Background()
 	log := slog.Default()
 	tx := unix.Timex{}
-	if offset.Abs() > 500 * time.Millisecond {
+	if offset.Abs() > 500*time.Millisecond {
 		log.LogAttrs(ctx, slog.LevelDebug, "stepping clock",
 			slog.Duration("offset", offset))
 		tx.Modes |= unix.ADJ_SETOFFSET

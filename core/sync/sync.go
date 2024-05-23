@@ -14,6 +14,7 @@ import (
 
 	"example.com/scion-time/core/client"
 	"example.com/scion-time/core/measurements"
+	"example.com/scion-time/core/sync/adjustments"
 )
 
 const (
@@ -27,11 +28,24 @@ const (
 	peerClkInterval = 60 * time.Second
 )
 
+var (
+	LocalClockSyncAdj adjustments.Adjustment
+	PeerClockSyncAdj  adjustments.Adjustment
+)
+
 type localReferenceClock struct{}
 
 func (c *localReferenceClock) MeasureClockOffset(context.Context) (
 	time.Time, time.Duration, error) {
 	return time.Time{}, 0, nil
+}
+
+type pllAdjustment struct {
+	pll *adjustments.Pll
+}
+
+func (a *pllAdjustment) Do(offset time.Duration) {
+	a.pll.Do(offset, 1000.0 /* weight */)
 }
 
 func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
@@ -64,7 +78,11 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []cli
 	})
 	var refClkClient client.ReferenceClockClient
 	refClkOffsets := make([]measurements.Measurement, len(refClks))
-	pll := newPLL(log, lclk)
+	var adj adjustments.Adjustment
+	adj, LocalClockSyncAdj = LocalClockSyncAdj, adj
+	if adj == nil {
+		adj = &pllAdjustment{pll: adjustments.NewPLL(log, lclk)}
+	}
 	for {
 		corrGauge.Set(0)
 		_, corr := measureOffsetToRefClks(refClkClient, refClks, refClkOffsets, refClkTimeout)
@@ -72,7 +90,7 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []cli
 			if float64(corr.Abs()) > maxCorr {
 				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)
 			}
-			pll.Do(corr, 1000.0 /* weight */)
+			adj.Do(corr)
 			corrGauge.Set(float64(corr))
 		}
 		lclk.Sleep(refClkInterval)
@@ -105,7 +123,11 @@ func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []cli
 		peerClks = append(peerClks, &localReferenceClock{})
 	}
 	peerClkOffsets := make([]measurements.Measurement, len(peerClks))
-	pll := newPLL(log, lclk)
+	var adj adjustments.Adjustment
+	adj, PeerClockSyncAdj = PeerClockSyncAdj, adj
+	if adj == nil {
+		adj = &pllAdjustment{pll: adjustments.NewPLL(log, lclk)}
+	}
 	for {
 		corrGauge.Set(0)
 		_, corr := measureOffsetToRefClks(
@@ -114,7 +136,7 @@ func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []cli
 			if float64(corr.Abs()) > maxCorr {
 				corr = time.Duration(float64(timemath.Sgn(corr)) * maxCorr)
 			}
-			pll.Do(corr, 1000.0 /* weight */)
+			adj.Do(corr)
 			corrGauge.Set(float64(corr))
 		}
 		lclk.Sleep(peerClkInterval)
