@@ -37,6 +37,7 @@ import (
 	"example.com/scion-time/core/client"
 	"example.com/scion-time/core/server"
 	"example.com/scion-time/core/sync"
+	"example.com/scion-time/core/sync/adjustments"
 	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/driver/clocks"
@@ -458,6 +459,8 @@ func runServer(configFile string) {
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
+		adj := &adjustments.SysAdjustment{}
+		sync.RegisterLocalClockSyncAdj(adj)
 		go sync.RunLocalClockSync(log, lclk, refClocks)
 	}
 

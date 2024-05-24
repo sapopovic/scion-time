@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,11 +29,6 @@ const (
 	peerClkInterval = 60 * time.Second
 )
 
-var (
-	LocalClockSyncAdj adjustments.Adjustment
-	PeerClockSyncAdj  adjustments.Adjustment
-)
-
 type localReferenceClock struct{}
 
 func (c *localReferenceClock) MeasureClockOffset(context.Context) (
@@ -46,6 +42,41 @@ type pllAdjustment struct {
 
 func (a *pllAdjustment) Do(offset time.Duration) {
 	a.pll.Do(offset, 1000.0 /* weight */)
+}
+
+var (
+	localClockSyncAdjMu sync.Mutex
+	localClockSyncAdj   adjustments.Adjustment
+	peerClockSyncAdjMu  sync.Mutex
+	peerClockSyncAdj    adjustments.Adjustment
+)
+
+func loadLocalClockSyncAdj() adjustments.Adjustment {
+	localClockSyncAdjMu.Lock()
+	defer localClockSyncAdjMu.Unlock()
+	var adj adjustments.Adjustment
+	adj, localClockSyncAdj = localClockSyncAdj, nil
+	return adj
+}
+
+func RegisterLocalClockSyncAdj(adj adjustments.Adjustment) {
+	localClockSyncAdjMu.Lock()
+	defer localClockSyncAdjMu.Unlock()
+	localClockSyncAdj = adj
+}
+
+func loadPeerClockSyncAdj() adjustments.Adjustment {
+	peerClockSyncAdjMu.Lock()
+	defer peerClockSyncAdjMu.Unlock()
+	var adj adjustments.Adjustment
+	adj, peerClockSyncAdj = peerClockSyncAdj, nil
+	return adj
+}
+
+func RegisterPeerClockSyncAdj(adj adjustments.Adjustment) {
+	peerClockSyncAdjMu.Lock()
+	defer peerClockSyncAdjMu.Unlock()
+	peerClockSyncAdj = adj
 }
 
 func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
@@ -78,8 +109,7 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []cli
 	})
 	var refClkClient client.ReferenceClockClient
 	refClkOffsets := make([]measurements.Measurement, len(refClks))
-	var adj adjustments.Adjustment
-	adj, LocalClockSyncAdj = LocalClockSyncAdj, adj
+	adj := loadLocalClockSyncAdj()
 	if adj == nil {
 		adj = &pllAdjustment{pll: adjustments.NewPLL(log, lclk)}
 	}
@@ -123,8 +153,7 @@ func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []cli
 		peerClks = append(peerClks, &localReferenceClock{})
 	}
 	peerClkOffsets := make([]measurements.Measurement, len(peerClks))
-	var adj adjustments.Adjustment
-	adj, PeerClockSyncAdj = PeerClockSyncAdj, adj
+	adj := loadPeerClockSyncAdj()
 	if adj == nil {
 		adj = &pllAdjustment{pll: adjustments.NewPLL(log, lclk)}
 	}

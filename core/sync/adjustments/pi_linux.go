@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
  * Based on flashptpd, https://github.com/meinberg-sync/flashptpd
  *

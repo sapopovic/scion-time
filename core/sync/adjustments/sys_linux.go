@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
  * Based on flashptpd, https://github.com/meinberg-sync/flashptpd
  *
@@ -50,11 +52,11 @@ const (
 	unixSTA_RONLY = 65280
 )
 
-type Adjtimex struct{}
+type SysAdjustment struct{}
 
-var _ Adjustment = (*Adjtimex)(nil)
+var _ Adjustment = (*SysAdjustment)(nil)
 
-func (a *Adjtimex) Do(offset time.Duration) {
+func (a *SysAdjustment) Do(offset time.Duration) {
 	ctx := context.Background()
 	log := slog.Default()
 	tx := unix.Timex{}
