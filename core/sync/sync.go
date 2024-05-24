@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -44,41 +43,6 @@ func (a *pllAdjustment) Do(offset time.Duration) {
 	a.pll.Do(offset, 1000.0 /* weight */)
 }
 
-var (
-	localClockSyncAdjMu sync.Mutex
-	localClockSyncAdj   adjustments.Adjustment
-	peerClockSyncAdjMu  sync.Mutex
-	peerClockSyncAdj    adjustments.Adjustment
-)
-
-func loadLocalClockSyncAdj() adjustments.Adjustment {
-	localClockSyncAdjMu.Lock()
-	defer localClockSyncAdjMu.Unlock()
-	var adj adjustments.Adjustment
-	adj, localClockSyncAdj = localClockSyncAdj, nil
-	return adj
-}
-
-func RegisterLocalClockSyncAdj(adj adjustments.Adjustment) {
-	localClockSyncAdjMu.Lock()
-	defer localClockSyncAdjMu.Unlock()
-	localClockSyncAdj = adj
-}
-
-func loadPeerClockSyncAdj() adjustments.Adjustment {
-	peerClockSyncAdjMu.Lock()
-	defer peerClockSyncAdjMu.Unlock()
-	var adj adjustments.Adjustment
-	adj, peerClockSyncAdj = peerClockSyncAdj, nil
-	return adj
-}
-
-func RegisterPeerClockSyncAdj(adj adjustments.Adjustment) {
-	peerClockSyncAdjMu.Lock()
-	defer peerClockSyncAdjMu.Unlock()
-	peerClockSyncAdj = adj
-}
-
 func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 	refClks []client.ReferenceClock, refClkOffsets []measurements.Measurement,
 	timeout time.Duration) (time.Time, time.Duration) {
@@ -89,7 +53,9 @@ func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 	return m.Timestamp, m.Offset
 }
 
-func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []client.ReferenceClock) {
+func RunLocalClockSync(log *slog.Logger,
+	lclk timebase.LocalClock, adj adjustments.Adjustment,
+	refClks []client.ReferenceClock) {
 	if refClkImpact <= 1.0 {
 		panic("invalid reference clock impact factor")
 	}
@@ -109,7 +75,6 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []cli
 	})
 	var refClkClient client.ReferenceClockClient
 	refClkOffsets := make([]measurements.Measurement, len(refClks))
-	adj := loadLocalClockSyncAdj()
 	if adj == nil {
 		adj = &pllAdjustment{pll: adjustments.NewPLL(log, lclk)}
 	}
@@ -127,7 +92,9 @@ func RunLocalClockSync(log *slog.Logger, lclk timebase.LocalClock, refClks []cli
 	}
 }
 
-func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []client.ReferenceClock) {
+func RunPeerClockSync(log *slog.Logger,
+	lclk timebase.LocalClock, adj adjustments.Adjustment,
+	peerClks []client.ReferenceClock) {
 	if peerClkImpact <= 1.0 {
 		panic("invalid peer clock impact factor")
 	}
@@ -153,7 +120,6 @@ func RunPeerClockSync(log *slog.Logger, lclk timebase.LocalClock, peerClks []cli
 		peerClks = append(peerClks, &localReferenceClock{})
 	}
 	peerClkOffsets := make([]measurements.Measurement, len(peerClks))
-	adj := loadPeerClockSyncAdj()
 	if adj == nil {
 		adj = &pllAdjustment{pll: adjustments.NewPLL(log, lclk)}
 	}

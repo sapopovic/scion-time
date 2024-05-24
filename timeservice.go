@@ -460,12 +460,11 @@ func runServer(configFile string) {
 
 	if len(refClocks) != 0 {
 		adj := &adjustments.SysAdjustment{}
-		sync.RegisterLocalClockSyncAdj(adj)
-		go sync.RunLocalClockSync(log, lclk, refClocks)
+		go sync.RunLocalClockSync(log, lclk, adj, refClocks)
 	}
 
 	if len(peerClocks) != 0 {
-		go sync.RunPeerClockSync(log, lclk, peerClocks)
+		go sync.RunPeerClockSync(log, lclk, nil /* adj */, peerClocks)
 	}
 
 	dscp := dscp(cfg)
@@ -498,7 +497,7 @@ func runRelay(configFile string) {
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
-		go sync.RunLocalClockSync(log, lclk, refClocks)
+		go sync.RunLocalClockSync(log, lclk, nil /* adj */, refClocks)
 	}
 
 	if len(peerClocks) != 0 {
@@ -546,7 +545,7 @@ func runClient(configFile string) {
 	}
 
 	if len(refClocks) != 0 {
-		go sync.RunLocalClockSync(log, lclk, refClocks)
+		go sync.RunLocalClockSync(log, lclk, nil /* adj */, refClocks)
 	}
 
 	if len(peerClocks) != 0 {
