@@ -336,7 +336,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, mtrcs *ipClientMetr
 		if c.Filter == nil {
 			offset = off
 		} else {
-			offset = c.Filter.Do(t0, t1, t2, t3)
+			_, offset, _ = c.Filter.Do(t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {
