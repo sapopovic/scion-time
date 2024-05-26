@@ -36,7 +36,7 @@ func weight(lo, mid, hi time.Duration, trust float64) float64 {
 }
 
 func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
-	_, _, _ time.Duration) {
+	c2s, off, s2c time.Duration) {
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
 
@@ -110,8 +110,10 @@ func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 		)
 	}
 
-	off := timemath.Inv(timemath.Duration(mid))
-	return off, off, off
+	c2s = timemath.Inv(timemath.Duration(lo))
+	off = timemath.Inv(timemath.Duration(mid))
+	s2c = timemath.Duration(hi)
+	return c2s, off, s2c
 }
 
 func (f *NtimedFilter) Reset() {

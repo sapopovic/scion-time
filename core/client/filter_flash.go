@@ -52,10 +52,10 @@ func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
 }
 
 func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
-	lo, mid, hi time.Duration) {
+	c2s, off, s2c time.Duration) {
 	if cap(f.state) == 0 {
-		off := ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
-		return off, off, off
+		off = ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
+		return sRxTime.Sub(cTxTime), off, cRxTime.Sub(sTxTime)
 	}
 	if len(f.state) == cap(f.state) {
 		f.state = f.state[1:]
@@ -78,10 +78,10 @@ func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 	})
 	i := len(f.luckyPkts) / 2
 	if len(f.luckyPkts)%2 != 0 {
-		off := f.luckyPkts[i].off
+		off = f.luckyPkts[i].off
 		return off, off, off
 	}
-	off := f.luckyPkts[i-1].off + (f.luckyPkts[i].off-f.luckyPkts[i-1].off)/2
+	off = f.luckyPkts[i-1].off + (f.luckyPkts[i].off-f.luckyPkts[i-1].off)/2
 	return off, off, off
 }
 
