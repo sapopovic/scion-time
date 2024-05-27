@@ -27,18 +27,21 @@ func NewNtimedFilter(log *slog.Logger) *NtimedFilter {
 	return &NtimedFilter{log: log, logCtx: context.Background()}
 }
 
-func weight(lo, mid, hi time.Duration, trust float64) float64 {
-	w := 0.001 + trust*2.0/(hi-lo).Seconds()
-	if w < 1.0 {
-		w = 1.0
+func combine(lo, mid, hi time.Duration, trust float64) (offset time.Duration, weight float64) {
+	offset = mid
+	weight = 0.001 + trust*2.0/(hi-lo).Seconds()
+	if weight < 1.0 {
+		weight = 1.0
 	}
-	return w
+	return
 }
 
 func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
-	c2s, off, s2c time.Duration) {
+	offset time.Duration) {
 
 	// Based on Ntimed by Poul-Henning Kamp, https://github.com/bsdphk/Ntimed
+
+	var weight float64
 
 	lo := cTxTime.Sub(sRxTime).Seconds()
 	hi := cRxTime.Sub(sTxTime).Seconds()
@@ -94,7 +97,7 @@ func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 
 	trust := 1.0
 
-	w := weight(timemath.Duration(lo), timemath.Duration(mid), timemath.Duration(hi), trust)
+	offset, weight = combine(timemath.Duration(lo), timemath.Duration(mid), timemath.Duration(hi), trust)
 
 	if f.log != nil {
 		f.log.LogAttrs(f.logCtx, slog.LevelDebug, "filtered response",
@@ -105,15 +108,12 @@ func (f *NtimedFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 			slog.Float64("loLim [s]", loLim),
 			slog.Float64("amid [s]", f.amid),
 			slog.Float64("hiLim [s]", hiLim),
-			slog.Float64("offset [s]", mid),
-			slog.Float64("weight", w),
+			slog.Float64("offset [s]", offset.Seconds()),
+			slog.Float64("weight", weight),
 		)
 	}
 
-	c2s = timemath.Inv(timemath.Duration(lo))
-	off = timemath.Inv(timemath.Duration(mid))
-	s2c = timemath.Duration(hi)
-	return c2s, off, s2c
+	return timemath.Inv(offset)
 }
 
 func (f *NtimedFilter) Reset() {

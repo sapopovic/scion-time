@@ -574,7 +574,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		if c.Filter == nil {
 			offset = off
 		} else {
-			_, offset, _ = c.Filter.Do(t0, t1, t2, t3)
+			offset = c.Filter.Do(t0, t1, t2, t3)
 		}
 
 		if c.Histo != nil {

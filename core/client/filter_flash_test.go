@@ -23,8 +23,7 @@ func offset(m measurement) time.Duration {
 }
 
 func filter(f *client.LuckyPacketFilter, m measurement) time.Duration {
-	_, off, _ := f.Do(m.cTxTime, m.sRxTime, m.sTxTime, m.cRxTime)
-	return off
+	return f.Do(m.cTxTime, m.sRxTime, m.sTxTime, m.cRxTime)
 }
 
 func TestFilter0(t *testing.T) {
