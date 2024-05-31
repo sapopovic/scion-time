@@ -93,7 +93,6 @@ func setFrequency(log *slog.Logger, frequency float64) {
 	tx := unix.Timex{
 		Modes:  unix.ADJ_FREQUENCY,
 		Freq:   unixutil.FreqToScaledPPM(frequency),
-		Status: unix.STA_PLL,
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 	if err != nil {
