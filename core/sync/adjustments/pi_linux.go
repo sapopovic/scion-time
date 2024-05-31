@@ -48,17 +48,6 @@ import (
 	"example.com/scion-time/base/unixutil"
 )
 
-const (
-	PIControllerMinPRatio     = 0.01
-	PIControllerDefaultPRatio = 0.2
-	PIControllerMaxPRatio     = 1.0
-	PIControllerMinIRatio     = 0.005
-	PIControllerDefaultIRatio = 0.05
-	PIControllerMaxIRatio     = 0.5
-
-	PIControllerDefaultStepThreshold = 100 * time.Millisecond
-)
-
 type PIController struct {
 	// Ratio (gain factor) of the proportional control output value (applied to
 	// the measured offset).

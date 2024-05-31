@@ -8,7 +8,11 @@ import (
 	"time"
 )
 
-type PIController struct{}
+type PIController struct {
+	KP            float64
+	KI            float64
+	StepThreshold time.Duration
+}
 
 var _ Adjustment = (*PIController)(nil)
 
