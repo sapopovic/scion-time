@@ -91,8 +91,8 @@ func setFrequency(log *slog.Logger, frequency float64) {
 	log.LogAttrs(context.Background(), slog.LevelDebug,
 		"setting frequency", slog.Float64("frequency", frequency))
 	tx := unix.Timex{
-		Modes:  unix.ADJ_FREQUENCY,
-		Freq:   unixutil.FreqToScaledPPM(frequency),
+		Modes: unix.ADJ_FREQUENCY,
+		Freq:  unixutil.FreqToScaledPPM(frequency),
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 	if err != nil {
