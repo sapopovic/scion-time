@@ -113,7 +113,7 @@ func (c *PIController) Do(offset time.Duration) {
 		log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock frequency",
 			slog.Float64("frequency", freq))
 		tx = unix.Timex{
-			Modes: unix.ADJ_FREQUENCY | unix.ADJ_NANO,
+			Modes: unix.ADJ_FREQUENCY,
 			Freq:  unixutil.FreqToScaledPPM(freq),
 		}
 		_, err = unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
