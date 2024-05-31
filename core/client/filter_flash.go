@@ -57,7 +57,8 @@ func (f *LuckyPacketFilter) Do(cTxTime, sRxTime, sTxTime, cRxTime time.Time) (
 		return ntp.ClockOffset(cTxTime, sRxTime, sTxTime, cRxTime)
 	}
 	if len(f.state) == cap(f.state) {
-		f.state = f.state[1:]
+		copy(f.state[0:], f.state[1:])
+		f.state = f.state[:len(f.state)-1]
 	}
 	f.state = append(f.state, measurement{
 		stamp: cTxTime,
