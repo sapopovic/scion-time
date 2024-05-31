@@ -74,7 +74,7 @@ func sleep(log *slog.Logger, duration time.Duration) {
 	_ = unix.Close(fd)
 }
 
-func setTime(log *slog.Logger, offset time.Duration) {
+func setOffset(log *slog.Logger, offset time.Duration) {
 	log.LogAttrs(context.Background(), slog.LevelDebug,
 		"setting time", slog.Duration("offset", offset))
 	tx := unix.Timex{
@@ -121,7 +121,7 @@ func (c *SystemClock) Step(offset time.Duration) {
 		setFrequency(c.Log, c.adjustment.afterFreq)
 		c.adjustment = nil
 	}
-	setTime(c.Log, offset)
+	setOffset(c.Log, offset)
 	if c.epoch == math.MaxUint64 {
 		panic("epoch overflow")
 	}
