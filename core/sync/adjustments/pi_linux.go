@@ -56,7 +56,7 @@ const (
 	PIControllerDefaultIRatio = 0.05
 	PIControllerMaxIRatio     = 0.5
 
-	PIControllerDefaultStepThreshold = 1 * time.Millisecond
+	PIControllerDefaultStepThreshold = 100 * time.Millisecond
 )
 
 type PIController struct {
