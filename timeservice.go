@@ -545,7 +545,12 @@ func runClient(configFile string) {
 	}
 
 	if len(refClocks) != 0 {
-		go sync.RunLocalClockSync(log, lclk, nil /* adj */, refClocks)
+		adj := &adjustments.PIController{
+			KP:            adjustments.PIControllerDefaultPRatio,
+			KI:            adjustments.PIControllerDefaultIRatio,
+			StepThreshold: adjustments.PIControllerDefaultStepThreshold,
+		}
+		go sync.RunLocalClockSync(log, lclk, adj, refClocks)
 	}
 
 	if len(peerClocks) != 0 {

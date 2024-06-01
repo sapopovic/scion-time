@@ -20,8 +20,8 @@ import (
 const (
 	refClkImpact    = 1.25
 	refClkCutoff    = 0
-	refClkTimeout   = 1 * time.Second
-	refClkInterval  = 2 * time.Second
+	refClkTimeout   = 500 * time.Millisecond
+	refClkInterval  = 1000 * time.Millisecond
 	peerClkImpact   = 2.5
 	peerClkCutoff   = time.Microsecond
 	peerClkTimeout  = 5 * time.Second
