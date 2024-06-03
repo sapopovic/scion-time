@@ -56,6 +56,8 @@ const (
 	dispatcherModeInternal = "internal"
 	authModeNTS            = "nts"
 	authModeSPAO           = "spao"
+	clockAlgoNtimed        = "ntimed"
+	clockAlgoPI            = "pi"
 
 	tlsCertReloadInterval = time.Minute * 10
 
@@ -77,6 +79,7 @@ type svcConfig struct {
 	AuthModes               []string `toml:"auth_modes,omitempty"`
 	NTSKEInsecureSkipVerify bool     `toml:"ntske_insecure_skip_verify,omitempty"`
 	DSCP                    uint8    `toml:"dscp,omitempty"` // must be in range [0, 63]
+	ClockAlgo               string   `toml:"clock_algo,omitempty"`
 }
 
 type ntpReferenceClockIP struct {
@@ -301,6 +304,15 @@ func dscp(cfg svcConfig) uint8 {
 		logbase.Fatal(slog.Default(), "invalid differentiated services codepoint value specified in config")
 	}
 	return cfg.DSCP
+}
+
+func clockAlgo(cfg svcConfig) string {
+	if cfg.ClockAlgo != "" &&
+		cfg.ClockAlgo != clockAlgoNtimed &&
+		cfg.ClockAlgo != clockAlgoPI {
+		logbase.Fatal(slog.Default(), "invalid clock steering algorithm value specified in config")
+	}
+	return cfg.ClockAlgo
 }
 
 func tlsConfig(cfg svcConfig) *tls.Config {
@@ -545,10 +557,14 @@ func runClient(configFile string) {
 	}
 
 	if len(refClocks) != 0 {
-		adj := &adjustments.PIController{
-			KP:            adjustments.PIControllerDefaultPRatio,
-			KI:            adjustments.PIControllerDefaultIRatio,
-			StepThreshold: adjustments.PIControllerDefaultStepThreshold,
+		var adj adjustments.Adjustment
+		clockAlgo := clockAlgo(cfg)
+		if clockAlgo == clockAlgoPI {
+			adj = &adjustments.PIController{
+				KP:            adjustments.PIControllerDefaultPRatio,
+				KI:            adjustments.PIControllerDefaultIRatio,
+				StepThreshold: adjustments.PIControllerDefaultStepThreshold,
+			}
 		}
 		go sync.RunLocalClockSync(log, lclk, adj, refClocks)
 	}
