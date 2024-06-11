@@ -30,9 +30,9 @@ type IPClient struct {
 		Enabled      bool
 		NTSKEFetcher ntske.Fetcher
 	}
-	Filter measurements.Filter
-	Histo  *hdrhistogram.Histogram
-	prev   struct {
+	Filter    measurements.Filter
+	Histogram *hdrhistogram.Histogram
+	prev      struct {
 		reference   string
 		interleaved bool
 		cTxTime     ntp.Time64
@@ -339,8 +339,8 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, mtrcs *ipClientMetr
 			offset = c.Filter.Do(t0, t1, t2, t3)
 		}
 
-		if c.Histo != nil {
-			err := c.Histo.RecordValue(rtd.Microseconds())
+		if c.Histogram != nil {
+			err := c.Histogram.RecordValue(rtd.Microseconds())
 			if err != nil {
 				return time.Time{}, 0, err
 			}

@@ -44,9 +44,9 @@ type SCIONClient struct {
 		mac          []byte
 		NTSKEFetcher ntske.Fetcher
 	}
-	Filter measurements.Filter
-	Histo  *hdrhistogram.Histogram
-	prev   struct {
+	Filter    measurements.Filter
+	Histogram *hdrhistogram.Histogram
+	prev      struct {
 		reference   string
 		path        string
 		interleaved bool
@@ -578,8 +578,8 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 			offset = c.Filter.Do(t0, t1, t2, t3)
 		}
 
-		if c.Histo != nil {
-			err := c.Histo.RecordValue(rtd.Microseconds())
+		if c.Histogram != nil {
+			err := c.Histogram.RecordValue(rtd.Microseconds())
 			if err != nil {
 				return time.Time{}, 0, err
 			}

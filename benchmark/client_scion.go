@@ -74,7 +74,7 @@ func RunSCIONBenchmark(
 			c := &client.SCIONClient{
 				Log:             log,
 				InterleavedMode: true,
-				Histo:           hg,
+				Histogram:       hg,
 			}
 
 			if slices.Contains(authModes, "spao") {

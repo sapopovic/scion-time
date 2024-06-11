@@ -38,7 +38,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 			c := &client.IPClient{
 				Log:             log,
 				InterleavedMode: true,
-				Histo:           hg,
+				Histogram:       hg,
 			}
 
 			if slices.Contains(authModes, "nts") {
