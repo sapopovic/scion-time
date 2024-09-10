@@ -65,7 +65,7 @@ func (a *SysAdjustment) Do(offset time.Duration) {
 			slog.Duration("offset", offset))
 		tx.Modes |= unix.ADJ_SETOFFSET
 		tx.Modes |= unix.ADJ_NANO
-		tx.Time = unixutil.NsecToNsecTimeval(offset.Nanoseconds())
+		tx.Time = unixutil.TimevalFromNsec(offset.Nanoseconds())
 	} else {
 		log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock",
 			slog.Duration("offset", offset))

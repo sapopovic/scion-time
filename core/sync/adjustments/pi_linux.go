@@ -89,7 +89,7 @@ func (c *PIController) Do(offset time.Duration) {
 			slog.Duration("offset", offset))
 		tx = unix.Timex{
 			Modes: unix.ADJ_SETOFFSET | unix.ADJ_NANO,
-			Time:  unixutil.NsecToNsecTimeval(offset.Nanoseconds()),
+			Time:  unixutil.TimevalFromNsec(offset.Nanoseconds()),
 		}
 		_, err = unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 		if err != nil {
@@ -103,7 +103,7 @@ func (c *PIController) Do(offset time.Duration) {
 			slog.Float64("frequency", freq))
 		tx = unix.Timex{
 			Modes: unix.ADJ_FREQUENCY,
-			Freq:  unixutil.FreqToScaledPPM(freq),
+			Freq:  unixutil.ScaledPPMFromFreq(freq),
 		}
 		_, err = unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 		if err != nil {

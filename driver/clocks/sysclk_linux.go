@@ -79,7 +79,7 @@ func setOffset(log *slog.Logger, offset time.Duration) {
 		"setting time", slog.Duration("offset", offset))
 	tx := unix.Timex{
 		Modes: unix.ADJ_SETOFFSET | unix.ADJ_NANO,
-		Time:  unixutil.NsecToNsecTimeval(offset.Nanoseconds()),
+		Time:  unixutil.TimevalFromNsec(offset.Nanoseconds()),
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 	if err != nil {
@@ -92,7 +92,7 @@ func setFrequency(log *slog.Logger, frequency float64) {
 		"setting frequency", slog.Float64("frequency", frequency))
 	tx := unix.Timex{
 		Modes: unix.ADJ_FREQUENCY,
-		Freq:  unixutil.FreqToScaledPPM(frequency),
+		Freq:  unixutil.ScaledPPMFromFreq(frequency),
 	}
 	_, err := unix.ClockAdjtime(unix.CLOCK_REALTIME, &tx)
 	if err != nil {
