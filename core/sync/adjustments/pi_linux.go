@@ -40,6 +40,7 @@ package adjustments
 import (
 	"context"
 	"log/slog"
+	"math"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -63,7 +64,7 @@ type PIController struct {
 	// Offset threshold indicating that, if raeched, a clock step is to be applied
 	StepThreshold time.Duration
 
-	p, i, freqAddend float64
+	p, i, freq, freqAddend float64
 }
 
 var _ Adjustment = (*PIController)(nil)
@@ -79,12 +80,20 @@ func (c *PIController) Do(offset time.Duration) {
 	}
 	freq := unixutil.FreqFromScaledPPM(tx.Freq)
 
+	if c.freq != 0 &&
+		c.freq >= unixutil.FreqFromScaledPPM(-32768000) &&
+		c.freq <= unixutil.FreqFromScaledPPM(32768000) &&
+		math.Abs(c.freq-freq) >= unixutil.FreqFromScaledPPM(1) {
+		logbase.Fatal(log, "unexpected clock behavior",
+			slog.Float64("cfreq", c.freq),
+			slog.Float64("freq", freq))
+	}
+
 	// "fake integral" (partial reversion of previous adjustment)
 	c.i += c.freqAddend * c.KI
 	freq -= c.freqAddend - (c.freqAddend * c.KI)
 
 	if c.StepThreshold != 0 && offset.Abs() >= c.StepThreshold {
-		c.freqAddend = 0
 		log.LogAttrs(ctx, slog.LevelDebug, "adjusting clock",
 			slog.Duration("offset", offset))
 		tx = unix.Timex{
@@ -95,6 +104,8 @@ func (c *PIController) Do(offset time.Duration) {
 		if err != nil {
 			logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
 		}
+		c.freqAddend = 0
+		c.freq = 0
 	} else {
 		c.freqAddend = offset.Seconds() * c.KP
 		c.p = c.freqAddend
@@ -109,5 +120,6 @@ func (c *PIController) Do(offset time.Duration) {
 		if err != nil {
 			logbase.Fatal(log, "unix.ClockAdjtime failed", slog.Any("error", err))
 		}
+		c.freq = freq
 	}
 }
