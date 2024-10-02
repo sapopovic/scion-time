@@ -1,6 +1,6 @@
 module example.com/m
 
-go 1.23.1
+go 1.23.2
 
 require gonum.org/v1/plot v0.14.0
 
