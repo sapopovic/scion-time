@@ -4,7 +4,7 @@
 certs
 crypto
 keys
-testnet/mbgplot/mbgplot
+testnet/offplot/offplot
 testnet/ntimed/ntimed-tool
 timeservice
 trcs
