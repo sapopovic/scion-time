@@ -47,29 +47,25 @@ func main() {
 	s := bufio.NewScanner(f0)
 	for s.Scan() {
 		l := s.Text()
-		ts := strings.Fields(l) // Tokenize the line
+		ts := strings.Fields(l)
+		var ok bool
+		var t time.Time
+		var off float64
 		if len(ts) >= 6 && ts[0] == "GNS181PEX:" {
 			x := ts[1] + "T" + ts[2] + "Z"
-			t, err := time.Parse(time.RFC3339, x)
+			t, err = time.Parse(time.RFC3339, x)
 			if err != nil {
-				log.Fatalf("failed to parse timestamp on line: %s, %s", s.Text(), err)
+				log.Fatalf("failed to parse timestamp on line: %s, %s", l, err)
 			}
 			y := ts[5]
 			if len(y) != 0 && y[len(y)-1] == ',' {
 				y = y[:len(y)-1]
 			}
-			off, err := strconv.ParseFloat(y, 64)
+			off, err = strconv.ParseFloat(y, 64)
 			if err != nil {
-				log.Fatalf("failed to parse offset on line: %s, %s", s.Text(), err)
+				log.Fatalf("failed to parse offset on line: %s, %s", l, err)
 			}
-			if n == 0 {
-				t0 = t
-			}
-			data = append(data, plotter.XY{
-				X: float64(t.Unix() - t0.Unix()),
-				Y: off,
-			})
-			n++
+			ok = true
 		} else if len(ts) >= 10 &&
 			strings.HasPrefix(ts[0], "phc2sys[") &&
 			strings.HasSuffix(ts[0], "]:") {
@@ -78,16 +74,19 @@ func main() {
 			x, _ = strings.CutSuffix(x, "]:")
 			seconds, err := strconv.ParseFloat(x, 64)
 			if err != nil {
-				log.Fatalf("failed to parse timestamp on line: %s, %s", s.Text(), err)
+				log.Fatalf("failed to parse timestamp on line: %s, %s", l, err)
 			}
 			secs := int64(seconds)
 			nsecs := int64((seconds - float64(secs)) * 1e9)
-			t := time.Unix(secs, nsecs)
+			t = time.Unix(secs, nsecs)
 			y, err := strconv.ParseInt(ts[4], 10, 64)
 			if err != nil {
-				log.Fatalf("failed to parse offset on line: %s, %s", s.Text(), err)
+				log.Fatalf("failed to parse offset on line: %s, %s", l, err)
 			}
-			off := float64(y) / 1e9
+			off = float64(y) / 1e9
+			ok = true
+		}
+		if ok {
 			if n == 0 {
 				t0 = t
 			}
@@ -95,8 +94,8 @@ func main() {
 				X: float64(t.Unix() - t0.Unix()),
 				Y: off,
 			})
-			n++
 		}
+		n++
 	}
 	if err := s.Err(); err != nil {
 		log.Fatalf("error during scan: %s", err)
