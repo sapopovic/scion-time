@@ -70,6 +70,32 @@ func main() {
 				Y: off,
 			})
 			n++
+		} else if len(ts) >= 10 &&
+			strings.HasPrefix(ts[0], "phc2sys[") &&
+			strings.HasSuffix(ts[0], "]:") {
+			x := ts[0]
+			x, _ = strings.CutPrefix(x, "phc2sys[")
+			x, _ = strings.CutSuffix(x, "]:")
+			seconds, err := strconv.ParseFloat(x, 64)
+			if err != nil {
+				log.Fatalf("failed to parse timestamp on line: %s, %s", s.Text(), err)
+			}
+			secs := int64(seconds)
+			nsecs := int64((seconds - float64(secs)) * 1e9)
+			t := time.Unix(secs, nsecs)
+			y, err := strconv.ParseInt(ts[4], 10, 64)
+			if err != nil {
+				log.Fatalf("failed to parse offset on line: %s, %s", s.Text(), err)
+			}
+			off := float64(y) / 1e9
+			if n == 0 {
+				t0 = t
+			}
+			data = append(data, plotter.XY{
+				X: float64(t.Unix() - t0.Unix()),
+				Y: off,
+			})
+			n++
 		}
 	}
 	if err := s.Err(); err != nil {
