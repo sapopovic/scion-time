@@ -65,7 +65,7 @@ func RunLocalClockSync(log *slog.Logger,
 	if refClkTimeout < 0 || refClkTimeout > refClkInterval/2 {
 		panic("invalid reference clock sync timeout")
 	}
-	maxCorr := refClkImpact * float64(lclk.MaxDrift(refClkInterval))
+	maxCorr := refClkImpact * float64(lclk.Drift(refClkInterval))
 	if maxCorr <= 0 {
 		panic("invalid reference clock max correction")
 	}
@@ -107,7 +107,7 @@ func RunPeerClockSync(log *slog.Logger,
 	if peerClkTimeout < 0 || peerClkTimeout > peerClkInterval/2 {
 		panic("invalid peer clock sync timeout")
 	}
-	maxCorr := peerClkImpact * float64(lclk.MaxDrift(peerClkInterval))
+	maxCorr := peerClkImpact * float64(lclk.Drift(peerClkInterval))
 	if maxCorr <= 0 {
 		panic("invalid peer clock max correction")
 	}

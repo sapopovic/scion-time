@@ -31,6 +31,7 @@ import (
 	"github.com/scionproto/scion/pkg/snet/path"
 
 	"example.com/scion-time/base/logbase"
+	"example.com/scion-time/base/timemath"
 
 	"example.com/scion-time/benchmark"
 
@@ -79,6 +80,7 @@ type svcConfig struct {
 	AuthModes               []string `toml:"auth_modes,omitempty"`
 	NTSKEInsecureSkipVerify bool     `toml:"ntske_insecure_skip_verify,omitempty"`
 	DSCP                    uint8    `toml:"dscp,omitempty"` // must be in range [0, 63]
+	ClockDrift              float64  `toml:"clock_drift,omitempty"`
 	ClockAlgo               string   `toml:"clock_algo,omitempty"`
 }
 
@@ -306,6 +308,13 @@ func dscp(cfg svcConfig) uint8 {
 	return cfg.DSCP
 }
 
+func clockDrift(cfg svcConfig) time.Duration {
+	if cfg.ClockDrift < 0.0 {
+		logbase.Fatal(slog.Default(), "invalid clock drift value specified in config")
+	}
+	return timemath.Duration(cfg.ClockDrift)
+}
+
 func clockAlgo(cfg svcConfig) string {
 	if cfg.ClockAlgo != "" &&
 		cfg.ClockAlgo != clockAlgoNtimed &&
@@ -467,7 +476,7 @@ func runServer(configFile string) {
 	localAddr.Host.Port = 0
 	refClocks, peerClocks := createClocks(cfg, localAddr, log)
 
-	lclk := &clocks.SystemClock{Log: log}
+	lclk := clocks.NewSystemClock(log, clockDrift(cfg))
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
@@ -505,7 +514,7 @@ func runRelay(configFile string) {
 	localAddr.Host.Port = 0
 	refClocks, peerClocks := createClocks(cfg, localAddr, log)
 
-	lclk := &clocks.SystemClock{Log: log}
+	lclk := clocks.NewSystemClock(log, clockDrift(cfg))
 	timebase.RegisterClock(lclk)
 
 	if len(refClocks) != 0 {
@@ -541,7 +550,7 @@ func runClient(configFile string) {
 	localAddr.Host.Port = 0
 	refClocks, peerClocks := createClocks(cfg, localAddr, log)
 
-	lclk := &clocks.SystemClock{Log: log}
+	lclk := clocks.NewSystemClock(log, clockDrift(cfg))
 	timebase.RegisterClock(lclk)
 
 	scionClocksAvailable := false
@@ -581,7 +590,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	ctx := context.Background()
 	log := slog.Default()
 
-	lclk := &clocks.SystemClock{Log: log}
+	lclk := clocks.NewSystemClock(log, clocks.UnknownDrift)
 	timebase.RegisterClock(lclk)
 
 	laddr := localAddr.Host
@@ -614,7 +623,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	ctx := context.Background()
 	log := slog.Default()
 
-	lclk := &clocks.SystemClock{Log: log}
+	lclk := clocks.NewSystemClock(log, clocks.UnknownDrift)
 	timebase.RegisterClock(lclk)
 
 	if dispatcherMode == dispatcherModeInternal {
@@ -691,13 +700,19 @@ func runBenchmark(configFile string) {
 }
 
 func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
-	lclk := &clocks.SystemClock{Log: slog.New(logbase.NewNopHandler())}
+	lclk := clocks.NewSystemClock(
+		slog.New(logbase.NewNopHandler()),
+		clocks.UnknownDrift,
+	)
 	timebase.RegisterClock(lclk)
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authModes, ntskeServer, log)
 }
 
 func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
-	lclk := &clocks.SystemClock{Log: slog.New(logbase.NewNopHandler())}
+	lclk := clocks.NewSystemClock(
+		slog.New(logbase.NewNopHandler()),
+		clocks.UnknownDrift,
+	)
 	timebase.RegisterClock(lclk)
 	benchmark.RunSCIONBenchmark(daemonAddr, localAddr, remoteAddr, authModes, ntskeServer, log)
 }

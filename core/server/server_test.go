@@ -16,7 +16,10 @@ import (
 )
 
 func init() {
-	lclk := &clocks.SystemClock{Log: slog.New(logbase.NewNopHandler())}
+	lclk := clocks.NewSystemClock(
+		slog.New(logbase.NewNopHandler()),
+		clocks.UnknownDrift,
+	)
 	timebase.RegisterClock(lclk)
 }
 

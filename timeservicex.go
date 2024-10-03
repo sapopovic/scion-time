@@ -16,7 +16,7 @@ func runX() {
 
 	log := slog.Default()
 
-	clk := &clocks.SystemClock{Log: log}
+	clk := clocks.NewSystemClock(log, clocks.UnknownDrift)
 	log.Debug("local clock", slog.Time("now", clk.Now()))
 	clk.Step(-1 * time.Second)
 	log.Debug("local clock", slog.Time("now", clk.Now()))

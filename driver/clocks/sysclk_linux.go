@@ -15,6 +15,7 @@ import (
 
 	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/base/timebase"
+	"example.com/scion-time/base/timemath"
 	"example.com/scion-time/base/unixutil"
 )
 
@@ -25,13 +26,21 @@ type adjustment struct {
 }
 
 type SystemClock struct {
-	Log        *slog.Logger
+	log        *slog.Logger
+	drift      float64
 	mu         sync.Mutex
 	epoch      uint64
 	adjustment *adjustment
 }
 
 var _ timebase.LocalClock = (*SystemClock)(nil)
+
+func NewSystemClock(log *slog.Logger, drift time.Duration) *SystemClock {
+	return &SystemClock{
+		log:   log,
+		drift: drift.Seconds(),
+	}
+}
 
 func now(log *slog.Logger) time.Time {
 	var ts unix.Timespec
@@ -107,21 +116,24 @@ func (c *SystemClock) Epoch() uint64 {
 }
 
 func (c *SystemClock) Now() time.Time {
-	return now(c.Log)
+	return now(c.log)
 }
 
-func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
-	return math.MaxInt64
+func (c *SystemClock) Drift(duration time.Duration) time.Duration {
+	if c.drift == UnknownDrift {
+		return math.MaxInt64
+	}
+	return timemath.Duration(duration.Seconds() * c.drift)
 }
 
 func (c *SystemClock) Step(offset time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.adjustment != nil {
-		setFrequency(c.Log, c.adjustment.afterFreq)
+		setFrequency(c.log, c.adjustment.afterFreq)
 		c.adjustment = nil
 	}
-	setOffset(c.Log, offset)
+	setOffset(c.log, offset)
 	if c.epoch == math.MaxUint64 {
 		panic("epoch overflow")
 	}
@@ -141,7 +153,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 	if duration == 0 {
 		duration = time.Second
 	}
-	setFrequency(c.Log, frequency+offset.Seconds()/duration.Seconds())
+	setFrequency(c.log, frequency+offset.Seconds()/duration.Seconds())
 	c.adjustment = &adjustment{
 		clock:     c,
 		duration:  duration,
@@ -154,14 +166,14 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 		if adj == adj.clock.adjustment {
 			setFrequency(log, adj.afterFreq)
 		}
-	}(c.Log, c.adjustment)
+	}(c.log, c.adjustment)
 }
 
 func (c *SystemClock) Sleep(duration time.Duration) {
-	c.Log.LogAttrs(context.Background(), slog.LevelDebug,
+	c.log.LogAttrs(context.Background(), slog.LevelDebug,
 		"sleeping", slog.Duration("duration", duration))
 	if duration < 0 {
 		panic("invalid duration value")
 	}
-	sleep(c.Log, duration)
+	sleep(c.log, duration)
 }

@@ -12,10 +12,16 @@ import (
 )
 
 type SystemClock struct {
-	Log *slog.Logger
+	log *slog.Logger
 }
 
 var _ timebase.LocalClock = (*SystemClock)(nil)
+
+func NewSystemClock(log *slog.Logger, drift time.Duration) *SystemClock {
+	return &SystemClock{
+		log: log,
+	}
+}
 
 func (c *SystemClock) Epoch() uint64 {
 	return 0
@@ -25,19 +31,19 @@ func (c *SystemClock) Now() time.Time {
 	return time.Now().UTC()
 }
 
-func (c *SystemClock) MaxDrift(duration time.Duration) time.Duration {
+func (c *SystemClock) Drift(duration time.Duration) time.Duration {
 	return math.MaxInt64
 }
 
 func (c *SystemClock) Step(offset time.Duration) {
-	c.Log.LogAttrs(context.Background(), slog.LevelDebug,
+	c.log.LogAttrs(context.Background(), slog.LevelDebug,
 		"SystemClock.Step, not yet implemented",
 		slog.Duration("offset", offset),
 	)
 }
 
 func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) {
-	c.Log.LogAttrs(context.Background(), slog.LevelDebug,
+	c.log.LogAttrs(context.Background(), slog.LevelDebug,
 		"SystemClock.Adjust, not yet implemented",
 		slog.Duration("offset", offset),
 		slog.Duration("duration", duration),
@@ -46,7 +52,7 @@ func (c *SystemClock) Adjust(offset, duration time.Duration, frequency float64) 
 }
 
 func (c *SystemClock) Sleep(duration time.Duration) {
-	c.Log.LogAttrs(context.Background(), slog.LevelDebug,
+	c.log.LogAttrs(context.Background(), slog.LevelDebug,
 		"SystemClock.Sleep",
 		slog.Duration("duration", duration),
 	)

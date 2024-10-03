@@ -41,7 +41,7 @@ func TestTimeserviceNTSChrony(t *testing.T) {
 	ctx := context.Background()
 	log := slog.Default()
 
-	lclk := &clocks.SystemClock{Log: log}
+	lclk := clocks.NewSystemClock(log, clocks.UnknownDrift)
 	timebase.RegisterClock(lclk)
 
 	laddr := localAddrSnet.Host
