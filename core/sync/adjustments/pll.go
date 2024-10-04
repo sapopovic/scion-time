@@ -16,14 +16,14 @@ import (
 type Pll struct {
 	log     *slog.Logger
 	logCtx  context.Context
-	clk     timebase.LocalClock
+	clk     timebase.SystemClock
 	epoch   uint64
 	mode    uint64
 	t0, t   time.Time
 	a, b, i float64
 }
 
-func NewPLL(log *slog.Logger, clk timebase.LocalClock) *Pll {
+func NewPLL(log *slog.Logger, clk timebase.SystemClock) *Pll {
 	return &Pll{log: log, logCtx: context.Background(), clk: clk}
 }
 

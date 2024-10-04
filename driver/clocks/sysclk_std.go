@@ -15,7 +15,7 @@ type SystemClock struct {
 	log *slog.Logger
 }
 
-var _ timebase.LocalClock = (*SystemClock)(nil)
+var _ timebase.SystemClock = (*SystemClock)(nil)
 
 func NewSystemClock(log *slog.Logger, drift time.Duration) *SystemClock {
 	return &SystemClock{

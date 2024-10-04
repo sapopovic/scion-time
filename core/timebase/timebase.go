@@ -9,7 +9,7 @@ import (
 
 var lclk atomic.Value
 
-func RegisterClock(c timebase.LocalClock) {
+func RegisterClock(c timebase.SystemClock) {
 	if c == nil {
 		panic("local clock must not be nil")
 	}
@@ -20,7 +20,7 @@ func RegisterClock(c timebase.LocalClock) {
 }
 
 func Now() time.Time {
-	c := lclk.Load().(timebase.LocalClock)
+	c := lclk.Load().(timebase.SystemClock)
 	if c == nil {
 		panic("no local clock registered")
 	}
@@ -28,7 +28,7 @@ func Now() time.Time {
 }
 
 func Epoch() uint64 {
-	c := lclk.Load().(timebase.LocalClock)
+	c := lclk.Load().(timebase.SystemClock)
 	if c == nil {
 		panic("no local clock registered")
 	}

@@ -65,6 +65,8 @@ const (
 	ServerTxtIncrementsBeforeH   = "The total number of TX timestamps incremented before transfer to ensure monotonicity"
 	ServerTxtIncrementsBeforeN   = "timeservice_server_txt_increments_before"
 
+	SyncCorrH        = "The current clock correction applied based on sync"
+	SyncCorrN        = "timeservice_sync_corr"
 	SyncLocalCorrH   = "The current clock correction applied based on local sync"
 	SyncLocalCorrN   = "timeservice_sync_local_corr"
 	SyncNetworkCorrH = "The current clock correction applied based on network sync"

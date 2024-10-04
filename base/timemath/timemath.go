@@ -30,7 +30,7 @@ func Inv(d time.Duration) time.Duration {
 	}
 }
 
-func midpoint(x, y time.Duration) time.Duration {
+func Midpoint(x, y time.Duration) time.Duration {
 	return x + (y-x)/2.0
 }
 
@@ -44,7 +44,7 @@ func Median(ds []time.Duration) time.Duration {
 	if n%2 != 0 {
 		return ds[i]
 	}
-	return midpoint(ds[i-1], ds[i])
+	return Midpoint(ds[i-1], ds[i])
 }
 
 func FaultTolerantMidpoint(ds []time.Duration) time.Duration {
@@ -54,5 +54,5 @@ func FaultTolerantMidpoint(ds []time.Duration) time.Duration {
 	}
 	slices.Sort(ds)
 	f := (n - 1) / 3
-	return midpoint(ds[f], ds[n-1-f])
+	return Midpoint(ds[f], ds[n-1-f])
 }

@@ -30,7 +30,7 @@ func ValidateResponseMetadata(resp *Packet) error {
 
 func ValidateResponseTimestamps(t0, t1, t2, t3 time.Time) error {
 	if t3.Sub(t0) < 0 {
-		panic("unexpected local clock behavior")
+		panic("unexpected system clock behavior")
 	}
 	if t2.Sub(t1) < 0 {
 		return errUnexpectedResponse
