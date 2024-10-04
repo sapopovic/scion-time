@@ -503,43 +503,6 @@ func runServer(configFile string) {
 	runMonitor()
 }
 
-func runRelay(configFile string) {
-	ctx := context.Background()
-	log := slog.Default()
-
-	cfg := loadConfig(configFile)
-	localAddr := localAddress(cfg)
-	daemonAddr := daemonAddress(cfg)
-
-	localAddr.Host.Port = 0
-	refClocks, peerClocks := createClocks(cfg, localAddr, log)
-
-	lclk := clocks.NewSystemClock(log, clockDrift(cfg))
-	timebase.RegisterClock(lclk)
-
-	if len(refClocks) != 0 {
-		go sync.RunLocalClockSync(log, lclk, nil /* adj */, refClocks)
-	}
-
-	if len(peerClocks) != 0 {
-		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(peerClocks)))
-	}
-
-	dscp := dscp(cfg)
-	tlsConfig := tlsConfig(cfg)
-	provider := ntske.NewProvider()
-
-	localAddr.Host.Port = ntp.ServerPortIP
-	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
-	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
-
-	localAddr.Host.Port = ntp.ServerPortSCION
-	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
-	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
-
-	runMonitor()
-}
-
 func runClient(configFile string) {
 	ctx := context.Background()
 	log := slog.Default()
@@ -793,7 +756,6 @@ func main() {
 	)
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
-	relayFlags := flag.NewFlagSet("relay", flag.ExitOnError)
 	clientFlags := flag.NewFlagSet("client", flag.ExitOnError)
 	toolFlags := flag.NewFlagSet("tool", flag.ExitOnError)
 	benchmarkFlags := flag.NewFlagSet("benchmark", flag.ExitOnError)
@@ -802,9 +764,6 @@ func main() {
 	serverFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	serverFlags.StringVar(&configFile, "config", "", "Config file")
 	serverFlags.BoolVar(&profileCPU, "profile-cpu", false, "Enable profiling")
-
-	relayFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
-	relayFlags.StringVar(&configFile, "config", "", "Config file")
 
 	clientFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	clientFlags.StringVar(&configFile, "config", "", "Config file")
@@ -846,16 +805,6 @@ func main() {
 		}
 		initLogger(verbose)
 		runServer(configFile)
-	case relayFlags.Name():
-		err := relayFlags.Parse(os.Args[2:])
-		if err != nil || relayFlags.NArg() != 0 {
-			exitWithUsage()
-		}
-		if configFile == "" {
-			exitWithUsage()
-		}
-		initLogger(verbose)
-		runRelay(configFile)
 	case clientFlags.Name():
 		err := clientFlags.Parse(os.Args[2:])
 		if err != nil || clientFlags.NArg() != 0 {
