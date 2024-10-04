@@ -461,10 +461,6 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 	return
 }
 
-func copyIP(ip net.IP) net.IP {
-	return append(ip[:0:0], ip...)
-}
-
 func runServer(configFile string) {
 	ctx := context.Background()
 	log := slog.Default()
@@ -493,7 +489,7 @@ func runServer(configFile string) {
 	provider := ntske.NewProvider()
 
 	localAddr.Host.Port = ntp.ServerPortIP
-	server.StartNTSKEServerIP(ctx, log, copyIP(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
+	server.StartNTSKEServerIP(ctx, log, slices.Clone(localAddr.Host.IP), localAddr.Host.Port, tlsConfig, provider)
 	server.StartIPServer(ctx, log, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
 	localAddr.Host.Port = ntp.ServerPortSCION
