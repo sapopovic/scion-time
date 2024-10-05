@@ -315,14 +315,14 @@ func clockDrift(cfg svcConfig) time.Duration {
 	return timemath.Duration(cfg.ClockDrift)
 }
 
-func clockAlgo(cfg svcConfig) string {
-	if cfg.ClockAlgo != "" &&
-		cfg.ClockAlgo != clockAlgoNtimed &&
-		cfg.ClockAlgo != clockAlgoPI {
-		logbase.Fatal(slog.Default(), "invalid clock steering algorithm value specified in config")
-	}
-	return cfg.ClockAlgo
-}
+// func clockAlgo(cfg svcConfig) string {
+// 	if cfg.ClockAlgo != "" &&
+// 		cfg.ClockAlgo != clockAlgoNtimed &&
+// 		cfg.ClockAlgo != clockAlgoPI {
+// 		logbase.Fatal(slog.Default(), "invalid clock steering algorithm value specified in config")
+// 	}
+// 	return cfg.ClockAlgo
+// }
 
 func tlsConfig(cfg svcConfig) *tls.Config {
 	if cfg.NTSKEServerName == "" || cfg.NTSKECertFile == "" || cfg.NTSKEKeyFile == "" {
@@ -475,15 +475,6 @@ func runServer(configFile string) {
 	lclk := clocks.NewSystemClock(log, clockDrift(cfg))
 	timebase.RegisterClock(lclk)
 
-	if len(refClocks) != 0 {
-		adj := &adjustments.SysAdjustment{}
-		go sync.RunLocalClockSync(log, lclk, adj, refClocks)
-	}
-
-	if len(peerClocks) != 0 {
-		go sync.RunPeerClockSync(log, lclk, nil /* adj */, peerClocks)
-	}
-
 	dscp := dscp(cfg)
 	tlsConfig := tlsConfig(cfg)
 	provider := ntske.NewProvider()
@@ -495,6 +486,14 @@ func runServer(configFile string) {
 	localAddr.Host.Port = ntp.ServerPortSCION
 	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
 	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
+
+	adj := &adjustments.PIController{
+		KP:            adjustments.PIControllerDefaultPRatio,
+		KI:            adjustments.PIControllerDefaultIRatio,
+		StepThreshold: adjustments.PIControllerDefaultStepThreshold,
+	}
+
+	go sync.Run(log, lclk, adj, refClocks, peerClocks)
 
 	runMonitor()
 }
@@ -508,6 +507,10 @@ func runClient(configFile string) {
 
 	localAddr.Host.Port = 0
 	refClocks, peerClocks := createClocks(cfg, localAddr, log)
+
+	if len(peerClocks) != 0 {
+		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(peerClocks)))
+	}
 
 	lclk := clocks.NewSystemClock(log, clockDrift(cfg))
 	timebase.RegisterClock(lclk)
@@ -524,22 +527,13 @@ func runClient(configFile string) {
 		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
-	if len(refClocks) != 0 {
-		var adj adjustments.Adjustment
-		clockAlgo := clockAlgo(cfg)
-		if clockAlgo == clockAlgoPI {
-			adj = &adjustments.PIController{
-				KP:            adjustments.PIControllerDefaultPRatio,
-				KI:            adjustments.PIControllerDefaultIRatio,
-				StepThreshold: adjustments.PIControllerDefaultStepThreshold,
-			}
-		}
-		go sync.RunLocalClockSync(log, lclk, adj, refClocks)
+	adj := &adjustments.PIController{
+		KP:            adjustments.PIControllerDefaultPRatio,
+		KI:            adjustments.PIControllerDefaultIRatio,
+		StepThreshold: adjustments.PIControllerDefaultStepThreshold,
 	}
 
-	if len(peerClocks) != 0 {
-		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(peerClocks)))
-	}
+	go sync.Run(log, lclk, adj, refClocks, peerClocks)
 
 	runMonitor()
 }
