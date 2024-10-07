@@ -47,6 +47,7 @@ func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 func Run(log *slog.Logger,
 	clk timebase.SystemClock, adj adjustments.Adjustment,
 	refClks, peerClks []client.ReferenceClock) {
+	ctx := context.Background()
 	if refClkImpact <= 1.0 {
 		panic("invalid local reference clock impact factor")
 	}
@@ -101,7 +102,8 @@ func Run(log *slog.Logger,
 			}
 			peerClkOffCh <- peerClkOff
 		}()
-		refClkCorr, peerClkCorr := <-refClkOffCh, <-peerClkOffCh
+		refClkOff, peerClkOff := <-refClkOffCh, <-peerClkOffCh
+		refClkCorr, peerClkCorr := refClkOff, peerClkOff
 		var refClkOk bool
 		if float64(refClkCorr.Abs()) > refClkMaxCorr {
 			refClkCorr = time.Duration(float64(timemath.Sgn(refClkCorr)) * refClkMaxCorr)
@@ -123,6 +125,17 @@ func Run(log *slog.Logger,
 		case refClkOk && peerClkOk:
 			corr = timemath.Midpoint(refClkCorr, peerClkCorr)
 		}
+		log.LogAttrs(ctx, slog.LevelDebug, "correcting clock",
+			slog.Float64("corr", corr.Seconds()),
+			slog.Bool("refClkOk", refClkOk),
+			slog.Float64("refClkOff", refClkOff.Seconds()),
+			slog.Float64("refClkCorr", refClkCorr.Seconds()),
+			slog.Float64("refClkMaxCorr", float64(refClkMaxCorr) / 1e9),
+			slog.Bool("peerClkOk", peerClkOk),
+			slog.Float64("peerClkOff", peerClkOff.Seconds()),
+			slog.Float64("peerClkCorr", peerClkCorr.Seconds()),
+			slog.Float64("peerClkMaxCorr", float64(peerClkMaxCorr) / 1e9),
+			slog.Float64("peerClkCutoff", peerClkCutoff.Seconds()))
 		adj.Do(corr)
 		corrGauge.Set(float64(corr))
 		clk.Sleep(syncInterval)
