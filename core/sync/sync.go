@@ -19,9 +19,10 @@ import (
 
 const (
 	refClkImpact  = 1.25
-	refClkCutoff  = 0
+
 	peerClkImpact = 2.5
 	peerClkCutoff = 50 * time.Microsecond
+
 	syncTimeout   = 500 * time.Millisecond
 	syncInterval  = 1000 * time.Millisecond
 )
@@ -100,19 +101,18 @@ func Run(log *slog.Logger,
 			}
 			peerClkOffCh <- peerClkOff
 		}()
-		var refClkOk, peerClkOk bool
 		refClkCorr, peerClkCorr := <-refClkOffCh, <-peerClkOffCh
-		if refClkCorr.Abs() > refClkCutoff {
-			if float64(refClkCorr.Abs()) > refClkMaxCorr {
-				refClkCorr = time.Duration(float64(timemath.Sgn(refClkCorr)) * refClkMaxCorr)
-			}
-			refClkOk = true
+		var refClkOk bool
+		if float64(refClkCorr.Abs()) > refClkMaxCorr {
+			refClkCorr = time.Duration(float64(timemath.Sgn(refClkCorr)) * refClkMaxCorr)
 		}
+		refClkOk = len(refClks) != 0
+		var peerClkOk bool
 		if peerClkCorr.Abs() > peerClkCutoff {
 			if float64(peerClkCorr.Abs()) > peerClkMaxCorr {
 				peerClkCorr = time.Duration(float64(timemath.Sgn(peerClkCorr)) * peerClkMaxCorr)
 			}
-			peerClkOk = true
+			peerClkOk = len(peerClks) != 0
 		}
 		var corr time.Duration
 		switch {
