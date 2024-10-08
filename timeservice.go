@@ -73,7 +73,7 @@ type svcConfig struct {
 	PHCReferenceClocks      []string `toml:"phc_reference_clocks,omitempty"`
 	SHMReferenceClocks      []string `toml:"shm_reference_clocks,omitempty"`
 	NTPReferenceClocks      []string `toml:"ntp_reference_clocks,omitempty"`
-	SCIONPeers              []string `toml:"scion_peers,omitempty"`
+	SCIONPeers              []string `toml:"scion_peer_clocks,omitempty"`
 	NTSKECertFile           string   `toml:"ntske_cert_file,omitempty"`
 	NTSKEKeyFile            string   `toml:"ntske_key_file,omitempty"`
 	NTSKEServerName         string   `toml:"ntske_server_name,omitempty"`
@@ -81,7 +81,11 @@ type svcConfig struct {
 	NTSKEInsecureSkipVerify bool     `toml:"ntske_insecure_skip_verify,omitempty"`
 	DSCP                    uint8    `toml:"dscp,omitempty"` // must be in range [0, 63]
 	ClockDrift              float64  `toml:"clock_drift,omitempty"`
-	ClockAlgo               string   `toml:"clock_algo,omitempty"`
+	ReferenceClockImpact    float64  `toml:"reference_clock_impact,omitempty"`
+	PeerClockImpact         float64  `toml:"peer_clock_impact,omitempty"`
+	PeerClockCutoff         float64  `toml:"peer_clock_cutoff,omitempty"`
+	SyncTimeout             float64  `toml:"sync_timeout,omitempty"`
+	SyncInterval            float64  `toml:"sync_interval,omitempty"`
 }
 
 type ntpReferenceClockIP struct {
@@ -309,20 +313,47 @@ func dscp(cfg svcConfig) uint8 {
 }
 
 func clockDrift(cfg svcConfig) time.Duration {
-	if cfg.ClockDrift < 0.0 {
+	if cfg.ClockDrift < 0 {
 		logbase.Fatal(slog.Default(), "invalid clock drift value specified in config")
 	}
 	return timemath.Duration(cfg.ClockDrift)
 }
 
-// func clockAlgo(cfg svcConfig) string {
-// 	if cfg.ClockAlgo != "" &&
-// 		cfg.ClockAlgo != clockAlgoNtimed &&
-// 		cfg.ClockAlgo != clockAlgoPI {
-// 		logbase.Fatal(slog.Default(), "invalid clock steering algorithm value specified in config")
-// 	}
-// 	return cfg.ClockAlgo
-// }
+func syncConfig(cfg svcConfig) sync.Config {
+	const (
+		defaultReferenceClockImpact = 1.25
+		defaultPeerClockImpact      = 2.5
+		defaultPeerClockCutoff      = 50 * time.Microsecond
+		defaultSyncTimeout          = 500 * time.Millisecond
+		defaultSyncInterval         = 1000 * time.Millisecond
+	)
+
+	syncCfg := sync.Config{
+		ReferenceClockImpact: cfg.ReferenceClockImpact,
+		PeerClockImpact:      cfg.PeerClockImpact,
+		PeerClockCutoff:      timemath.Duration(cfg.PeerClockCutoff),
+		SyncTimeout:          timemath.Duration(cfg.SyncTimeout),
+		SyncInterval:         timemath.Duration(cfg.SyncInterval),
+	}
+
+	if syncCfg.ReferenceClockImpact == 0 {
+		syncCfg.ReferenceClockImpact = defaultReferenceClockImpact
+	}
+	if syncCfg.PeerClockImpact == 0 {
+		syncCfg.PeerClockImpact = defaultPeerClockImpact
+	}
+	if syncCfg.PeerClockCutoff == 0 {
+		syncCfg.PeerClockCutoff = defaultPeerClockCutoff
+	}
+	if syncCfg.SyncTimeout == 0 {
+		syncCfg.SyncTimeout = defaultSyncTimeout
+	}
+	if syncCfg.SyncInterval == 0 {
+		syncCfg.SyncInterval = defaultSyncInterval
+	}
+
+	return syncCfg
+}
 
 func tlsConfig(cfg svcConfig) *tls.Config {
 	if cfg.NTSKEServerName == "" || cfg.NTSKECertFile == "" || cfg.NTSKEKeyFile == "" {
@@ -487,13 +518,15 @@ func runServer(configFile string) {
 	server.StartNTSKEServerSCION(ctx, log, udp.UDPAddrFromSnet(localAddr), tlsConfig, provider)
 	server.StartSCIONServer(ctx, log, daemonAddr, snet.CopyUDPAddr(localAddr.Host), dscp, provider)
 
+	syncCfg := syncConfig(cfg)
+
 	adj := &adjustments.PIController{
 		KP:            adjustments.PIControllerDefaultPRatio,
 		KI:            adjustments.PIControllerDefaultIRatio,
 		StepThreshold: adjustments.PIControllerDefaultStepThreshold,
 	}
 
-	go sync.Run(log, lclk, adj, refClocks, peerClocks)
+	go sync.Run(log, syncCfg, lclk, adj, refClocks, peerClocks)
 
 	runMonitor()
 }
@@ -527,13 +560,15 @@ func runClient(configFile string) {
 		server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
 	}
 
+	syncCfg := syncConfig(cfg)
+
 	adj := &adjustments.PIController{
 		KP:            adjustments.PIControllerDefaultPRatio,
 		KI:            adjustments.PIControllerDefaultIRatio,
 		StepThreshold: adjustments.PIControllerDefaultStepThreshold,
 	}
 
-	go sync.Run(log, lclk, adj, refClocks, peerClocks)
+	go sync.Run(log, syncCfg, lclk, adj, refClocks, peerClocks)
 
 	runMonitor()
 }

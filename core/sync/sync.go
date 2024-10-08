@@ -17,15 +17,13 @@ import (
 	"example.com/scion-time/core/sync/adjustments"
 )
 
-const (
-	refClkImpact  = 1.25
-
-	peerClkImpact = 2.5
-	peerClkCutoff = 50 * time.Microsecond
-
-	syncTimeout   = 500 * time.Millisecond
-	syncInterval  = 1000 * time.Millisecond
-)
+type Config struct {
+	ReferenceClockImpact float64
+	PeerClockImpact      float64
+	PeerClockCutoff      time.Duration
+	SyncTimeout          time.Duration
+	SyncInterval         time.Duration
+}
 
 type localReferenceClock struct{}
 
@@ -44,30 +42,30 @@ func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 	return m.Timestamp, m.Offset
 }
 
-func Run(log *slog.Logger,
+func Run(log *slog.Logger, cfg Config,
 	clk timebase.SystemClock, adj adjustments.Adjustment,
 	refClks, peerClks []client.ReferenceClock) {
 	ctx := context.Background()
-	if refClkImpact <= 1.0 {
+	if cfg.ReferenceClockImpact <= 1.0 {
 		panic("invalid local reference clock impact factor")
 	}
-	if peerClkImpact <= 1.0 {
+	if cfg.PeerClockImpact <= 1.0 {
 		panic("invalid peer clock impact factor")
 	}
-	if peerClkImpact-1.0 <= refClkImpact {
+	if cfg.PeerClockImpact-1.0 <= cfg.ReferenceClockImpact {
 		panic("invalid peer clock impact factor")
 	}
-	if syncInterval <= 0 {
+	if cfg.SyncInterval <= 0 {
 		panic("invalid sync interval")
 	}
-	if syncTimeout < 0 || syncTimeout > syncInterval/2 {
+	if cfg.SyncTimeout < 0 || cfg.SyncTimeout > cfg.SyncInterval/2 {
 		panic("invalid sync timeout")
 	}
-	refClkMaxCorr := refClkImpact * float64(clk.Drift(syncInterval))
+	refClkMaxCorr := cfg.ReferenceClockImpact * float64(clk.Drift(cfg.SyncInterval))
 	if refClkMaxCorr <= 0 {
 		panic("unexpected system clock behavior")
 	}
-	peerClkMaxCorr := peerClkImpact * float64(clk.Drift(syncInterval))
+	peerClkMaxCorr := cfg.PeerClockImpact * float64(clk.Drift(cfg.SyncInterval))
 	if peerClkMaxCorr <= 0 {
 		panic("unexpected system clock behavior")
 	}
@@ -90,7 +88,7 @@ func Run(log *slog.Logger,
 			var refClkOff time.Duration
 			if len(refClks) != 0 {
 				_, refClkOff = measureOffsetToRefClks(
-					refClkClient, refClks, refClkOffsets, syncTimeout)
+					refClkClient, refClks, refClkOffsets, cfg.SyncTimeout)
 			}
 			refClkOffCh <- refClkOff
 		}()
@@ -98,7 +96,7 @@ func Run(log *slog.Logger,
 			var peerClkOff time.Duration
 			if len(peerClks) != 0 {
 				_, peerClkOff = measureOffsetToRefClks(
-					peerClkClient, peerClks, peerClkOffsets, syncTimeout)
+					peerClkClient, peerClks, peerClkOffsets, cfg.SyncTimeout)
 			}
 			peerClkOffCh <- peerClkOff
 		}()
@@ -106,13 +104,15 @@ func Run(log *slog.Logger,
 		refClkCorr, peerClkCorr := refClkOff, peerClkOff
 		var refClkOk bool
 		if float64(refClkCorr.Abs()) > refClkMaxCorr {
-			refClkCorr = time.Duration(float64(timemath.Sgn(refClkCorr)) * refClkMaxCorr)
+			refClkCorr = time.Duration(
+				float64(timemath.Sgn(refClkCorr)) * refClkMaxCorr)
 		}
 		refClkOk = len(refClks) != 0
 		var peerClkOk bool
-		if peerClkCorr.Abs() > peerClkCutoff {
+		if peerClkCorr.Abs() > cfg.PeerClockCutoff {
 			if float64(peerClkCorr.Abs()) > peerClkMaxCorr {
-				peerClkCorr = time.Duration(float64(timemath.Sgn(peerClkCorr)) * peerClkMaxCorr)
+				peerClkCorr = time.Duration(
+					float64(timemath.Sgn(peerClkCorr)) * peerClkMaxCorr)
 			}
 			peerClkOk = len(peerClks) != 0
 		}
@@ -130,14 +130,13 @@ func Run(log *slog.Logger,
 			slog.Bool("refClkOk", refClkOk),
 			slog.Float64("refClkOff", refClkOff.Seconds()),
 			slog.Float64("refClkCorr", refClkCorr.Seconds()),
-			slog.Float64("refClkMaxCorr", float64(refClkMaxCorr) / 1e9),
+			slog.Float64("refClkMaxCorr", float64(refClkMaxCorr)/1e9),
 			slog.Bool("peerClkOk", peerClkOk),
 			slog.Float64("peerClkOff", peerClkOff.Seconds()),
 			slog.Float64("peerClkCorr", peerClkCorr.Seconds()),
-			slog.Float64("peerClkMaxCorr", float64(peerClkMaxCorr) / 1e9),
-			slog.Float64("peerClkCutoff", peerClkCutoff.Seconds()))
+			slog.Float64("peerClkMaxCorr", float64(peerClkMaxCorr)/1e9))
 		adj.Do(corr)
 		corrGauge.Set(float64(corr))
-		clk.Sleep(syncInterval)
+		clk.Sleep(cfg.SyncInterval)
 	}
 }
