@@ -67,7 +67,9 @@ const (
 
 type svcConfig struct {
 	LocalAddr               string   `toml:"local_address,omitempty"`
-	DaemonAddr              string   `toml:"daemon_address,omitempty"`
+	SCIONDaemonAddr         string   `toml:"scion_daemon_address,omitempty"`
+	SCIONConfigDir          string   `toml:"scion_config_dir,omitempty"`
+	SCIONDataDir            string   `toml:"scion_data_dir,omitempty"`
 	RemoteAddr              string   `toml:"remote_address,omitempty"`
 	MBGReferenceClocks      []string `toml:"mbg_reference_clocks,omitempty"`
 	PHCReferenceClocks      []string `toml:"phc_reference_clocks,omitempty"`
@@ -302,7 +304,7 @@ func remoteAddress(cfg svcConfig) *snet.UDPAddr {
 }
 
 func daemonAddress(cfg svcConfig) string {
-	return cfg.DaemonAddr
+	return cfg.SCIONDaemonAddr
 }
 
 func dscp(cfg svcConfig) uint8 {
@@ -411,7 +413,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		if !remoteAddr.IA.IsZero() {
 			refClocks = append(refClocks, newNTPReferenceClockSCION(
 				log,
-				cfg.DaemonAddr,
+				cfg.SCIONDaemonAddr,
 				udp.UDPAddrFromSnet(localAddr),
 				udp.UDPAddrFromSnet(remoteAddr),
 				dscp,
@@ -444,7 +446,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		ntskeServer := ntskeServerFromRemoteAddr(s)
 		peerClocks = append(peerClocks, newNTPReferenceClockSCION(
 			log,
-			cfg.DaemonAddr,
+			cfg.SCIONDaemonAddr,
 			udp.UDPAddrFromSnet(localAddr),
 			udp.UDPAddrFromSnet(remoteAddr),
 			dscp,
