@@ -72,6 +72,9 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 	conn *net.UDPConn, localHostIface string, localHostPort int, dscp uint8,
 	fetcher *scion.Fetcher, provider *ntske.Provider) {
 	defer conn.Close()
+
+	localConnPort := conn.LocalAddr().(*net.UDPAddr).Port
+
 	err := udp.EnableTimestamping(conn, localHostIface)
 	if err != nil {
 		log.LogAttrs(ctx, slog.LevelError, "failed to enable timestamping", slog.Any("error", err))
@@ -160,6 +163,14 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 		}
 
 		if int(udpLayer.DstPort) != localHostPort {
+			if localConnPort != scion.EndhostPort || udpLayer.DstPort == scion.EndhostPort {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to forward packet",
+					slog.String("cause", "unexpected underlay or L4 destination port"),
+					slog.Int("underlay_dst_port", localConnPort),
+					slog.Int("l4_dst_port", int(udpLayer.DstPort)))
+				continue
+			}
+
 			dstAddrPort := netip.AddrPortFrom(dstAddr, udpLayer.DstPort)
 			payload := gopacket.Payload(udpLayer.Payload)
 
