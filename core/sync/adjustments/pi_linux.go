@@ -84,7 +84,7 @@ func (c *PIController) Do(offset time.Duration) {
 		c.freq >= unixutil.FreqFromScaledPPM(-32768000) &&
 		c.freq <= unixutil.FreqFromScaledPPM(32768000) &&
 		math.Abs(c.freq-freq) >= unixutil.FreqFromScaledPPM(1) {
-		log.LogAttrs(ctx, slog.LevelInfo, "unexpected clock behavior",
+		log.LogAttrs(ctx, slog.LevelError, "unexpected clock behavior",
 			slog.Float64("cfreq", c.freq),
 			slog.Float64("freq", freq))
 	}
