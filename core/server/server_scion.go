@@ -239,7 +239,15 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 			}
 
 			mtrcs.pktsForwarded.Inc()
-		} else if localHostPort != scion.EndhostPort {
+		} else {
+			if localHostPort == scion.EndhostPort {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to handle packet",
+					slog.String("cause", "unexpected underlay or L4 destination port"),
+					slog.Int("underlay_dst_port", localConnPort),
+					slog.Int("l4_dst_port", int(udpLayer.DstPort)))
+				continue
+			}
+
 			var (
 				authOpt *slayers.EndToEndOption
 				authKey []byte
@@ -532,6 +540,7 @@ func StartSCIONDispatcher(ctx context.Context, log *slog.Logger,
 	}
 
 	localHost.Port = scion.EndhostPort
+	localHostPort := localHost.Port
 
 	mtrcs := newSCIONServerMetrics()
 
@@ -539,6 +548,6 @@ func StartSCIONDispatcher(ctx context.Context, log *slog.Logger,
 	if err != nil {
 		logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
 	}
-	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHost.Port,
+	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHostPort,
 		0 /* DSCP */, nil /* DRKey fetcher */, nil /* NTSKE provider */)
 }
