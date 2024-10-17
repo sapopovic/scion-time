@@ -1,7 +1,6 @@
 [general]
 id = "cs1-ff00_0_131-1"
 config_dir = "gen/ASff00_0_131"
-reconnect_to_dispatcher = true
 
 [trust_db]
 connection = "gen-cache/cs1-ff00_0_131-1.trust.db"

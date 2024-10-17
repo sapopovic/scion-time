@@ -98,7 +98,7 @@ cd ~
 git clone https://github.com/scionproto/scion.git
 
 cd ~/scion
-git checkout v0.11.0
+git checkout v0.12.0
 go build -o ./bin/ ./control/cmd/control
 go build -o ./bin/ ./daemon/cmd/daemon
 go build -o ./bin/ ./dispatcher/cmd/dispatcher

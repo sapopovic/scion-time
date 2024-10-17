@@ -1,7 +1,6 @@
 [general]
 id = "sd1-ff00_0_133"
 config_dir = "gen/ASff00_0_133"
-reconnect_to_dispatcher = true
 
 [trust_db]
 connection = "gen-cache/sd1-ff00_0_133.trust.db"
