@@ -181,7 +181,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 			netip.AddrFrom4(nextHopAddr.As4()),
 			nextHop.Port())
 	}
-	if nextHop == (netip.AddrPort{}) && remoteAddr.IA.Equal(localAddr.IA) {
+	if nextHop == (netip.AddrPort{}) && remoteAddr.IA == localAddr.IA {
 		nextHop = netip.AddrPortFrom(
 			netip.AddrFrom4(remoteAddr.Host.AddrPort().Addr().As4()),
 			scion.EndhostPort)
@@ -395,9 +395,9 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 			}
 			return time.Time{}, 0, err
 		}
-		validSrc := scionLayer.SrcIA.Equal(remoteAddr.IA) &&
+		validSrc := scionLayer.SrcIA == remoteAddr.IA &&
 			compareIPs(scionLayer.RawSrcAddr, remoteAddr.Host.IP) == 0
-		validDst := scionLayer.DstIA.Equal(localAddr.IA) &&
+		validDst := scionLayer.DstIA == localAddr.IA &&
 			compareIPs(scionLayer.RawDstAddr, localAddr.Host.IP) == 0
 		if !validSrc || !validDst {
 			err = errUnexpectedPacket

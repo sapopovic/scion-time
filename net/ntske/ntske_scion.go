@@ -25,7 +25,7 @@ func dialQUIC(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr st
 	dc := scion.NewDaemonConnector(ctx, daemonAddr)
 
 	var ps []snet.Path
-	if remoteAddr.IA.Equal(localAddr.IA) {
+	if remoteAddr.IA == localAddr.IA {
 		ps = []snet.Path{path.Path{
 			Src:           remoteAddr.IA,
 			Dst:           remoteAddr.IA,
