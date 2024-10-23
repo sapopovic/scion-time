@@ -19,6 +19,8 @@ import (
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/spao"
 
+	spath "github.com/scionproto/scion/pkg/snet/path"
+
 	"example.com/scion-time/base/metrics"
 
 	"example.com/scion-time/core/measurements"
@@ -168,6 +170,14 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		}
 		remoteAddr.Host.IP = net.ParseIP(ntskeData.Server)
 		remoteAddr.Host.Port = int(ntskeData.Port)
+		if remoteAddr.IA == localAddr.IA {
+			path = spath.Path{
+				Src:           remoteAddr.IA,
+				Dst:           remoteAddr.IA,
+				DataplanePath: spath.Empty{},
+				NextHop:       remoteAddr.Host,
+			}
+		}
 	}
 	ip4 := remoteAddr.Host.IP.To4()
 	if ip4 != nil {
@@ -180,11 +190,6 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		nextHop = netip.AddrPortFrom(
 			netip.AddrFrom4(nextHopAddr.As4()),
 			nextHop.Port())
-	}
-	if nextHop == (netip.AddrPort{}) && remoteAddr.IA == localAddr.IA {
-		nextHop = netip.AddrPortFrom(
-			netip.AddrFrom4(remoteAddr.Host.AddrPort().Addr().As4()),
-			scion.EndhostPort)
 	}
 
 	buf := make([]byte, scion.MTU)

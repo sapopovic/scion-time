@@ -30,6 +30,7 @@ func dialQUIC(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr st
 			Src:           remoteAddr.IA,
 			Dst:           remoteAddr.IA,
 			DataplanePath: path.Empty{},
+			NextHop:       remoteAddr.Host,
 		}}
 	} else {
 		ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})

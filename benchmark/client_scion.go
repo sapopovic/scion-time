@@ -51,6 +51,7 @@ func RunSCIONBenchmark(
 					Src:           remoteAddr.IA,
 					Dst:           remoteAddr.IA,
 					DataplanePath: path.Empty{},
+					NextHop:       remoteAddr.Host,
 				}}
 			} else {
 				ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})

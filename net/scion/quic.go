@@ -345,13 +345,6 @@ func dialUDP(ctx context.Context, localAddr, remoteAddr udp.UDPAddr, path snet.P
 	}
 	localAddr.Host.Port = raw.LocalAddr().(*net.UDPAddr).Port
 	nextHop := path.UnderlayNextHop()
-	if nextHop == nil && remoteAddr.IA == localAddr.IA {
-		nextHop = &net.UDPAddr{
-			IP:   remoteAddr.Host.IP,
-			Port: EndhostPort,
-			Zone: remoteAddr.Host.Zone,
-		}
-	}
 	return &clientConn{
 		baseConn: baseConn{
 			raw:       raw,
