@@ -147,10 +147,80 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet", slog.Any("error", err))
 			continue
 		}
-		validType := len(decoded) >= 2 &&
-			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
+		validType := len(decoded) >= 2 && (decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP ||
+			decoded[len(decoded)-1] == slayers.LayerTypeSCMP)
 		if !validType {
 			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet", slog.String("cause", "unexpected type or structure"))
+			continue
+		}
+
+		if decoded[len(decoded)-1] == slayers.LayerTypeSCMP {
+			var payload gopacket.Payload
+			switch scmpLayer.TypeCode.Type() {
+			case slayers.SCMPTypeEchoRequest:
+				payload = gopacket.Payload(scmpLayer.Payload)
+				scmpLayer.TypeCode = slayers.CreateSCMPTypeCode(
+					slayers.SCMPTypeEchoReply, 0 /* code */)
+			case slayers.SCMPTypeTracerouteRequest:
+				payload = gopacket.Payload(scmpLayer.Payload)
+				scmpLayer.TypeCode = slayers.CreateSCMPTypeCode(
+					slayers.SCMPTypeTracerouteReply, 0 /* code */)
+			default:
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to handle packet",
+					slog.String("cause", "unsupported SCMP message type"),
+					slog.Uint64("type", uint64(scmpLayer.TypeCode.Type())))
+				continue
+			}
+
+			scionLayer.DstIA, scionLayer.SrcIA = scionLayer.SrcIA, scionLayer.DstIA
+			scionLayer.DstAddrType, scionLayer.SrcAddrType = scionLayer.SrcAddrType, scionLayer.DstAddrType
+			scionLayer.RawDstAddr, scionLayer.RawSrcAddr = scionLayer.RawSrcAddr, scionLayer.RawDstAddr
+			scionLayer.Path, err = scionLayer.Path.Reverse()
+			if err != nil {
+				panic(err)
+			}
+			scionLayer.NextHdr = slayers.L4SCMP
+
+			err = buffer.Clear()
+			if err != nil {
+				panic(err)
+			}
+
+			err = payload.SerializeTo(buffer, options)
+			if err != nil {
+				panic(err)
+			}
+			buffer.PushLayer(payload.LayerType())
+
+			err = scmpLayer.SerializeTo(buffer, options)
+			if err != nil {
+				panic(err)
+			}
+			buffer.PushLayer(scmpLayer.LayerType())
+
+			err = scionLayer.SerializeTo(buffer, options)
+			if err != nil {
+				panic(err)
+			}
+			buffer.PushLayer(scionLayer.LayerType())
+
+			m, err := conn.WriteToUDPAddrPort(buffer.Bytes(), lastHop)
+			if err != nil || m != len(buffer.Bytes()) {
+				log.LogAttrs(ctx, slog.LevelError, "failed to write packet", slog.Any("error", err))
+				continue
+			}
+			_, id, err := udp.ReadTXTimestamp(conn)
+			if err != nil {
+				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+					slog.Any("error", err))
+			} else if id != txID {
+				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txID)))
+				txID = id + 1
+			} else {
+				txID++
+			}
+
 			continue
 		}
 
