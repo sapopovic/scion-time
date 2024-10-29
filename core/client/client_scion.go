@@ -389,12 +389,24 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 			}
 			return time.Time{}, 0, err
 		}
-		validType := len(decoded) >= 2 &&
-			decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP
+		validType := len(decoded) >= 2 && (decoded[len(decoded)-1] == slayers.LayerTypeSCIONUDP ||
+			decoded[len(decoded)-1] == slayers.LayerTypeSCMP)
 		if !validType {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet", slog.String("cause", "unexpected type or structure"))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+		if decoded[len(decoded)-1] == slayers.LayerTypeSCMP {
+			err = errUnexpectedPacket
+			c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to handle packet",
+				slog.String("cause", "unexpected SCMP message type"),
+				slog.Uint64("type", uint64(scmpLayer.TypeCode.Type())),
+				slog.Uint64("code", uint64(scmpLayer.TypeCode.Code())))
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				numRetries++
 				continue
 			}

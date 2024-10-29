@@ -167,8 +167,9 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 					slayers.SCMPTypeTracerouteReply, 0 /* code */)
 			default:
 				log.LogAttrs(ctx, slog.LevelInfo, "failed to handle packet",
-					slog.String("cause", "unsupported SCMP message type"),
-					slog.Uint64("type", uint64(scmpLayer.TypeCode.Type())))
+					slog.String("cause", "unexpected SCMP message type"),
+					slog.Uint64("type", uint64(scmpLayer.TypeCode.Type())),
+					slog.Uint64("code", uint64(scmpLayer.TypeCode.Code())))
 				continue
 			}
 
