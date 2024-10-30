@@ -262,8 +262,18 @@ func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, r
 
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
-	paths := c.pather.Paths(c.remoteAddr.IA)
-	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, paths)
+	var ps []snet.Path
+	if c.remoteAddr.IA == c.localAddr.IA {
+		ps = []snet.Path{path.Path{
+			Src:           c.remoteAddr.IA,
+			Dst:           c.remoteAddr.IA,
+			DataplanePath: path.Empty{},
+			NextHop:       c.remoteAddr.Host,
+		}}
+	} else {
+		ps = c.pather.Paths(c.remoteAddr.IA)
+	}
+	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps)
 }
 
 func loadConfig(configFile string) svcConfig {
