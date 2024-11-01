@@ -17,6 +17,8 @@ import (
 	"example.com/scion-time/net/udp"
 )
 
+var errNoPath = errors.New("failed to dial QUIC connection: no path")
+
 func dialQUIC(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr string, config *tls.Config) (*scion.QUICConnection, Data, error) {
 	config.NextProtos = []string{alpn}
 	var err error
@@ -47,7 +49,7 @@ func dialQUIC(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, daemonAddr st
 				"no paths available",
 				slog.Any("remote", remoteAddr),
 			)
-			return nil, Data{}, errors.New("no paths available")
+			return nil, Data{}, errNoPath
 		}
 	}
 
