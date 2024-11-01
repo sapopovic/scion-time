@@ -18,12 +18,12 @@ jobs:
           sudo apt-get install gnutls-bin
           sudo apt-get install libtomcrypt-dev
           sudo apt-get install nettle-dev
-          curl -LO https://chrony-project.org/releases/chrony-4.5.tar.gz
-          tar -xzvf chrony-4.5.tar.gz
-          mv chrony-4.5 chrony-4.5-src
-          mkdir chrony-4.5
-          cd chrony-4.5-src/
-          ./configure --prefix=/home/ubuntu/chrony-4.5
+          curl -LO https://chrony-project.org/releases/chrony-4.6.1.tar.gz
+          tar -xzvf chrony-4.6.1.tar.gz
+          mv chrony-4.6.1 chrony-4.6.1-src
+          mkdir chrony-4.6.1
+          cd chrony-4.6.1-src/
+          ./configure --prefix=/home/ubuntu/chrony-4.6.1
           make
           sudo make install
 
@@ -31,7 +31,7 @@ jobs:
         run: |
           sh testnet/tls-gen-cert.sh
           sudo systemctl stop chronyd
-          sudo /home/ubuntu/chrony-4.5/sbin/chronyd -4 -f /home/runner/work/scion-time/scion-time/testnet/chrony/chronyNTS.conf
+          sudo /home/ubuntu/chrony-4.6.1/sbin/chronyd -4 -f /home/runner/work/scion-time/scion-time/testnet/chrony/chronyNTS.conf
           sleep 10
 
       - name: Set up Go
