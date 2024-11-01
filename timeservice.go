@@ -265,7 +265,7 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	var ps []snet.Path
 	if c.remoteAddr.IA == c.localAddr.IA {
 		ps = []snet.Path{path.Path{
-			Src:           c.remoteAddr.IA,
+			Src:           c.localAddr.IA,
 			Dst:           c.remoteAddr.IA,
 			DataplanePath: path.Empty{},
 			NextHop:       c.remoteAddr.Host,
@@ -635,7 +635,7 @@ func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	var ps []snet.Path
 	if remoteAddr.IA == localAddr.IA {
 		ps = []snet.Path{path.Path{
-			Src:           remoteAddr.IA,
+			Src:           localAddr.IA,
 			Dst:           remoteAddr.IA,
 			DataplanePath: path.Empty{},
 			NextHop:       remoteAddr.Host,

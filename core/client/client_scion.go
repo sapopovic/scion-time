@@ -172,7 +172,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		remoteAddr.Host.Port = int(ntskeData.Port)
 		if remoteAddr.IA == localAddr.IA {
 			path = spath.Path{
-				Src:           remoteAddr.IA,
+				Src:           localAddr.IA,
 				Dst:           remoteAddr.IA,
 				DataplanePath: spath.Empty{},
 				NextHop:       remoteAddr.Host,

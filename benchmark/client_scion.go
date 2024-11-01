@@ -48,7 +48,7 @@ func RunSCIONBenchmark(
 			var ps []snet.Path
 			if remoteAddr.IA == localAddr.IA {
 				ps = []snet.Path{path.Path{
-					Src:           remoteAddr.IA,
+					Src:           localAddr.IA,
 					Dst:           remoteAddr.IA,
 					DataplanePath: path.Empty{},
 					NextHop:       remoteAddr.Host,
