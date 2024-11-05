@@ -293,7 +293,7 @@ func ListenQUIC(ctx context.Context, localAddr udp.UDPAddr,
 	}
 	qlistener, err := quic.Listen(conn, tlsCfg, quicCfg)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	return &QUICListener{qlistener, conn}, nil
@@ -375,7 +375,7 @@ func DialQUIC(ctx context.Context, localAddr, remoteAddr udp.UDPAddr, path snet.
 	}
 	qconn, err := quic.Dial(ctx, conn, remoteAddr, tlsCfg, quicCfg)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	return &QUICConnection{qconn, conn}, nil
