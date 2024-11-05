@@ -60,5 +60,10 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1
           $(go env GOPATH)/bin/golangci-lint run
 
+      - name: gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          $(go env GOPATH)/bin/gosec -quiet -exclude=G103,G104,G114,G115,G304,G402,G407 ./...
+
       - name: go test
         run: go test example.com/scion-time/...
