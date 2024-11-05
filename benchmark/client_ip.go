@@ -70,7 +70,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 			}
 			mu.Lock()
 			defer mu.Unlock()
-			hg.PercentilesPrint(os.Stdout, 1, 1.0)
+			_, _ = hg.PercentilesPrint(os.Stdout, 1, 1.0)
 		}()
 	}
 	t0 := time.Now()
