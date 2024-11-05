@@ -313,10 +313,6 @@ func remoteAddress(cfg svcConfig) *snet.UDPAddr {
 	return &remoteAddr
 }
 
-func daemonAddress(cfg svcConfig) string {
-	return cfg.SCIONDaemonAddr
-}
-
 func dscp(cfg svcConfig) uint8 {
 	if cfg.DSCP > 63 {
 		logbase.Fatal(slog.Default(), "invalid differentiated services codepoint value specified in config")
@@ -467,7 +463,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
 
-	daemonAddr := daemonAddress(cfg)
+	daemonAddr := cfg.SCIONDaemonAddr
 	if daemonAddr != "" {
 		ctx := context.Background()
 		pather := scion.StartPather(ctx, log, daemonAddr, dstIAs)
@@ -509,8 +505,8 @@ func runServer(configFile string) {
 	log := slog.Default()
 
 	cfg := loadConfig(configFile)
+	daemonAddr := cfg.SCIONDaemonAddr
 	localAddr := localAddress(cfg)
-	daemonAddr := daemonAddress(cfg)
 
 	localAddr.Host.Port = 0
 	refClocks, peerClocks := createClocks(cfg, localAddr, log)
@@ -683,8 +679,8 @@ func runBenchmark(configFile string) {
 	cfg := loadConfig(configFile)
 	log := slog.Default()
 
+	daemonAddr := cfg.SCIONDaemonAddr
 	localAddr := localAddress(cfg)
-	daemonAddr := daemonAddress(cfg)
 	remoteAddr := remoteAddress(cfg)
 
 	localAddr.Host.Port = 0
