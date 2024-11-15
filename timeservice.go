@@ -698,7 +698,7 @@ func runBenchmark(configFile string) {
 
 func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
 	lclk := clocks.NewSystemClock(
-		slog.New(logbase.NewNopHandler()),
+		slog.New(logbase.DiscardHandler),
 		clocks.UnknownDrift,
 	)
 	timebase.RegisterClock(lclk)
@@ -707,7 +707,7 @@ func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, nts
 
 func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
 	lclk := clocks.NewSystemClock(
-		slog.New(logbase.NewNopHandler()),
+		slog.New(logbase.DiscardHandler),
 		clocks.UnknownDrift,
 	)
 	timebase.RegisterClock(lclk)
