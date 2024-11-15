@@ -54,6 +54,13 @@ type ptpSysOffsetPrecise struct {
 	reserved    [4]uint32 /* Reserved for future use. */
 }
 
+type ptpSysOffsetExtended struct {
+	nSamples uint32
+	clockID  int32
+	reserved [2]uint32
+	ts       [25][3]ptpClockTime
+}
+
 const (
 	sizeofPTPSysOffsetPrecise = 64 // sizeof(struct ptp_sys_offset_precise)
 
@@ -92,6 +99,15 @@ func ioctlRequest(d, s, t, n int) uint {
 		(uint(n&ioctlSNMask) << ioctlSNShift)
 }
 
+func extendedTS(extendedTS [3]ptpClockTime) (sysTime, phcTime time.Time, delay time.Duration) {
+	t0 := time.Unix(extendedTS[0].sec, int64(extendedTS[0].nsec)).UTC()
+	t2 := time.Unix(extendedTS[2].sec, int64(extendedTS[2].nsec)).UTC()
+	delay = t2.Sub(t0)
+	sysTime = t0.Add(delay / 2)
+	phcTime = time.Unix(extendedTS[1].sec, int64(extendedTS[1].nsec)).UTC()
+	return
+}
+
 func NewReferenceClock(log *slog.Logger, dev string) *ReferenceClock {
 	return &ReferenceClock{log: log, dev: dev}
 }
@@ -124,12 +140,34 @@ func (c *ReferenceClock) MeasureClockOffset(ctx context.Context) (
 		uintptr(unsafe.Pointer(&off)),
 	)
 	if errno != 0 {
-		c.log.LogAttrs(ctx, slog.LevelError,
-			"ioctl failed",
-			slog.String("dev", c.dev),
-			slog.Uint64("errno", uint64(errno)),
+		off := ptpSysOffsetExtended{nSamples: 7}
+		_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd),
+			uintptr(ioctlRequest(ioctlRead|ioctlWrite, int(unsafe.Sizeof(off)), '=', 0x9)),
+			uintptr(unsafe.Pointer(&off)),
 		)
-		return time.Time{}, 0, errno
+		if errno != 0 {
+			c.log.LogAttrs(ctx, slog.LevelError,
+				"ioctl failed",
+				slog.String("dev", c.dev),
+				slog.Uint64("errno", uint64(errno)),
+			)
+			return time.Time{}, 0, errno
+		}
+		sys, phc, delay := extendedTS(off.ts[0])
+		for i := 1; i < int(off.nSamples); i++ {
+			s, p, d := extendedTS(off.ts[i])
+			if d < delay {
+				sys, phc, delay = s, p, d
+			}
+		}
+		offset := phc.Sub(sys)
+		c.log.LogAttrs(ctx, slog.LevelDebug,
+			"PTP hardware clock sample",
+			slog.Time("sysRealTime", sys),
+			slog.Time("deviceTime", phc),
+			slog.Duration("offset", offset),
+		)
+		return sys, offset, nil
 	}
 
 	sysRealTime := time.Unix(off.sysRealTime.sec, int64(off.sysRealTime.nsec)).UTC()
