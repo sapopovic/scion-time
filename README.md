@@ -55,12 +55,11 @@ In an additional session:
 
 ## Installing prerequisites for a SCION test environment
 
-Reference platform: Ubuntu 22.04 LTS, Go 1.23.4
+Reference platform: Ubuntu 24.04 LTS, Go 1.23.4
 
 ```
 sudo apt-get update
-sudo apt-get install -y build-essential python3-pip supervisor
-pip3 install plumbum toml supervisor-wildcards
+sudo apt-get install -y build-essential python3-plumbum python3-toml supervisor
 ```
 
 On x86-64:
