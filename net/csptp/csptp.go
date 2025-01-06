@@ -54,7 +54,6 @@ func secondsFromPTPSeconds(s [6]uint8) uint64 {
 
 func TimestampFromTime(t time.Time) Timestamp {
 	panic("not yet implemented")
-	return Timestamp{}
 }
 
 func TimeFromTimestamp(t Timestamp) time.Time {
