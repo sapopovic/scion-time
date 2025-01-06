@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"example.com/scion-time/driver/clocks"
+	_ "example.com/scion-time/net/csptp"
 	"example.com/scion-time/net/ntp"
 )
 
