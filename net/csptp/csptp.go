@@ -1,5 +1,8 @@
 package csptp
 
+// See FlashPTP at https://github.com/meinberg-sync/flashptpd
+// and IEEE 1588-2019, PTP version 2.1
+
 import (
 	"time"
 )
@@ -12,14 +15,14 @@ const (
 
 	SdoID = 0
 
-	MsgTypeSync     = 0
-	MsgTypeFollowUp = 8
+	MessageTypeSync     = 0
+	MessageTypeFollowUp = 8
 
 	VersionMin     = 1
 	VersionMax     = 0x12
 	VersionDefault = 0x12
 
-	Domain = 0
+	DomainNumber = 0
 )
 
 type PortID struct {
@@ -33,18 +36,19 @@ type Timestamp struct {
 }
 
 type Packet struct {
-	SdoIDMsgType    uint8
-	Version         uint8
-	MsgLen          uint16
-	Domain          uint8
-	Flags           uint16
-	Correction      int64
-	MsgTypeSpecific uint32
-	PortID          PortID
-	SeqID           uint16
-	MsgCtrl         uint8
-	LogMsgPeriod    int8
-	Timestamp       Timestamp
+	SdoIDMessageType    uint8
+	Version             uint8
+	MessageLength       uint16
+	DomainNumber        uint8
+	MinorSdoID          uint8
+	FlagField           uint16
+	CorrectionField     int64
+	MessageTypeSpecific uint32
+	SourcePortIdentity  PortID
+	SequenceID          uint16
+	ControlField        uint8
+	LogMessageInterval  int8
+	Timestamp           Timestamp
 }
 
 func secondsFromPTPSeconds(s [6]uint8) uint64 {
