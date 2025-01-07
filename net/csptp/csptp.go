@@ -8,6 +8,8 @@ import (
 )
 
 const (
+	nanosecondsPerSecond int64 = 1e9
+
 	EventPortIP      = 319   // Sync
 	EventPortSCION   = 10319 // Sync
 	GeneralPortIP    = 320   // Follow Up
@@ -57,11 +59,23 @@ func secondsFromPTPSeconds(s [6]uint8) uint64 {
 }
 
 func TimestampFromTime(t time.Time) Timestamp {
-	panic("not yet implemented")
+	unixSec := t.Unix()
+	if unixSec < 0 {
+		panic("invalid argument: t must not be before the epoch")
+	}
+	s := uint64(unixSec)
+	return Timestamp{
+		Seconds: [6]uint8{
+			uint8(s >> 40), uint8(s >> 32), uint8(s >> 24),
+			uint8(s >> 16), uint8(s >> 8), uint8(s)},
+		Nanoseconds: uint32(t.Nanosecond()),
+	}
 }
 
-func TimeFromTimestamp(t Timestamp) time.Time {
-	return time.Unix(int64(secondsFromPTPSeconds(t.Seconds)), int64(t.Nanoseconds)).UTC()
+func (x Timestamp) Sub(y Timestamp) time.Duration {
+	return time.Duration(
+		(int64(secondsFromPTPSeconds(x.Seconds))-int64(secondsFromPTPSeconds(y.Seconds)))*nanosecondsPerSecond +
+			(int64(x.Nanoseconds) - int64(y.Nanoseconds)))
 }
 
 func DecodePacket(pkt *Packet, b []byte) error {
