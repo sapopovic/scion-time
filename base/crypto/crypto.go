@@ -18,7 +18,7 @@ func randInt31(ctx context.Context, n int) (int, error) {
 		return 0, nil
 	}
 	if n > math.MaxInt32 {
-		panic("invalid argument to randInt31: n must not be greater than 2147483647")
+		panic("invalid argument: n must not be greater than 2147483647")
 	}
 	t := uint32(-n) % uint32(n)
 	b := make([]byte, 4)
@@ -72,7 +72,7 @@ func randInt63(ctx context.Context, n int) (int, error) {
 
 func RandIntn(ctx context.Context, n int) (int, error) {
 	if n <= 0 {
-		panic("invalid argument to RandIntn: n must be greater than 0")
+		panic("invalid argument: n must be greater than 0")
 	}
 	if n <= math.MaxInt32 {
 		return randInt31(ctx, n)
@@ -82,10 +82,10 @@ func RandIntn(ctx context.Context, n int) (int, error) {
 
 func Sample(ctx context.Context, k, n int, pick func(dst, src int)) (int, error) {
 	if k < 0 {
-		panic("invalid argument to Sample: k must be non-negative")
+		panic("invalid argument: k must be non-negative")
 	}
 	if n < 0 {
-		panic("invalid argument to Sample: n must be non-negative")
+		panic("invalid argument: n must be non-negative")
 	}
 	if n < k {
 		k = n

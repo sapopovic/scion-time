@@ -64,6 +64,9 @@ var (
 
 func Time64FromTime(t time.Time) Time64 {
 	d := t.Sub(epoch).Nanoseconds()
+	if d < 0 {
+		panic("invalid argument: t must not be before the epoch")
+	}
 	return Time64{
 		Seconds: uint32(
 			d / nanosecondsPerSecond),
