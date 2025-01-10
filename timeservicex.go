@@ -12,6 +12,25 @@ import (
 	"example.com/scion-time/net/ntp"
 )
 
+func TimeFromTime64(t ntp.Time64, t0 time.Time) time.Time {
+	const (
+		epoch         = -(70*365 + 17) * 86400 // Seconds from Unix epoch (1970) to NTP epoch (1900), incl. leap days
+		secondsPerEra = 1 << 32
+	)
+
+	tref := t0.Unix()
+
+	sec := epoch + (tref-epoch)/secondsPerEra*secondsPerEra + int64(t.Seconds)
+
+	// If the timestamp would be too far in the past relative to
+	// the reference time, assume it's from the next era
+	if sec < tref-secondsPerEra/2 {
+		sec += secondsPerEra
+	}
+
+	return time.Unix(sec, 0)
+}
+
 func runX() {
 	initLogger(true /* verbose */)
 
@@ -22,9 +41,17 @@ func runX() {
 	clk.Step(-1 * time.Second)
 	log.Debug("local clock", slog.Time("now", clk.Now()))
 
-	now64 := ntp.Time64FromTime(time.Now())
+	now := time.Now().UTC()
+	now64 := ntp.Time64FromTime(now)
 	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
 		slog.Any("now", ntp.Time64LogValuer{T: now64}))
+
+	t0 := TimeFromTime64(ntp.Time64{1<<32 - 1, 0}, now)
+	t1 := TimeFromTime64(ntp.Time64{0, 0}, now)
+	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
+		slog.Time("t0", t0),
+		slog.Time("t1", t1),
+	)
 
 	var pkt ntp.Packet
 	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
