@@ -42,12 +42,13 @@ func runX() {
 	log.Debug("local clock", slog.Time("now", clk.Now()))
 
 	now := time.Now().UTC()
+
 	now64 := ntp.Time64FromTime(now)
 	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
 		slog.Any("now", ntp.Time64LogValuer{T: now64}))
 
-	t0 := TimeFromTime64(ntp.Time64{1<<32 - 1, 0}, now)
-	t1 := TimeFromTime64(ntp.Time64{0, 0}, now)
+	t0 := TimeFromTime64(ntp.Time64{Seconds: 1<<32 - 1, Fraction: 0}, now)
+	t1 := TimeFromTime64(ntp.Time64{Seconds: 0, Fraction: 0}, now)
 	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
 		slog.Time("t0", t0),
 		slog.Time("t1", t1),
