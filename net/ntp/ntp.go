@@ -81,6 +81,31 @@ func TimeFromTime64(t Time64) time.Time {
 			(int64(t.Fraction)*nanosecondsPerSecond+1<<31)>>32))
 }
 
+// TimeFromTime64V2 converts an NTP timestamp to a time.Time using a reference time t0
+// to resolve the NTP timestamp era ambiguity.
+func TimeFromTime64V2(t Time64, t0 time.Time) time.Time {
+	const (
+		// Seconds from Unix epoch (1970) to NTP epoch (1900), including leap days
+		epoch = -(70*365 + 17) * 86400
+		// Seconds per NTP era (2^32)
+		secondsPerEra = 1 << 32
+	)
+
+	tref := t0.Unix()
+
+	sec := epoch + (tref-epoch)/secondsPerEra*secondsPerEra + int64(t.Seconds)
+
+	// If the timestamp would be too far in the past relative to
+	// the reference time, assume it's from the next era
+	if sec < tref-secondsPerEra/2 {
+		sec += secondsPerEra
+	}
+
+	nsec := (int64(t.Fraction)*nanosecondsPerSecond + 1<<31) >> 32
+
+	return time.Unix(sec, nsec).UTC()
+}
+
 func (t Time64) Before(u Time64) bool {
 	return t.Seconds < u.Seconds ||
 		t.Seconds == u.Seconds && t.Fraction < u.Fraction
