@@ -12,7 +12,7 @@ import (
 func TestTime64Conversion(t *testing.T) {
 	t0 := time.Now()
 	t64 := ntp.Time64FromTime(t0)
-	t1 := ntp.TimeFromTime64V2(t64, t0)
+	t1 := ntp.TimeFromTime64(t64, t0)
 
 	if !t1.Equal(t0) {
 		t.Errorf("t1 and t0 must be equal")
@@ -131,7 +131,7 @@ func TestTimeFromTime64V2(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tt := ntp.TimeFromTime64V2(tc.t64, refTime)
+			tt := ntp.TimeFromTime64(tc.t64, refTime)
 			if !tt.Equal(tc.expected) {
 				t.Errorf("TimeFromTime64V2() tt = %v, want %v", tt, tc.expected)
 			}

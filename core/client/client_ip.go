@@ -148,7 +148,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, mtrcs *ipClientMetr
 	ntpreq.SetVersion(ntp.VersionMax)
 	ntpreq.SetMode(ntp.ModeClient)
 	if c.InterleavedMode && reference == c.prev.reference &&
-		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime)) <= 3*time.Second {
+		cTxTime0.Sub(ntp.TimeFromTime64(c.prev.cTxTime, cTxTime0)) <= 3*time.Second {
 		interleavedReq = true
 		ntpreq.OriginTime = c.prev.sRxTime
 		ntpreq.ReceiveTime = c.prev.cRxTime
@@ -288,15 +288,15 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, mtrcs *ipClientMetr
 			slog.Any("data", ntp.PacketLogValuer{Pkt: &ntpresp}),
 		)
 
-		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime)
-		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime)
+		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime, cTxTime0)
+		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime, cTxTime0)
 
 		var t0, t1, t2, t3 time.Time
 		if interleavedResp {
-			t0 = ntp.TimeFromTime64(c.prev.cTxTime)
-			t1 = ntp.TimeFromTime64(c.prev.sRxTime)
+			t0 = ntp.TimeFromTime64(c.prev.cTxTime, cTxTime0)
+			t1 = ntp.TimeFromTime64(c.prev.sRxTime, cTxTime0)
 			t2 = sTxTime
-			t3 = ntp.TimeFromTime64(c.prev.cRxTime)
+			t3 = ntp.TimeFromTime64(c.prev.cRxTime, cTxTime0)
 		} else {
 			t0 = cTxTime1
 			t1 = sRxTime

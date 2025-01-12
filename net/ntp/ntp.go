@@ -75,15 +75,9 @@ func Time64FromTime(t time.Time) Time64 {
 	}
 }
 
-func TimeFromTime64(t Time64) time.Time {
-	return epoch.Add(time.Duration(
-		int64(t.Seconds)*nanosecondsPerSecond +
-			(int64(t.Fraction)*nanosecondsPerSecond+1<<31)>>32))
-}
-
-// TimeFromTime64V2 converts an NTP timestamp to a time.Time using a reference time t0
+// TimeFromTime64 converts an NTP timestamp to a time.Time using a reference time t0
 // to resolve the NTP timestamp era ambiguity.
-func TimeFromTime64V2(t Time64, t0 time.Time) time.Time {
+func TimeFromTime64(t Time64, t0 time.Time) time.Time {
 	const (
 		// Seconds from Unix epoch (1970) to NTP epoch (1900), including leap days
 		epoch = -(70*365 + 17) * 86400
