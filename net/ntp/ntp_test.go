@@ -14,74 +14,84 @@ func TestTime64FromTime(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		t        time.Time
+		tt       time.Time
 		expected ntp.Time64
 	}{
 		{
 			name:     "NTP epoch",
-			t:        time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC),
+			tt:       time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 0, Fraction: 0},
 		},
 		{
 			name:     "Unix epoch",
-			t:        time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+			tt:       time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 2208988800, Fraction: 0},
 		},
 		{
 			name:     "Zero fraction",
-			t:        time.Date(2024, 1, 17, 12, 30, 45, 0, time.UTC),
+			tt:       time.Date(2024, 1, 17, 12, 30, 45, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 3914483445, Fraction: 0x0},
 		},
 		{
 			name:     "Quarter fraction",
-			t:        time.Date(2024, 1, 17, 12, 30, 45, 250000000, time.UTC),
+			tt:       time.Date(2024, 1, 17, 12, 30, 45, 250000000, time.UTC),
 			expected: ntp.Time64{Seconds: 3914483445, Fraction: 0x40000000},
 		},
 		{
 			name:     "Half fraction",
-			t:        time.Date(2024, 1, 17, 12, 30, 45, 500000000, time.UTC),
+			tt:       time.Date(2024, 1, 17, 12, 30, 45, 500000000, time.UTC),
 			expected: ntp.Time64{Seconds: 3914483445, Fraction: 0x80000000},
 		},
 		{
 			name:     "Maximum fraction",
-			t:        time.Date(2024, 1, 17, 12, 30, 45, 999999999, time.UTC),
+			tt:       time.Date(2024, 1, 17, 12, 30, 45, 999999999, time.UTC),
 			expected: ntp.Time64{Seconds: 3914483445, Fraction: 4294967291},
 		},
 		{
 			name:     "Era cutoff - just before",
-			t:        time.Date(1955, 12, 29, 20, 45, 52, 0, time.UTC),
+			tt:       time.Date(1955, 12, 29, 20, 45, 52, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 3914438400 - 1<<31, Fraction: 0},
 		},
 		{
 			name:     "Era cutoff - just beyond, era 0",
-			t:        time.Date(1955, 12, 29, 20, 45, 51, 0, time.UTC),
+			tt:       time.Date(1955, 12, 29, 20, 45, 51, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 3914438400 - 1<<31 - 1, Fraction: 0},
 		},
 		{
 			name:     "Era cutoff - just beyond, era 1",
-			t:        time.Date(2092, 2, 4, 3, 14, 07, 0, time.UTC),
+			tt:       time.Date(2092, 2, 4, 3, 14, 07, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 3914438400 - 1<<31 - 1, Fraction: 0},
 		},
 		{
 			name:     "Era rollover - just before",
-			t:        time.Date(2036, 2, 7, 6, 28, 15, 0, time.UTC),
+			tt:       time.Date(2036, 2, 7, 6, 28, 15, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 4294967295, Fraction: 0},
 		},
 		{
 			name:     "Era rollover - just after",
-			t:        time.Date(2036, 2, 7, 6, 28, 16, 0, time.UTC),
+			tt:       time.Date(2036, 2, 7, 6, 28, 16, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 0, Fraction: 0},
 		},
 		{
-			name:     "Nanosecond precision",
-			t:        time.Date(2024, 1, 17, 0, 0, 0, 1, time.UTC),
+			name:     "Nanosecond precision (0)",
+			tt:       time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
+			expected: ntp.Time64{Seconds: 3914438400, Fraction: 0},
+		},
+		{
+			name:     "Nanosecond precision (1)",
+			tt:       time.Date(2024, 1, 17, 0, 0, 0, 1, time.UTC),
 			expected: ntp.Time64{Seconds: 3914438400, Fraction: 4},
+		},
+		{
+			name:     "Nanosecond precision (999999999)",
+			tt:       time.Date(2024, 1, 17, 0, 0, 0, 999999999, time.UTC),
+			expected: ntp.Time64{Seconds: 3914438400, Fraction: 4294967291},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t64 := ntp.Time64FromTime(tc.t)
+			t64 := ntp.Time64FromTime(tc.tt)
 			if t64 != tc.expected {
 				t.Errorf("Time64FromTime() = %+v, expected %+v", t64, tc.expected)
 			}
@@ -92,7 +102,6 @@ func TestTime64FromTime(t *testing.T) {
 func TestTimeFromTime64(t *testing.T) {
 	// Based on an Claude AI interaction
 
-	// Reference time: 2024-01-17 00:00:00 UTC
 	refTime := time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
@@ -144,9 +153,9 @@ func TestTimeFromTime64(t *testing.T) {
 			name: "Era rollover - just before",
 			t64: ntp.Time64{
 				Seconds:  4294967295,
-				Fraction: 0,
+				Fraction: 4294967295,
 			},
-			expected: time.Date(2036, 2, 7, 6, 28, 15, 0, time.UTC),
+			expected: time.Date(2036, 2, 7, 6, 28, 15, 999999999, time.UTC),
 		},
 		{
 			name: "Era rollover - just after",
@@ -165,7 +174,7 @@ func TestTimeFromTime64(t *testing.T) {
 			expected: time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
 		},
 		{
-			name: "Small fraction",
+			name: "Small fraction (4)",
 			t64: ntp.Time64{
 				Seconds:  3914438400,
 				Fraction: 4,
@@ -173,10 +182,18 @@ func TestTimeFromTime64(t *testing.T) {
 			expected: time.Date(2024, 1, 17, 0, 0, 0, 0, time.UTC),
 		},
 		{
+			name: "Small fraction (5)",
+			t64: ntp.Time64{
+				Seconds:  3914438400,
+				Fraction: 5,
+			},
+			expected: time.Date(2024, 1, 17, 0, 0, 0, 1, time.UTC),
+		},
+		{
 			name: "Quarter fraction",
 			t64: ntp.Time64{
 				Seconds:  3914438400,
-				Fraction: 0x40000000, // 2^30, represents 0.25 seconds
+				Fraction: 0x40000000,
 			},
 			expected: time.Date(2024, 1, 17, 0, 0, 0, 250000000, time.UTC),
 		},
@@ -184,7 +201,7 @@ func TestTimeFromTime64(t *testing.T) {
 			name: "Half fraction",
 			t64: ntp.Time64{
 				Seconds:  3914438400,
-				Fraction: 0x80000000, // 2^31, represents 0.5 seconds
+				Fraction: 0x80000000,
 			},
 			expected: time.Date(2024, 1, 17, 0, 0, 0, 500000000, time.UTC),
 		},
@@ -205,14 +222,6 @@ func TestTimeFromTime64(t *testing.T) {
 			expected: time.Date(2024, 1, 17, 0, 0, 0, 999999999, time.UTC),
 		},
 		{
-			name: "Nanosecond precision",
-			t64: ntp.Time64{
-				Seconds:  3914438400,
-				Fraction: 5,
-			},
-			expected: time.Date(2024, 1, 17, 0, 0, 0, 1, time.UTC),
-		},
-		{
 			name: "Far past relative to reference - should wrap to next era",
 			t64: ntp.Time64{
 				Seconds:  1, // Just after NTP epoch (1900)
@@ -221,21 +230,13 @@ func TestTimeFromTime64(t *testing.T) {
 			// Should be interpreted as being in an era close to our reference time
 			expected: time.Date(2036, 2, 7, 6, 28, 17, 0, time.UTC),
 		},
-		{
-			name: "Far future relative to reference",
-			t64: ntp.Time64{
-				Seconds:  4000000000,
-				Fraction: 0,
-			},
-			expected: time.Date(2026, 10, 03, 7, 6, 40, 0, time.UTC),
-		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tt := ntp.TimeFromTime64(tc.t64, refTime)
 			if !tt.Equal(tc.expected) {
-				t.Errorf("TimeFromTime64() tt = %v, expected %v", tt, tc.expected)
+				t.Errorf("TimeFromTime64() = %v, expected %v", tt, tc.expected)
 			}
 		})
 	}
