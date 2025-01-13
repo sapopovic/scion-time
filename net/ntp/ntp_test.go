@@ -48,12 +48,27 @@ func TestTime64FromTime(t *testing.T) {
 			expected: ntp.Time64{Seconds: 3914483445, Fraction: 4294967291},
 		},
 		{
-			name:     "Era rollover - just before (2036-02-07 06:28:15 UTC)",
+			name:     "Era cutoff - just before",
+			t:        time.Date(1955, 12, 29, 20, 45, 52, 0, time.UTC),
+			expected: ntp.Time64{Seconds: 3914438400 - 1<<31, Fraction: 0},
+		},
+		{
+			name:     "Era cutoff - just beyond, era 0",
+			t:        time.Date(1955, 12, 29, 20, 45, 51, 0, time.UTC),
+			expected: ntp.Time64{Seconds: 3914438400 - 1<<31 - 1, Fraction: 0},
+		},
+		{
+			name:     "Era cutoff - just beyond, era 1",
+			t:        time.Date(2092, 2, 4, 3, 14, 07, 0, time.UTC),
+			expected: ntp.Time64{Seconds: 3914438400 - 1<<31 - 1, Fraction: 0},
+		},
+		{
+			name:     "Era rollover - just before",
 			t:        time.Date(2036, 2, 7, 6, 28, 15, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 4294967295, Fraction: 0},
 		},
 		{
-			name:     "Era rollover - just after (2036-02-07 06:28:16 UTC)",
+			name:     "Era rollover - just after",
 			t:        time.Date(2036, 2, 7, 6, 28, 16, 0, time.UTC),
 			expected: ntp.Time64{Seconds: 0, Fraction: 0},
 		},
@@ -110,7 +125,23 @@ func TestTimeFromTime64(t *testing.T) {
 			expected: time.Date(2024, 1, 17, 0, 0, 1, 0, time.UTC),
 		},
 		{
-			name: "Era rollover - just before (2036-02-07 06:28:15 UTC)",
+			name: "Era cutoff - just before",
+			t64: ntp.Time64{
+				Seconds:  3914438400 - 1<<31,
+				Fraction: 0,
+			},
+			expected: time.Date(1955, 12, 29, 20, 45, 52, 0, time.UTC),
+		},
+		{
+			name: "Era cutoff - just beyond",
+			t64: ntp.Time64{
+				Seconds:  3914438400 - 1<<31 - 1,
+				Fraction: 0,
+			},
+			expected: time.Date(2092, 2, 4, 3, 14, 07, 0, time.UTC),
+		},
+		{
+			name: "Era rollover - just before",
 			t64: ntp.Time64{
 				Seconds:  4294967295,
 				Fraction: 0,
@@ -118,7 +149,7 @@ func TestTimeFromTime64(t *testing.T) {
 			expected: time.Date(2036, 2, 7, 6, 28, 15, 0, time.UTC),
 		},
 		{
-			name: "Era rollover - just after (2036-02-07 06:28:16 UTC)",
+			name: "Era rollover - just after",
 			t64: ntp.Time64{
 				Seconds:  0,
 				Fraction: 0,
