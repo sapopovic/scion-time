@@ -7,7 +7,11 @@ import (
 )
 
 const (
+	// Seconds from Unix epoch (1970) to NTP epoch (1900), including 17 leap days
+	epoch int64 = -2208988800
+
 	nanosecondsPerSecond int64 = 1e9
+	secondsPerEra        int64 = 1 << 32
 
 	ServerPortIP    = 123
 	ServerPortSCION = 10123
@@ -57,34 +61,23 @@ type Packet struct {
 }
 
 var (
-	epoch = time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
-
 	errUnexpectedPacketSize = errors.New("unexpected packet size")
 )
 
 func Time64FromTime(t time.Time) Time64 {
-	d := t.Sub(epoch).Nanoseconds()
-	if d < 0 {
-		panic("invalid argument: t must not be before the epoch")
-	}
 	return Time64{
 		Seconds: uint32(
-			d / nanosecondsPerSecond),
+			t.Unix() - epoch),
+		// Fraction: uint32(
+		// 	(int64(t.Nanosecond()) << 32 + nanosecondsPerSecond/2) / nanosecondsPerSecond),
 		Fraction: uint32(
-			(d%nanosecondsPerSecond<<32 + nanosecondsPerSecond/2) / nanosecondsPerSecond),
+			int64(t.Nanosecond()) << 32 / nanosecondsPerSecond),
 	}
 }
 
 // TimeFromTime64 converts an NTP timestamp to a time.Time using a reference time t0
 // to resolve the NTP timestamp era ambiguity.
 func TimeFromTime64(t Time64, t0 time.Time) time.Time {
-	const (
-		// Seconds from Unix epoch (1970) to NTP epoch (1900), including leap days
-		epoch = -(70*365 + 17) * 86400
-		// Seconds per NTP era (2^32)
-		secondsPerEra = 1 << 32
-	)
-
 	tref := t0.Unix()
 
 	sec := epoch + (tref-epoch)/secondsPerEra*secondsPerEra + int64(t.Seconds)
@@ -95,7 +88,8 @@ func TimeFromTime64(t Time64, t0 time.Time) time.Time {
 		sec += secondsPerEra
 	}
 
-	nsec := (int64(t.Fraction)*nanosecondsPerSecond + 1<<31) >> 32
+	// nsec := (int64(t.Fraction) * nanosecondsPerSecond + 1<<31) >> 32
+	nsec := int64(t.Fraction) * nanosecondsPerSecond >> 32
 
 	return time.Unix(sec, nsec).UTC()
 }

@@ -78,7 +78,7 @@ func main() {
 			}
 			secs := int64(seconds)
 			nsecs := int64((seconds - float64(secs)) * 1e9)
-			t = time.Unix(secs, nsecs)
+			t = time.Unix(secs, nsecs).UTC()
 			y, err := strconv.ParseInt(ts[4], 10, 64)
 			if err != nil {
 				log.Fatalf("failed to parse offset on line: %s, %s", l, err)

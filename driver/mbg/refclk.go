@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	nanosecondsPerSecond int64 = 1e9
+
 	// See https://man7.org/linux/man-pages/man2/ioctl.2.html#NOTES
 
 	ioctlWrite = 1
@@ -57,7 +59,7 @@ func nanoseconds(frac uint32) int64 {
 	// nanoseconds(0x80000000) == 500000000
 	// nanoseconds(0xffffffff) == 999999999
 
-	return int64((uint64(frac) * uint64(time.Second)) / (1 << 32))
+	return int64(frac) * nanosecondsPerSecond >> 32
 }
 
 func NewReferenceClock(log *slog.Logger, dev string) *ReferenceClock {
