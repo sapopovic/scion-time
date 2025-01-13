@@ -50,12 +50,12 @@ func TimestampFromOOBData(oob []byte) (time.Time, error) {
 					if sec0 != 0 || nsec0 != 0 || sec1 != 0 || nsec1 != 0 {
 						panic("unexpected timestamping behavior")
 					}
-					ts = time.Unix(sec2, nsec2)
+					ts = time.Unix(sec2, nsec2).UTC()
 				} else {
 					if sec1 != 0 || nsec1 != 0 || sec2 != 0 || nsec2 != 0 {
 						panic("unexpected timestamping behavior")
 					}
-					ts = time.Unix(sec0, nsec0)
+					ts = time.Unix(sec0, nsec0).UTC()
 				}
 				return ts, nil
 			} else if h.Type == unix.SCM_TIMESTAMPNS {
@@ -63,7 +63,7 @@ func TimestampFromOOBData(oob []byte) (time.Time, error) {
 					return time.Time{}, errUnexpectedData
 				}
 				ts := (*unix.Timespec)(unsafe.Pointer(&oob[unix.CmsgSpace(0)]))
-				return time.Unix(ts.Unix()), nil
+				return time.Unix(ts.Unix()).UTC(), nil
 			}
 		}
 		oob = oob[unix.CmsgSpace(int(h.Len))-unix.CmsgSpace(0):]
@@ -197,12 +197,12 @@ func timestampFromOOBData(oob []byte) (time.Time, uint32, error) {
 					if sec0 != 0 || nsec0 != 0 || sec1 != 0 || nsec1 != 0 {
 						panic("unexpected timestamping behavior")
 					}
-					ts = time.Unix(sec2, nsec2)
+					ts = time.Unix(sec2, nsec2).UTC()
 				} else {
 					if sec1 != 0 || nsec1 != 0 || sec2 != 0 || nsec2 != 0 {
 						panic("unexpected timestamping behavior")
 					}
-					ts = time.Unix(sec0, nsec0)
+					ts = time.Unix(sec0, nsec0).UTC()
 				}
 				tsSet = true
 			}

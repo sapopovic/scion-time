@@ -69,7 +69,7 @@ func Time64FromTime(t time.Time) Time64 {
 		Seconds: uint32(
 			t.Unix() - epoch),
 		// Fraction: uint32(
-		// 	(int64(t.Nanosecond()) << 32 + nanosecondsPerSecond/2) / nanosecondsPerSecond),
+		// 	(int64(t.Nanosecond())<<32 + nanosecondsPerSecond/2) / nanosecondsPerSecond),
 		Fraction: uint32(
 			int64(t.Nanosecond()) << 32 / nanosecondsPerSecond),
 	}
@@ -88,7 +88,7 @@ func TimeFromTime64(t Time64, t0 time.Time) time.Time {
 		sec += secondsPerEra
 	}
 
-	// nsec := (int64(t.Fraction) * nanosecondsPerSecond + 1<<31) >> 32
+	// nsec := (int64(t.Fraction)*nanosecondsPerSecond + 1<<31) >> 32
 	nsec := int64(t.Fraction) * nanosecondsPerSecond >> 32
 
 	return time.Unix(sec, nsec).UTC()
