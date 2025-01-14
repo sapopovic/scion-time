@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	nanosecondsPerSecond int64 = 1e9
-
 	EventPortIP      = 319   // Sync
 	EventPortSCION   = 10319 // Sync
 	GeneralPortIP    = 320   // Follow Up
@@ -53,29 +51,26 @@ type Packet struct {
 	Timestamp           Timestamp
 }
 
-func secondsFromPTPSeconds(s [6]uint8) uint64 {
-	return uint64(s[0])<<40 | uint64(s[1])<<32 | uint64(s[2])<<24 |
-		uint64(s[3])<<16 | uint64(s[4])<<8 | uint64(s[5])
-}
-
 func TimestampFromTime(t time.Time) Timestamp {
-	unixSec := t.Unix()
-	if unixSec < 0 {
-		panic("invalid argument: t must not be before the epoch")
+	s := t.Unix()
+	if s < 0 {
+		panic("invalid argument: t must not be before 1970-01-01T00:00:00Z")
 	}
-	s := uint64(unixSec)
+	if s > 1<<48-1 {
+		panic("invalid argument: t must not be after 8921556-12-07T10:44:15.999999999Z")
+	}
 	return Timestamp{
 		Seconds: [6]uint8{
-			uint8(s >> 40), uint8(s >> 32), uint8(s >> 24),
-			uint8(s >> 16), uint8(s >> 8), uint8(s)},
+			uint8(uint64(s) >> 40), uint8(uint64(s) >> 32), uint8(uint64(s) >> 24),
+			uint8(uint64(s) >> 16), uint8(uint64(s) >> 8), uint8(uint64(s))},
 		Nanoseconds: uint32(t.Nanosecond()),
 	}
 }
 
-func (x Timestamp) Sub(y Timestamp) time.Duration {
-	return time.Duration(
-		(int64(secondsFromPTPSeconds(x.Seconds))-int64(secondsFromPTPSeconds(y.Seconds)))*nanosecondsPerSecond +
-			(int64(x.Nanoseconds) - int64(y.Nanoseconds)))
+func TimeFromTimestamp(t Timestamp) time.Time {
+	s := uint64(t.Seconds[0])<<40 | uint64(t.Seconds[1])<<32 | uint64(t.Seconds[2])<<24 |
+		uint64(t.Seconds[3])<<16 | uint64(t.Seconds[4])<<8 | uint64(t.Seconds[5])
+	return time.Unix(int64(s), int64(t.Nanoseconds)).UTC()
 }
 
 func DecodePacket(pkt *Packet, b []byte) error {
