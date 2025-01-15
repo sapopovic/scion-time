@@ -13,6 +13,9 @@ const (
 	GeneralPortIP    = 320   // Follow Up
 	GeneralPortSCION = 10320 // Follow Up
 
+	FlagTwoStep uint16 = 1 << 9
+	FlagUnicast uint16 = 1 << 10
+
 	SdoID = 0
 
 	MessageTypeSync     = 0
@@ -49,6 +52,15 @@ type Packet struct {
 	ControlField        uint8
 	LogMessageInterval  int8
 	Timestamp           Timestamp
+}
+
+//lint:ignore U1000 work in progress
+func flagField(twoStep bool) uint16 {
+	f := FlagUnicast
+	if twoStep {
+		f |= FlagTwoStep
+	}
+	return f
 }
 
 func TimestampFromTime(t time.Time) Timestamp {
