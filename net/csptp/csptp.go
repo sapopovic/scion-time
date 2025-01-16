@@ -13,9 +13,6 @@ const (
 	GeneralPortIP    = 320   // Follow Up
 	GeneralPortSCION = 10320 // Follow Up
 
-	FlagTwoStep uint16 = 1 << 9
-	FlagUnicast uint16 = 1 << 10
-
 	SdoID = 0
 
 	MessageTypeSync     = 0
@@ -26,6 +23,11 @@ const (
 	VersionDefault = 0x12
 
 	DomainNumber = 0
+
+	FlagTwoStep = 1 << 9
+	FlagUnicast = 1 << 10
+
+	LogMessageInterval = 0x7f
 )
 
 type PortID struct {
@@ -56,7 +58,7 @@ type Packet struct {
 
 //lint:ignore U1000 work in progress
 func flagField(twoStep bool) uint16 {
-	f := FlagUnicast
+	f := uint16(FlagUnicast)
 	if twoStep {
 		f |= FlagTwoStep
 	}
