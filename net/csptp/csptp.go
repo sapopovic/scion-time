@@ -40,6 +40,8 @@ type Timestamp struct {
 	Nanoseconds uint32
 }
 
+type TimeInterval int64
+
 type Packet struct {
 	SdoIDMessageType    uint8
 	Version             uint8
@@ -85,6 +87,10 @@ func TimeFromTimestamp(t Timestamp) time.Time {
 	s := uint64(t.Seconds[0])<<40 | uint64(t.Seconds[1])<<32 | uint64(t.Seconds[2])<<24 |
 		uint64(t.Seconds[3])<<16 | uint64(t.Seconds[4])<<8 | uint64(t.Seconds[5])
 	return time.Unix(int64(s), int64(t.Nanoseconds)).UTC()
+}
+
+func DurationFromTimeInterval(i TimeInterval) time.Duration {
+	return time.Duration(i >> 16)
 }
 
 func DecodePacket(pkt *Packet, b []byte) error {

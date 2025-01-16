@@ -150,3 +150,46 @@ func TestTimestampBitPatterns(t *testing.T) {
 		})
 	}
 }
+
+func TestTimeIntervalConversion(t *testing.T) {
+	tests := []struct {
+		name string
+		ti   csptp.TimeInterval
+		td   time.Duration
+	}{
+		{
+			name: "max",
+			ti:   (1<<47 - 1) << 16,
+			td:   1<<47 - 1,
+		},
+		{
+			name: "positive",
+			ti:   1 << 16,
+			td:   1,
+		},
+		{
+			name: "zero",
+			ti:   0,
+			td:   0,
+		},
+		{
+			name: "negative",
+			ti:   -1 << 16,
+			td:   -1,
+		},
+		{
+			name: "min",
+			ti:   -(1 << 47) << 16,
+			td:   -(1 << 47),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			td := csptp.DurationFromTimeInterval(tc.ti)
+			if td != tc.td {
+				t.Errorf("DurationFromTimeInterval(%016x) = %v, expected %v", tc.ti, td.Nanoseconds(), tc.td.Nanoseconds())
+			}
+		})
+	}
+}
