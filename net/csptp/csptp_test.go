@@ -154,7 +154,7 @@ func TestTimestampBitPatterns(t *testing.T) {
 func TestTimeIntervalConversion(t *testing.T) {
 	tests := []struct {
 		name string
-		ti   csptp.TimeInterval
+		ti   int64
 		td   time.Duration
 	}{
 		{
