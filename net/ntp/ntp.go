@@ -113,26 +113,29 @@ func RoundTripDelay(t0, t1, t2, t3 time.Time) time.Duration {
 }
 
 func EncodePacket(b *[]byte, pkt *Packet) {
-	*b = (*b)[:PacketLen]
+	if cap(*b) < PacketLen {
+		*b = make([]byte, PacketLen)
+	} else {
+		*b = (*b)[:PacketLen]
+	}
 
-	bb := *b
-	bb[0] = byte(pkt.LVM)
-	bb[1] = byte(pkt.Stratum)
-	bb[2] = byte(pkt.Poll)
-	bb[3] = byte(pkt.Precision)
-	binary.BigEndian.PutUint16(bb[4:], pkt.RootDelay.Seconds)
-	binary.BigEndian.PutUint16(bb[6:], pkt.RootDelay.Fraction)
-	binary.BigEndian.PutUint16(bb[8:], pkt.RootDispersion.Seconds)
-	binary.BigEndian.PutUint16(bb[10:], pkt.RootDispersion.Fraction)
-	binary.BigEndian.PutUint32(bb[12:], pkt.ReferenceID)
-	binary.BigEndian.PutUint32(bb[16:], pkt.ReferenceTime.Seconds)
-	binary.BigEndian.PutUint32(bb[20:], pkt.ReferenceTime.Fraction)
-	binary.BigEndian.PutUint32(bb[24:], pkt.OriginTime.Seconds)
-	binary.BigEndian.PutUint32(bb[28:], pkt.OriginTime.Fraction)
-	binary.BigEndian.PutUint32(bb[32:], pkt.ReceiveTime.Seconds)
-	binary.BigEndian.PutUint32(bb[36:], pkt.ReceiveTime.Fraction)
-	binary.BigEndian.PutUint32(bb[40:], pkt.TransmitTime.Seconds)
-	binary.BigEndian.PutUint32(bb[44:], pkt.TransmitTime.Fraction)
+	(*b)[0] = byte(pkt.LVM)
+	(*b)[1] = byte(pkt.Stratum)
+	(*b)[2] = byte(pkt.Poll)
+	(*b)[3] = byte(pkt.Precision)
+	binary.BigEndian.PutUint16((*b)[4:], pkt.RootDelay.Seconds)
+	binary.BigEndian.PutUint16((*b)[6:], pkt.RootDelay.Fraction)
+	binary.BigEndian.PutUint16((*b)[8:], pkt.RootDispersion.Seconds)
+	binary.BigEndian.PutUint16((*b)[10:], pkt.RootDispersion.Fraction)
+	binary.BigEndian.PutUint32((*b)[12:], pkt.ReferenceID)
+	binary.BigEndian.PutUint32((*b)[16:], pkt.ReferenceTime.Seconds)
+	binary.BigEndian.PutUint32((*b)[20:], pkt.ReferenceTime.Fraction)
+	binary.BigEndian.PutUint32((*b)[24:], pkt.OriginTime.Seconds)
+	binary.BigEndian.PutUint32((*b)[28:], pkt.OriginTime.Fraction)
+	binary.BigEndian.PutUint32((*b)[32:], pkt.ReceiveTime.Seconds)
+	binary.BigEndian.PutUint32((*b)[36:], pkt.ReceiveTime.Fraction)
+	binary.BigEndian.PutUint32((*b)[40:], pkt.TransmitTime.Seconds)
+	binary.BigEndian.PutUint32((*b)[44:], pkt.TransmitTime.Fraction)
 }
 
 func DecodePacket(pkt *Packet, b []byte) error {
