@@ -158,8 +158,151 @@ func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
 	return nil
 }
 
-func EncodeMessage(b *[]byte, msg *Message) {}
+const MinMessageLength = 44
 
-func EncodeRequestTLV(b *[]byte, tlv *RequestTLV) {}
+func EncodeMessage(b []byte, msg *Message) {
+	b[0] = byte(msg.SdoIDMessageType)
+	b[1] = byte(msg.PTPVersion)
+	b[2] = byte(msg.MessageLength >> 8)
+	b[3] = byte(msg.MessageLength)
+	b[4] = byte(msg.DomainNumber)
+	b[5] = byte(msg.MinorSdoID)
+	b[6] = byte(msg.FlagField >> 8)
+	b[7] = byte(msg.FlagField)
+	b[8] = byte(uint64(msg.CorrectionField) >> 56)
+	b[9] = byte(uint64(msg.CorrectionField) >> 48)
+	b[10] = byte(uint64(msg.CorrectionField) >> 40)
+	b[11] = byte(uint64(msg.CorrectionField) >> 32)
+	b[12] = byte(uint64(msg.CorrectionField) >> 24)
+	b[13] = byte(uint64(msg.CorrectionField) >> 16)
+	b[14] = byte(uint64(msg.CorrectionField) >> 8)
+	b[15] = byte(uint64(msg.CorrectionField))
+	b[16] = byte(msg.MessageTypeSpecific >> 24)
+	b[17] = byte(msg.MessageTypeSpecific >> 16)
+	b[18] = byte(msg.MessageTypeSpecific >> 8)
+	b[19] = byte(msg.MessageTypeSpecific)
+	b[20] = byte(msg.SourcePortIdentity.ClockID >> 56)
+	b[21] = byte(msg.SourcePortIdentity.ClockID >> 48)
+	b[22] = byte(msg.SourcePortIdentity.ClockID >> 40)
+	b[23] = byte(msg.SourcePortIdentity.ClockID >> 32)
+	b[24] = byte(msg.SourcePortIdentity.ClockID >> 24)
+	b[25] = byte(msg.SourcePortIdentity.ClockID >> 16)
+	b[26] = byte(msg.SourcePortIdentity.ClockID >> 8)
+	b[27] = byte(msg.SourcePortIdentity.ClockID)
+	b[28] = byte(msg.SourcePortIdentity.Port >> 8)
+	b[29] = byte(msg.SourcePortIdentity.Port)
+	b[30] = byte(msg.SequenceID >> 8)
+	b[31] = byte(msg.SequenceID)
+	b[32] = byte(msg.ControlField)
+	b[33] = byte(msg.LogMessageInterval)
+	b[34] = byte(msg.Timestamp.Seconds[0])
+	b[35] = byte(msg.Timestamp.Seconds[1])
+	b[36] = byte(msg.Timestamp.Seconds[2])
+	b[37] = byte(msg.Timestamp.Seconds[3])
+	b[38] = byte(msg.Timestamp.Seconds[4])
+	b[39] = byte(msg.Timestamp.Seconds[5])
+	b[40] = byte(msg.Timestamp.Nanoseconds >> 24)
+	b[41] = byte(msg.Timestamp.Nanoseconds >> 16)
+	b[42] = byte(msg.Timestamp.Nanoseconds >> 8)
+	b[43] = byte(msg.Timestamp.Nanoseconds)
+}
 
-func EncodeResponseTLV(b *[]byte, tlv *ResponseTLV) {}
+func EncodedRequestTLVLength(tlv *RequestTLV) int {
+	len := 14 + /* padding: */ 22
+	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
+		len += 18
+	}
+	return len
+}
+
+func EncodeRequestTLV(b []byte, tlv *RequestTLV) {
+	b[0] = byte(tlv.Type >> 8)
+	b[1] = byte(tlv.Type)
+	b[2] = byte(tlv.Length >> 8)
+	b[3] = byte(tlv.Length)
+	b[4] = byte(tlv.OrganizationID[0])
+	b[5] = byte(tlv.OrganizationID[1])
+	b[6] = byte(tlv.OrganizationID[2])
+	b[7] = byte(tlv.OrganizationSubType[0])
+	b[8] = byte(tlv.OrganizationSubType[1])
+	b[9] = byte(tlv.OrganizationSubType[2])
+	b[10] = byte(tlv.FlagField >> 24)
+	b[11] = byte(tlv.FlagField >> 16)
+	b[12] = byte(tlv.FlagField >> 8)
+	b[13] = byte(tlv.FlagField)
+	for i := 14; i != 36; i++ {
+		b[i] = 0
+	}
+	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
+		for i := 36; i != 54; i++ {
+			b[i] = 0
+		}
+	}
+}
+
+func EncodedResponseTLVLength(tlv *RequestTLV) int {
+	len := 36
+	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
+		len += 18
+	}
+	return len
+}
+
+func EncodeResponseTLV(b []byte, tlv *ResponseTLV) {
+	b[0] = byte(tlv.Type >> 8)
+	b[1] = byte(tlv.Type)
+	b[2] = byte(tlv.Length >> 8)
+	b[3] = byte(tlv.Length)
+	b[4] = byte(tlv.OrganizationID[0])
+	b[5] = byte(tlv.OrganizationID[1])
+	b[6] = byte(tlv.OrganizationID[2])
+	b[7] = byte(tlv.OrganizationSubType[0])
+	b[8] = byte(tlv.OrganizationSubType[1])
+	b[9] = byte(tlv.OrganizationSubType[2])
+	b[10] = byte(tlv.FlagField >> 24)
+	b[11] = byte(tlv.FlagField >> 16)
+	b[12] = byte(tlv.FlagField >> 8)
+	b[13] = byte(tlv.FlagField)
+	b[14] = byte(tlv.Error >> 8)
+	b[15] = byte(tlv.Error)
+	b[16] = byte(tlv.RequestIngressTimestamp.Seconds[0])
+	b[17] = byte(tlv.RequestIngressTimestamp.Seconds[1])
+	b[18] = byte(tlv.RequestIngressTimestamp.Seconds[2])
+	b[19] = byte(tlv.RequestIngressTimestamp.Seconds[3])
+	b[20] = byte(tlv.RequestIngressTimestamp.Seconds[4])
+	b[21] = byte(tlv.RequestIngressTimestamp.Seconds[5])
+	b[22] = byte(tlv.RequestIngressTimestamp.Nanoseconds >> 24)
+	b[23] = byte(tlv.RequestIngressTimestamp.Nanoseconds >> 16)
+	b[24] = byte(tlv.RequestIngressTimestamp.Nanoseconds >> 8)
+	b[25] = byte(tlv.RequestIngressTimestamp.Nanoseconds)
+	b[26] = byte(uint64(tlv.RequestCorrectionField) >> 56)
+	b[27] = byte(uint64(tlv.RequestCorrectionField) >> 48)
+	b[28] = byte(uint64(tlv.RequestCorrectionField) >> 40)
+	b[29] = byte(uint64(tlv.RequestCorrectionField) >> 32)
+	b[30] = byte(uint64(tlv.RequestCorrectionField) >> 24)
+	b[31] = byte(uint64(tlv.RequestCorrectionField) >> 16)
+	b[32] = byte(uint64(tlv.RequestCorrectionField) >> 8)
+	b[33] = byte(uint64(tlv.RequestCorrectionField))
+	b[34] = byte(tlv.UTCOffset >> 8)
+	b[35] = byte(tlv.UTCOffset)
+	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
+		b[36] = byte(tlv.ServerStateDS.GMPriority1)
+		b[37] = byte(tlv.ServerStateDS.GMClockClass)
+		b[38] = byte(tlv.ServerStateDS.GMClockAccuracy)
+		b[39] = byte(tlv.ServerStateDS.GMClockVariance >> 8)
+		b[40] = byte(tlv.ServerStateDS.GMClockVariance)
+		b[41] = byte(tlv.ServerStateDS.GMPriority2)
+		b[42] = byte(tlv.ServerStateDS.GMClockID >> 56)
+		b[43] = byte(tlv.ServerStateDS.GMClockID >> 48)
+		b[44] = byte(tlv.ServerStateDS.GMClockID >> 40)
+		b[45] = byte(tlv.ServerStateDS.GMClockID >> 32)
+		b[46] = byte(tlv.ServerStateDS.GMClockID >> 24)
+		b[47] = byte(tlv.ServerStateDS.GMClockID >> 16)
+		b[48] = byte(tlv.ServerStateDS.GMClockID >> 8)
+		b[49] = byte(tlv.ServerStateDS.GMClockID)
+		b[50] = byte(tlv.ServerStateDS.StepsRemoved >> 8)
+		b[51] = byte(tlv.ServerStateDS.StepsRemoved)
+		b[52] = byte(tlv.ServerStateDS.TimeSource)
+		b[53] = byte(tlv.ServerStateDS.Reserved)
+	}
+}
