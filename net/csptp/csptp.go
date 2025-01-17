@@ -4,6 +4,7 @@ package csptp
 // and IEEE 1588-2019, PTP version 2.1
 
 import (
+	"errors"
 	"time"
 )
 
@@ -146,18 +147,6 @@ func DurationFromTimeInterval(i int64) time.Duration {
 	return time.Duration(i >> 16)
 }
 
-func DecodeMessage(msg *Message, b []byte) error {
-	return nil
-}
-
-func DecodeRequestTLV(tlv *RequestTLV, b []byte) error {
-	return nil
-}
-
-func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
-	return nil
-}
-
 const MinMessageLength = 44
 
 func EncodeMessage(b []byte, msg *Message) {
@@ -207,6 +196,36 @@ func EncodeMessage(b []byte, msg *Message) {
 	b[43] = byte(msg.Timestamp.Nanoseconds)
 }
 
+var (
+	errUnexpectedMessageSize = errors.New("unexpected message size")
+)
+
+func DecodeMessage(msg *Message, b []byte) error {
+	if len(b) < MinMessageLength {
+		return errUnexpectedMessageSize
+	}
+
+	msg.SdoIDMessageType = b[0]
+	msg.PTPVersion = b[1]
+	msg.MessageLength = uint16(b[2])<<8 | uint16(b[3])
+	msg.DomainNumber = b[4]
+	msg.MinorSdoID = b[5]
+	msg.FlagField = uint16(b[6])<<8 | uint16(b[7])
+	msg.CorrectionField = int64(uint64(b[8])<<56 | uint64(b[9])<<48 | uint64(b[10])<<40 | uint64(b[11])<<32 |
+		uint64(b[12])<<24 | uint64(b[13])<<16 | uint64(b[14])<<8 | uint64(b[15]))
+	msg.MessageTypeSpecific = uint32(b[16])<<24 | uint32(b[17])<<16 | uint32(b[18])<<8 | uint32(b[19])
+	msg.SourcePortIdentity.ClockID = uint64(b[20])<<56 | uint64(b[21])<<48 | uint64(b[22])<<40 | uint64(b[23])<<32 |
+		uint64(b[24])<<24 | uint64(b[25])<<16 | uint64(b[26])<<8 | uint64(b[27])
+	msg.SourcePortIdentity.Port = uint16(b[28])<<8 | uint16(b[29])
+	msg.SequenceID = uint16(b[30])<<8 | uint16(b[31])
+	msg.ControlField = b[32]
+	msg.LogMessageInterval = int8(b[33])
+	msg.Timestamp.Seconds = [6]uint8{b[34], b[35], b[36], b[37], b[38], b[39]}
+	msg.Timestamp.Nanoseconds = uint32(b[40])<<24 | uint32(b[41])<<16 | uint32(b[42])<<8 | uint32(b[43])
+
+	return nil
+}
+
 func EncodedRequestTLVLength(tlv *RequestTLV) int {
 	len := 14 + /* padding: */ 22
 	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
@@ -240,7 +259,27 @@ func EncodeRequestTLV(b []byte, tlv *RequestTLV) {
 	}
 }
 
-func EncodedResponseTLVLength(tlv *RequestTLV) int {
+var (
+	errUnexpectedRequestTLVSize = errors.New("unexpected request TLV size")
+)
+
+func DecodeRequestTLV(tlv *RequestTLV, b []byte) error {
+	if len(b) < 14 {
+		return errUnexpectedRequestTLVSize
+	}
+	tlv.Type = uint16(b[0])<<8 | uint16(b[1])
+	tlv.Length = uint16(b[2])<<8 | uint16(b[3])
+	tlv.OrganizationID = [3]uint8{b[4], b[5], b[6]}
+	tlv.OrganizationSubType = [3]uint8{b[7], b[8], b[9]}
+	tlv.FlagField = uint32(b[10])<<24 | uint32(b[11])<<16 | uint32(b[12])<<8 | uint32(b[13])
+	if len(b) < EncodedRequestTLVLength(tlv) {
+		return errUnexpectedRequestTLVSize
+	}
+
+	return nil
+}
+
+func EncodedResponseTLVLength(tlv *ResponseTLV) int {
 	len := 36
 	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
 		len += 18
@@ -305,4 +344,43 @@ func EncodeResponseTLV(b []byte, tlv *ResponseTLV) {
 		b[52] = byte(tlv.ServerStateDS.TimeSource)
 		b[53] = byte(tlv.ServerStateDS.Reserved)
 	}
+}
+
+var (
+	errUnexpectedResponseTLVSize = errors.New("unexpected response TLV size")
+)
+
+func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
+	if len(b) < 14 {
+		return errUnexpectedResponseTLVSize
+	}
+	tlv.Type = uint16(b[0])<<8 | uint16(b[1])
+	tlv.Length = uint16(b[2])<<8 | uint16(b[3])
+	tlv.OrganizationID = [3]uint8{b[4], b[5], b[6]}
+	tlv.OrganizationSubType = [3]uint8{b[7], b[8], b[9]}
+	tlv.FlagField = uint32(b[10])<<24 | uint32(b[11])<<16 | uint32(b[12])<<8 | uint32(b[13])
+	if len(b) < EncodedResponseTLVLength(tlv) {
+		return errUnexpectedResponseTLVSize
+	}
+
+	tlv.Error = uint16(b[14])<<8 | uint16(b[15])
+	tlv.RequestIngressTimestamp.Seconds = [6]uint8{b[16], b[17], b[18], b[19], b[20], b[21]}
+	tlv.RequestIngressTimestamp.Nanoseconds = uint32(b[22])<<24 | uint32(b[23])<<16 | uint32(b[24])<<8 | uint32(b[25])
+	tlv.RequestCorrectionField = int64(uint64(b[26])<<56 | uint64(b[27])<<48 | uint64(b[28])<<40 | uint64(b[29])<<32 |
+		uint64(b[30])<<24 | uint64(b[31])<<16 | uint64(b[32])<<8 | uint64(b[33]))
+	tlv.UTCOffset = int16(uint16(b[34])<<8 | uint16(b[35]))
+	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
+		tlv.ServerStateDS.GMPriority1 = b[36]
+		tlv.ServerStateDS.GMClockClass = b[37]
+		tlv.ServerStateDS.GMClockAccuracy = b[38]
+		tlv.ServerStateDS.GMClockVariance = uint16(b[39])<<8 | uint16(b[40])
+		tlv.ServerStateDS.GMPriority2 = b[41]
+		tlv.ServerStateDS.GMClockID = uint64(b[42])<<56 | uint64(b[43])<<48 | uint64(b[44])<<40 | uint64(b[45])<<32 |
+			uint64(b[46])<<24 | uint64(b[47])<<16 | uint64(b[48])<<8 | uint64(b[49])
+		tlv.ServerStateDS.StepsRemoved = uint16(b[50])<<8 | uint16(b[51])
+		tlv.ServerStateDS.TimeSource = b[52]
+		tlv.ServerStateDS.Reserved = b[53]
+	}
+
+	return nil
 }
