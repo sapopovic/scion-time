@@ -105,13 +105,9 @@ func EncodePacket(b *[]byte, pkt *Packet) {
 		panic("unexpected NTP header")
 	}
 	if cap(*b) < MaxPacketLen {
-		t := make([]byte, ntpPacketLen)
-		copy(t, *b)
-		*b = make([]byte, MaxPacketLen)
-		copy(*b, t)
-	} else {
-		*b = (*b)[:MaxPacketLen]
+		*b = append(make([]byte, 0, MaxPacketLen), (*b)...)
 	}
+	*b = (*b)[:MaxPacketLen]
 
 	pos := ntpPacketLen
 	pos, err := pkt.UniqueID.pack(*b, pos)
