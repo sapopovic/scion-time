@@ -150,4 +150,16 @@ func DecodeMessage(msg *Message, b []byte) error {
 	return nil
 }
 
+func DecodeRequestTLV(tlv *RequestTLV, b []byte) error {
+	return nil
+}
+
+func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
+	return nil
+}
+
 func EncodeMessage(b *[]byte, msg *Message) {}
+
+func EncodeRequestTLV(b *[]byte, tlv *RequestTLV) {}
+
+func EncodeResponseTLV(b *[]byte, tlv *ResponseTLV) {}
