@@ -333,3 +333,571 @@ func TestCompleteMessageRoundTrip(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestRequestTLVTypeRoundTrip(t *testing.T) {
+	vs := []uint16{0, 1, math.MaxUint16 - 1, math.MaxUint16,
+		csptp.TLVTypeOrganizationExtension}
+	for _, v := range vs {
+		tlv0 := csptp.RequestTLV{Type: v}
+		b := make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+		csptp.EncodeRequestTLV(b, &tlv0)
+		var tlv1 csptp.RequestTLV
+		err := csptp.DecodeRequestTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.Type != v {
+			t.Fail()
+		}
+		if tlv1.Type != tlv0.Type {
+			t.Fail()
+		}
+	}
+}
+
+func TestRequestTLVLengthRoundTrip(t *testing.T) {
+	vs := []uint16{0, 1, math.MaxUint16 - 1, math.MaxUint16}
+	for _, v := range vs {
+		tlv0 := csptp.RequestTLV{Length: v}
+		b := make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+		csptp.EncodeRequestTLV(b, &tlv0)
+		var tlv1 csptp.RequestTLV
+		err := csptp.DecodeRequestTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.Length != v {
+			t.Fail()
+		}
+		if tlv1.Length != tlv0.Length {
+			t.Fail()
+		}
+	}
+}
+
+func TestRequestTLVOrganizationIDRoundTrip(t *testing.T) {
+	vs := [][3]uint8{
+		{0, 0, 0},
+		{1, 1, 1},
+		{0xFF, 0xFF, 0xFE},
+		{0xFF, 0xFF, 0xFF},
+		{csptp.OrganizationIDMeinberg0, csptp.OrganizationIDMeinberg1, csptp.OrganizationIDMeinberg2},
+	}
+	for _, v := range vs {
+		tlv0 := csptp.RequestTLV{OrganizationID: v}
+		b := make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+		csptp.EncodeRequestTLV(b, &tlv0)
+		var tlv1 csptp.RequestTLV
+		err := csptp.DecodeRequestTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.OrganizationID != v {
+			t.Fail()
+		}
+		if tlv1.OrganizationID != tlv0.OrganizationID {
+			t.Fail()
+		}
+	}
+}
+
+func TestRequestTLVOrganizationSubTypeRoundTrip(t *testing.T) {
+	vs := [][3]uint8{
+		{0, 0, 0},
+		{1, 1, 1},
+		{0xFF, 0xFF, 0xFE},
+		{0xFF, 0xFF, 0xFF},
+		{csptp.OrganizationSubTypeRequest0, csptp.OrganizationSubTypeRequest1, csptp.OrganizationSubTypeRequest2},
+	}
+	for _, v := range vs {
+		tlv0 := csptp.RequestTLV{OrganizationSubType: v}
+		b := make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+		csptp.EncodeRequestTLV(b, &tlv0)
+		var tlv1 csptp.RequestTLV
+		err := csptp.DecodeRequestTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.OrganizationSubType != v {
+			t.Fail()
+		}
+		if tlv1.OrganizationSubType != tlv0.OrganizationSubType {
+			t.Fail()
+		}
+	}
+}
+
+func TestRequestTLVFlagFieldRoundTrip(t *testing.T) {
+	vs := []uint32{0, 1, math.MaxUint32 - 1, math.MaxUint32,
+		csptp.TLVFlagServerStateDS}
+	for _, v := range vs {
+		tlv0 := csptp.RequestTLV{FlagField: v}
+		b := make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+		csptp.EncodeRequestTLV(b, &tlv0)
+		var tlv1 csptp.RequestTLV
+		err := csptp.DecodeRequestTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.FlagField != v {
+			t.Fail()
+		}
+		if tlv1.FlagField != tlv0.FlagField {
+			t.Fail()
+		}
+	}
+}
+
+func TestRequestTLVFlagFieldServerStateDSRoundTrip(t *testing.T) {
+	vs := []uint32{0, csptp.TLVFlagServerStateDS}
+	for _, v := range vs {
+		tlv0 := csptp.RequestTLV{FlagField: v}
+		b := make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+		csptp.EncodeRequestTLV(b, &tlv0)
+		var tlv1 csptp.RequestTLV
+		err := csptp.DecodeRequestTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.FlagField != v {
+			t.Fail()
+		}
+		if tlv1.FlagField != tlv0.FlagField {
+			t.Fail()
+		}
+
+		expectedLen := 36
+		if v&csptp.TLVFlagServerStateDS == csptp.TLVFlagServerStateDS {
+			expectedLen = 54
+		}
+		if len(b) != expectedLen {
+			t.Fail()
+		}
+	}
+}
+
+func TestCompleteRequestTLVRoundTrip(t *testing.T) {
+	tlv0 := csptp.RequestTLV{
+		Type: csptp.TLVTypeOrganizationExtension,
+		OrganizationID: [3]uint8{
+			csptp.OrganizationIDMeinberg0,
+			csptp.OrganizationIDMeinberg1,
+			csptp.OrganizationIDMeinberg2,
+		},
+		OrganizationSubType: [3]uint8{
+			csptp.OrganizationSubTypeRequest0,
+			csptp.OrganizationSubTypeRequest1,
+			csptp.OrganizationSubTypeRequest2,
+		},
+		FlagField: csptp.TLVFlagServerStateDS,
+	}
+	tlv0.Length = uint16(csptp.EncodedRequestTLVLength(&tlv0)) - 4
+
+	b := make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+	csptp.EncodeRequestTLV(b, &tlv0)
+	var tlv1 csptp.RequestTLV
+	err := csptp.DecodeRequestTLV(&tlv1, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tlv1 != tlv0 {
+		t.Fail()
+	}
+}
+
+func TestRequestTLVInvalidLength(t *testing.T) {
+	var err error
+	var tlv0, tlv1 csptp.RequestTLV
+	var b []byte
+
+	tlv0 = csptp.RequestTLV{}
+	b = make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+	csptp.EncodeRequestTLV(b, &tlv0)
+	tlv1 = csptp.RequestTLV{}
+	err = csptp.DecodeRequestTLV(&tlv1, b[:13])
+	if err == nil {
+		t.Error("Expected error for insufficient buffer length")
+	}
+
+	tlv0 = csptp.RequestTLV{}
+	b = make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+	csptp.EncodeRequestTLV(b, &tlv0)
+	tlv1 = csptp.RequestTLV{}
+	err = csptp.DecodeRequestTLV(&tlv1, b[:len(b)-1])
+	if err == nil {
+		t.Error("Expected error for insufficient buffer length")
+	}
+
+	tlv0 = csptp.RequestTLV{FlagField: csptp.TLVFlagServerStateDS}
+	b = make([]byte, csptp.EncodedRequestTLVLength(&tlv0))
+	csptp.EncodeRequestTLV(b, &tlv0)
+	tlv1 = csptp.RequestTLV{}
+	err = csptp.DecodeRequestTLV(&tlv1, b[:len(b)-1])
+	if err == nil {
+		t.Error("Expected error for insufficient buffer length with ServerStateDS flag set")
+	}
+}
+
+func TestResponseTLVTypeRoundTrip(t *testing.T) {
+	vs := []uint16{0, 1, math.MaxUint16 - 1, math.MaxUint16,
+		csptp.TLVTypeOrganizationExtension}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{Type: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.Type != v {
+			t.Fail()
+		}
+		if tlv1.Type != tlv0.Type {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVLengthRoundTrip(t *testing.T) {
+	vs := []uint16{0, 1, math.MaxUint16 - 1, math.MaxUint16}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{Length: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.Length != v {
+			t.Fail()
+		}
+		if tlv1.Length != tlv0.Length {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVOrganizationIDRoundTrip(t *testing.T) {
+	vs := [][3]uint8{
+		{0, 0, 0},
+		{1, 1, 1},
+		{0xFF, 0xFF, 0xFE},
+		{0xFF, 0xFF, 0xFF},
+		{csptp.OrganizationIDMeinberg0, csptp.OrganizationIDMeinberg1, csptp.OrganizationIDMeinberg2},
+	}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{OrganizationID: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.OrganizationID != v {
+			t.Fail()
+		}
+		if tlv1.OrganizationID != tlv0.OrganizationID {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVOrganizationSubTypeRoundTrip(t *testing.T) {
+	vs := [][3]uint8{
+		{0, 0, 0},
+		{1, 1, 1},
+		{0xFF, 0xFF, 0xFE},
+		{0xFF, 0xFF, 0xFF},
+		{csptp.OrganizationSubTypeResponse0, csptp.OrganizationSubTypeResponse1, csptp.OrganizationSubTypeResponse2},
+	}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{OrganizationSubType: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.OrganizationSubType != v {
+			t.Fail()
+		}
+		if tlv1.OrganizationSubType != tlv0.OrganizationSubType {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVFlagFieldRoundTrip(t *testing.T) {
+	vs := []uint32{0, 1, math.MaxUint32 - 1, math.MaxUint32,
+		csptp.TLVFlagServerStateDS}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{FlagField: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.FlagField != v {
+			t.Fail()
+		}
+		if tlv1.FlagField != tlv0.FlagField {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVErrorRoundTrip(t *testing.T) {
+	vs := []uint16{0, 1, math.MaxUint16 - 1, math.MaxUint16,
+		csptp.ErrorTxTimestampInvalid}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{Error: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.Error != v {
+			t.Fail()
+		}
+		if tlv1.Error != tlv0.Error {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVRequestIngressTimestampRoundTrip(t *testing.T) {
+	vs := []csptp.Timestamp{
+		{
+			Seconds:     [6]uint8{0, 0, 0, 0, 0, 0},
+			Nanoseconds: 0,
+		},
+		{
+			Seconds:     [6]uint8{0, 0, 0, 0, 0, 1},
+			Nanoseconds: 1,
+		},
+		{
+			Seconds:     [6]uint8{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE},
+			Nanoseconds: math.MaxUint32 - 1,
+		},
+		{
+			Seconds:     [6]uint8{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+			Nanoseconds: math.MaxUint32,
+		},
+	}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{RequestIngressTimestamp: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.RequestIngressTimestamp != v {
+			t.Fail()
+		}
+		if tlv1.RequestIngressTimestamp != tlv0.RequestIngressTimestamp {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVRequestCorrectionFieldRoundTrip(t *testing.T) {
+	vs := []int64{math.MinInt64, math.MinInt64 + 1, -1, 0, 1, math.MaxInt64 - 1, math.MaxInt64}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{RequestCorrectionField: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.RequestCorrectionField != v {
+			t.Fail()
+		}
+		if tlv1.RequestCorrectionField != tlv0.RequestCorrectionField {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVUTCOffsetRoundTrip(t *testing.T) {
+	vs := []int16{math.MinInt16, math.MinInt16 + 1, -1, 0, 1, math.MaxInt16 - 1, math.MaxInt16}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{UTCOffset: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.UTCOffset != v {
+			t.Fail()
+		}
+		if tlv1.UTCOffset != tlv0.UTCOffset {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVServerStateDSRoundTrip(t *testing.T) {
+	vs := []csptp.ServerStateDS{
+		{},
+		{
+			GMPriority1:     1,
+			GMClockClass:    1,
+			GMClockAccuracy: 1,
+			GMClockVariance: 1,
+			GMPriority2:     1,
+			GMClockID:       1,
+			StepsRemoved:    1,
+			TimeSource:      1,
+		},
+		{
+			GMPriority1:     math.MaxUint8,
+			GMClockClass:    math.MaxUint8,
+			GMClockAccuracy: math.MaxUint8,
+			GMClockVariance: math.MaxUint16,
+			GMPriority2:     math.MaxUint8,
+			GMClockID:       math.MaxUint64,
+			StepsRemoved:    math.MaxUint16,
+			TimeSource:      math.MaxUint8,
+		},
+	}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{
+			FlagField:     csptp.TLVFlagServerStateDS,
+			ServerStateDS: v,
+		}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.ServerStateDS != v {
+			t.Fail()
+		}
+		if tlv1.ServerStateDS != tlv0.ServerStateDS {
+			t.Fail()
+		}
+	}
+}
+
+func TestResponseTLVFlagFieldServerStateDSRoundTrip(t *testing.T) {
+	vs := []uint32{0, csptp.TLVFlagServerStateDS}
+	for _, v := range vs {
+		tlv0 := csptp.ResponseTLV{FlagField: v}
+		b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+		csptp.EncodeResponseTLV(b, &tlv0)
+		var tlv1 csptp.ResponseTLV
+		err := csptp.DecodeResponseTLV(&tlv1, b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tlv0.FlagField != v {
+			t.Fail()
+		}
+		if tlv1.FlagField != tlv0.FlagField {
+			t.Fail()
+		}
+
+		expectedLen := 36
+		if v&csptp.TLVFlagServerStateDS == csptp.TLVFlagServerStateDS {
+			expectedLen = 54
+		}
+		if len(b) != expectedLen {
+			t.Fail()
+		}
+	}
+}
+
+func TestCompleteResponseTLVRoundTrip(t *testing.T) {
+	tlv0 := csptp.ResponseTLV{
+		Type: csptp.TLVTypeOrganizationExtension,
+		OrganizationID: [3]uint8{
+			csptp.OrganizationIDMeinberg0,
+			csptp.OrganizationIDMeinberg1,
+			csptp.OrganizationIDMeinberg2,
+		},
+		OrganizationSubType: [3]uint8{
+			csptp.OrganizationSubTypeResponse0,
+			csptp.OrganizationSubTypeResponse1,
+			csptp.OrganizationSubTypeResponse2,
+		},
+		FlagField: csptp.TLVFlagServerStateDS,
+		Error:     csptp.ErrorTxTimestampInvalid,
+		RequestIngressTimestamp: csptp.Timestamp{
+			Seconds:     [6]uint8{0x11, 0x22, 0x33, 0x44, 0x55, 0x66},
+			Nanoseconds: 0x77777777,
+		},
+		RequestCorrectionField: 0x123456789ABCDEF,
+		UTCOffset:              37,
+		ServerStateDS: csptp.ServerStateDS{
+			GMPriority1:     1,
+			GMClockClass:    2,
+			GMClockAccuracy: 3,
+			GMClockVariance: 4,
+			GMPriority2:     5,
+			GMClockID:       0xAAAABBBBCCCCDDDD,
+			StepsRemoved:    6,
+			TimeSource:      7,
+		},
+	}
+	tlv0.Length = uint16(csptp.EncodedResponseTLVLength(&tlv0)) - 4
+
+	b := make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+	csptp.EncodeResponseTLV(b, &tlv0)
+	var tlv1 csptp.ResponseTLV
+	err := csptp.DecodeResponseTLV(&tlv1, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tlv1 != tlv0 {
+		t.Fail()
+	}
+}
+
+func TestResponseTLVInvalidLength(t *testing.T) {
+	var err error
+	var tlv0, tlv1 csptp.ResponseTLV
+	var b []byte
+
+	tlv0 = csptp.ResponseTLV{}
+	b = make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+	csptp.EncodeResponseTLV(b, &tlv0)
+	tlv1 = csptp.ResponseTLV{}
+	err = csptp.DecodeResponseTLV(&tlv1, b[:13])
+	if err == nil {
+		t.Error("Expected error for insufficient buffer length")
+	}
+
+	tlv0 = csptp.ResponseTLV{}
+	b = make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+	csptp.EncodeResponseTLV(b, &tlv0)
+	tlv1 = csptp.ResponseTLV{}
+	err = csptp.DecodeResponseTLV(&tlv1, b[:len(b)-1])
+	if err == nil {
+		t.Error("Expected error for insufficient buffer length")
+	}
+
+	tlv0 = csptp.ResponseTLV{FlagField: csptp.TLVFlagServerStateDS}
+	b = make([]byte, csptp.EncodedResponseTLVLength(&tlv0))
+	csptp.EncodeResponseTLV(b, &tlv0)
+	tlv1 = csptp.ResponseTLV{}
+	err = csptp.DecodeResponseTLV(&tlv1, b[:len(b)-1])
+	if err == nil {
+		t.Error("Expected error for insufficient buffer length with ServerStateDS flag set")
+	}
+}
