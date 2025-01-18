@@ -3,8 +3,10 @@ package csptp_test
 // Based on an Claude AI interaction
 
 import (
+	"bytes"
 	"math"
 	"testing"
+	"time"
 
 	"example.com/scion-time/net/csptp"
 )
@@ -899,5 +901,481 @@ func TestResponseTLVInvalidLength(t *testing.T) {
 	err = csptp.DecodeResponseTLV(&tlv1, b[:len(b)-1])
 	if err == nil {
 		t.Error("Expected error for insufficient buffer length with ServerStateDS flag set")
+	}
+}
+
+func TestSyncRequest0(t *testing.T) {
+	msg0 := csptp.Message{
+		SdoIDMessageType:    csptp.MessageTypeSync,
+		PTPVersion:          csptp.PTPVersion,
+		MessageLength:       csptp.MinMessageLength,
+		DomainNumber:        csptp.DomainNumber,
+		MinorSdoID:          csptp.MinorSdoID,
+		FlagField:           csptp.FlagTwoStep | csptp.FlagUnicast,
+		CorrectionField:     0,
+		MessageTypeSpecific: 0,
+		SourcePortIdentity: csptp.PortID{
+			ClockID: 0x007665fffe746833,
+			Port:    1,
+		},
+		SequenceID:         0,
+		ControlField:       csptp.ControlSync,
+		LogMessageInterval: 0,
+		Timestamp:          csptp.Timestamp{},
+	}
+	b0 := []byte{
+		0x00, 0x12, 0x00, 0x2c, 0x00, 0x00, 0x06, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x76, 0x65, 0xff,
+		0xfe, 0x74, 0x68, 0x33, 0x00, 0x01, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00}
+	b1 := make([]byte, msg0.MessageLength)
+	csptp.EncodeMessage(b1, &msg0)
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	var msg1 csptp.Message
+	err := csptp.DecodeMessage(&msg1, b1)
+	if err != nil {
+		t.Fail()
+	}
+	if msg1 != msg0 {
+		t.Fail()
+	}
+}
+
+func TestFollowUpRequest0(t *testing.T) {
+	msg0 := csptp.Message{
+		SdoIDMessageType:    csptp.MessageTypeFollowUp,
+		PTPVersion:          csptp.PTPVersion,
+		MessageLength:       csptp.MinMessageLength,
+		DomainNumber:        csptp.DomainNumber,
+		MinorSdoID:          csptp.MinorSdoID,
+		FlagField:           csptp.FlagUnicast,
+		CorrectionField:     0,
+		MessageTypeSpecific: 0,
+		SourcePortIdentity: csptp.PortID{
+			ClockID: 0x007665fffe746833,
+			Port:    1,
+		},
+		SequenceID:         0,
+		ControlField:       csptp.ControlFollowUp,
+		LogMessageInterval: 0,
+		Timestamp:          csptp.Timestamp{},
+	}
+	tlv0 := csptp.RequestTLV{
+		Type:   csptp.TLVTypeOrganizationExtension,
+		Length: 0,
+		OrganizationID: [3]uint8{
+			csptp.OrganizationIDMeinberg0,
+			csptp.OrganizationIDMeinberg1,
+			csptp.OrganizationIDMeinberg2},
+		OrganizationSubType: [3]uint8{
+			csptp.OrganizationSubTypeRequest0,
+			csptp.OrganizationSubTypeRequest1,
+			csptp.OrganizationSubTypeRequest2},
+		FlagField: csptp.TLVFlagServerStateDS,
+	}
+	msg0.MessageLength += uint16(csptp.EncodedRequestTLVLength(&tlv0))
+	tlv0.Length = uint16(csptp.EncodedRequestTLVLength(&tlv0))
+	b0 := []byte{
+		0x08, 0x12, 0x00, 0x62, 0x00, 0x00, 0x04, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x76, 0x65, 0xff,
+		0xfe, 0x74, 0x68, 0x33, 0x00, 0x01, 0x00, 0x00,
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x36,
+		0xec, 0x46, 0x70, 0x52, 0x65, 0x71, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x0}
+	b1 := make([]byte, msg0.MessageLength)
+	csptp.EncodeMessage(b1[0:csptp.MinMessageLength], &msg0)
+	csptp.EncodeRequestTLV(b1[csptp.MinMessageLength:], &tlv0)
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	var msg1 csptp.Message
+	err := csptp.DecodeMessage(&msg1, b1[0:csptp.MinMessageLength])
+	if err != nil {
+		t.Fail()
+	}
+	if msg1 != msg0 {
+		t.Fail()
+	}
+	var tlv1 csptp.RequestTLV
+	err = csptp.DecodeRequestTLV(&tlv1, b1[csptp.MinMessageLength:])
+	if err != nil {
+		t.Fail()
+	}
+	if tlv1 != tlv0 {
+		t.Fail()
+	}
+}
+
+func TestSyncResponse0(t *testing.T) {
+	msg0 := csptp.Message{
+		SdoIDMessageType:    csptp.MessageTypeSync,
+		PTPVersion:          csptp.PTPVersion,
+		MessageLength:       csptp.MinMessageLength,
+		DomainNumber:        csptp.DomainNumber,
+		MinorSdoID:          csptp.MinorSdoID,
+		FlagField:           csptp.FlagTwoStep | csptp.FlagUnicast,
+		CorrectionField:     0,
+		MessageTypeSpecific: 0,
+		SourcePortIdentity: csptp.PortID{
+			ClockID: 0x007665fffe746831,
+			Port:    1,
+		},
+		SequenceID:         0,
+		ControlField:       csptp.ControlSync,
+		LogMessageInterval: csptp.LogMessageInterval,
+		Timestamp:          csptp.Timestamp{},
+	}
+	b0 := []byte{
+		0x00, 0x12, 0x00, 0x2c, 0x00, 0x00, 0x06, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x76, 0x65, 0xff,
+		0xfe, 0x74, 0x68, 0x31, 0x00, 0x01, 0x00, 0x00,
+		0x00, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00}
+	b1 := make([]byte, msg0.MessageLength)
+	csptp.EncodeMessage(b1, &msg0)
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	var msg1 csptp.Message
+	err := csptp.DecodeMessage(&msg1, b1)
+	if err != nil {
+		t.Fail()
+	}
+	if msg1 != msg0 {
+		t.Fail()
+	}
+}
+
+func TestFollowUpResponse0(t *testing.T) {
+	msg0 := csptp.Message{
+		SdoIDMessageType:    csptp.MessageTypeFollowUp,
+		PTPVersion:          csptp.PTPVersion,
+		MessageLength:       csptp.MinMessageLength,
+		DomainNumber:        csptp.DomainNumber,
+		MinorSdoID:          csptp.MinorSdoID,
+		FlagField:           csptp.FlagUnicast,
+		CorrectionField:     0,
+		MessageTypeSpecific: 0,
+		SourcePortIdentity: csptp.PortID{
+			ClockID: 0x007665fffe746831,
+			Port:    1,
+		},
+		SequenceID:         0,
+		ControlField:       csptp.ControlFollowUp,
+		LogMessageInterval: csptp.LogMessageInterval,
+		Timestamp:          csptp.TimestampFromTime(time.Unix(1737196455, 486627530).UTC()),
+	}
+	tlv0 := csptp.ResponseTLV{
+		Type:   csptp.TLVTypeOrganizationExtension,
+		Length: 0,
+		OrganizationID: [3]uint8{
+			csptp.OrganizationIDMeinberg0,
+			csptp.OrganizationIDMeinberg1,
+			csptp.OrganizationIDMeinberg2},
+		OrganizationSubType: [3]uint8{
+			csptp.OrganizationSubTypeResponse0,
+			csptp.OrganizationSubTypeResponse1,
+			csptp.OrganizationSubTypeResponse2},
+		FlagField:               csptp.TLVFlagServerStateDS,
+		Error:                   0,
+		RequestIngressTimestamp: csptp.TimestampFromTime(time.Unix(1737196455, 482166607).UTC()),
+		RequestCorrectionField:  0,
+		UTCOffset:               0,
+		ServerStateDS: csptp.ServerStateDS{
+			GMPriority1:     128,
+			GMClockClass:    248,
+			GMClockAccuracy: 47,
+			GMClockVariance: 65535,
+			GMPriority2:     128,
+			GMClockID:       33326197411964977,
+			StepsRemoved:    0,
+			TimeSource:      96,
+			Reserved:        0,
+		},
+	}
+	msg0.MessageLength += uint16(csptp.EncodedResponseTLVLength(&tlv0))
+	tlv0.Length = uint16(csptp.EncodedResponseTLVLength(&tlv0))
+	b0 := []byte{
+		0x08, 0x12, 0x00, 0x62, 0x00, 0x00, 0x04, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x76, 0x65, 0xff,
+		0xfe, 0x74, 0x68, 0x31, 0x00, 0x01, 0x00, 0x00,
+		0x02, 0x7f, 0x00, 0x00, 0x67, 0x8b, 0x83, 0xa7,
+		0x1d, 0x01, 0x58, 0xca, 0x00, 0x03, 0x00, 0x36,
+		0xec, 0x46, 0x70, 0x52, 0x65, 0x73, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x67, 0x8b,
+		0x83, 0xa7, 0x1c, 0xbd, 0x47, 0x4f, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x80, 0xf8, 0x2f, 0xff, 0xff, 0x80, 0x00, 0x76,
+		0x65, 0xff, 0xfe, 0x74, 0x68, 0x31, 0x00, 0x00,
+		0x60, 0x0}
+	b1 := make([]byte, msg0.MessageLength)
+	csptp.EncodeMessage(b1[0:csptp.MinMessageLength], &msg0)
+	csptp.EncodeResponseTLV(b1[csptp.MinMessageLength:], &tlv0)
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	var msg1 csptp.Message
+	err := csptp.DecodeMessage(&msg1, b1[0:csptp.MinMessageLength])
+	if err != nil {
+		t.Fail()
+	}
+	if msg1 != msg0 {
+		t.Fail()
+	}
+	var tlv1 csptp.ResponseTLV
+	err = csptp.DecodeResponseTLV(&tlv1, b1[csptp.MinMessageLength:])
+	if err != nil {
+		t.Fail()
+	}
+	if tlv1 != tlv0 {
+		t.Fail()
+	}
+}
+
+func TestSyncRequest1(t *testing.T) {
+	msg0 := csptp.Message{
+		SdoIDMessageType:    csptp.MessageTypeSync,
+		PTPVersion:          csptp.PTPVersion,
+		MessageLength:       csptp.MinMessageLength,
+		DomainNumber:        csptp.DomainNumber,
+		MinorSdoID:          csptp.MinorSdoID,
+		FlagField:           csptp.FlagTwoStep | csptp.FlagUnicast,
+		CorrectionField:     0,
+		MessageTypeSpecific: 0,
+		SourcePortIdentity: csptp.PortID{
+			ClockID: 0x007665fffe746833,
+			Port:    1,
+		},
+		SequenceID:         1,
+		ControlField:       csptp.ControlSync,
+		LogMessageInterval: 0,
+		Timestamp:          csptp.Timestamp{},
+	}
+	b0 := []byte{
+		0x00, 0x12, 0x00, 0x2c, 0x00, 0x00, 0x06, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x76, 0x65, 0xff,
+		0xfe, 0x74, 0x68, 0x33, 0x00, 0x01, 0x00, 0x01,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x0}
+	b1 := make([]byte, msg0.MessageLength)
+	csptp.EncodeMessage(b1, &msg0)
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	var msg1 csptp.Message
+	err := csptp.DecodeMessage(&msg1, b1)
+	if err != nil {
+		t.Fail()
+	}
+	if msg1 != msg0 {
+		t.Fail()
+	}
+}
+
+func TestFollowUpRequest1(t *testing.T) {
+	msg0 := csptp.Message{
+		SdoIDMessageType:    csptp.MessageTypeFollowUp,
+		PTPVersion:          csptp.PTPVersion,
+		MessageLength:       csptp.MinMessageLength,
+		DomainNumber:        csptp.DomainNumber,
+		MinorSdoID:          csptp.MinorSdoID,
+		FlagField:           csptp.FlagUnicast,
+		CorrectionField:     0,
+		MessageTypeSpecific: 0,
+		SourcePortIdentity: csptp.PortID{
+			ClockID: 0x007665fffe746833,
+			Port:    1,
+		},
+		SequenceID:         1,
+		ControlField:       csptp.ControlFollowUp,
+		LogMessageInterval: 0,
+		Timestamp:          csptp.Timestamp{},
+	}
+	tlv0 := csptp.RequestTLV{
+		Type:   csptp.TLVTypeOrganizationExtension,
+		Length: 0,
+		OrganizationID: [3]uint8{
+			csptp.OrganizationIDMeinberg0,
+			csptp.OrganizationIDMeinberg1,
+			csptp.OrganizationIDMeinberg2},
+		OrganizationSubType: [3]uint8{
+			csptp.OrganizationSubTypeRequest0,
+			csptp.OrganizationSubTypeRequest1,
+			csptp.OrganizationSubTypeRequest2},
+		FlagField: 0,
+	}
+	msg0.MessageLength += uint16(csptp.EncodedRequestTLVLength(&tlv0))
+	tlv0.Length = uint16(csptp.EncodedRequestTLVLength(&tlv0))
+	b0 := []byte{
+		0x08, 0x12, 0x00, 0x50, 0x00, 0x00, 0x04, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x76, 0x65, 0xff,
+		0xfe, 0x74, 0x68, 0x33, 0x00, 0x01, 0x00, 0x01,
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x24,
+		0xec, 0x46, 0x70, 0x52, 0x65, 0x71, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	b1 := make([]byte, msg0.MessageLength)
+	csptp.EncodeMessage(b1[0:csptp.MinMessageLength], &msg0)
+	csptp.EncodeRequestTLV(b1[csptp.MinMessageLength:], &tlv0)
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	var msg1 csptp.Message
+	err := csptp.DecodeMessage(&msg1, b1[0:csptp.MinMessageLength])
+	if err != nil {
+		t.Fail()
+	}
+	if msg1 != msg0 {
+		t.Fail()
+	}
+	var tlv1 csptp.RequestTLV
+	err = csptp.DecodeRequestTLV(&tlv1, b1[csptp.MinMessageLength:])
+	if err != nil {
+		t.Fail()
+	}
+	if tlv1 != tlv0 {
+		t.Fail()
+	}
+}
+
+func TestSyncResponse1(t *testing.T) {
+	msg0 := csptp.Message{
+		SdoIDMessageType:    csptp.MessageTypeSync,
+		PTPVersion:          csptp.PTPVersion,
+		MessageLength:       csptp.MinMessageLength,
+		DomainNumber:        csptp.DomainNumber,
+		MinorSdoID:          csptp.MinorSdoID,
+		FlagField:           csptp.FlagTwoStep | csptp.FlagUnicast,
+		CorrectionField:     0,
+		MessageTypeSpecific: 0,
+		SourcePortIdentity: csptp.PortID{
+			ClockID: 0x007665fffe746831,
+			Port:    1,
+		},
+		SequenceID:         1,
+		ControlField:       csptp.ControlSync,
+		LogMessageInterval: csptp.LogMessageInterval,
+		Timestamp:          csptp.Timestamp{},
+	}
+	b0 := []byte{
+		0x00, 0x12, 0x00, 0x2c, 0x00, 0x00, 0x06, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x76, 0x65, 0xff,
+		0xfe, 0x74, 0x68, 0x31, 0x00, 0x01, 0x00, 0x01,
+		0x00, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00}
+	b1 := make([]byte, msg0.MessageLength)
+	csptp.EncodeMessage(b1, &msg0)
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	var msg1 csptp.Message
+	err := csptp.DecodeMessage(&msg1, b1)
+	if err != nil {
+		t.Fail()
+	}
+	if msg1 != msg0 {
+		t.Fail()
+	}
+}
+
+func TestFollowUpResponse1(t *testing.T) {
+	msg0 := csptp.Message{
+		SdoIDMessageType:    csptp.MessageTypeFollowUp,
+		PTPVersion:          csptp.PTPVersion,
+		MessageLength:       csptp.MinMessageLength,
+		DomainNumber:        csptp.DomainNumber,
+		MinorSdoID:          csptp.MinorSdoID,
+		FlagField:           csptp.FlagUnicast,
+		CorrectionField:     0,
+		MessageTypeSpecific: 0,
+		SourcePortIdentity: csptp.PortID{
+			ClockID: 0x007665fffe746831,
+			Port:    1,
+		},
+		SequenceID:         1,
+		ControlField:       csptp.ControlFollowUp,
+		LogMessageInterval: csptp.LogMessageInterval,
+		Timestamp:          csptp.TimestampFromTime(time.Unix(1737196456, 494391756).UTC()),
+	}
+	tlv0 := csptp.ResponseTLV{
+		Type:   csptp.TLVTypeOrganizationExtension,
+		Length: 0,
+		OrganizationID: [3]uint8{
+			csptp.OrganizationIDMeinberg0,
+			csptp.OrganizationIDMeinberg1,
+			csptp.OrganizationIDMeinberg2},
+		OrganizationSubType: [3]uint8{
+			csptp.OrganizationSubTypeResponse0,
+			csptp.OrganizationSubTypeResponse1,
+			csptp.OrganizationSubTypeResponse2},
+		FlagField:               0,
+		Error:                   0,
+		RequestIngressTimestamp: csptp.TimestampFromTime(time.Unix(1737196456, 493401778).UTC()),
+		RequestCorrectionField:  0,
+		UTCOffset:               0,
+		ServerStateDS: csptp.ServerStateDS{
+			GMPriority1:     0,
+			GMClockClass:    0,
+			GMClockAccuracy: 0,
+			GMClockVariance: 0,
+			GMPriority2:     0,
+			GMClockID:       0,
+			StepsRemoved:    0,
+			TimeSource:      0,
+			Reserved:        0,
+		},
+	}
+	msg0.MessageLength += uint16(csptp.EncodedResponseTLVLength(&tlv0))
+	tlv0.Length = uint16(csptp.EncodedResponseTLVLength(&tlv0))
+	b0 := []byte{
+		0x08, 0x12, 0x00, 0x50, 0x00, 0x00, 0x04, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x76, 0x65, 0xff,
+		0xfe, 0x74, 0x68, 0x31, 0x00, 0x01, 0x00, 0x01,
+		0x02, 0x7f, 0x00, 0x00, 0x67, 0x8b, 0x83, 0xa8,
+		0x1d, 0x77, 0xd1, 0xcc, 0x00, 0x03, 0x00, 0x24,
+		0xec, 0x46, 0x70, 0x52, 0x65, 0x73, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x67, 0x8b,
+		0x83, 0xa8, 0x1d, 0x68, 0xb6, 0xb2, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0}
+	b1 := make([]byte, msg0.MessageLength)
+	csptp.EncodeMessage(b1[0:csptp.MinMessageLength], &msg0)
+	csptp.EncodeResponseTLV(b1[csptp.MinMessageLength:], &tlv0)
+	if !bytes.Equal(b1, b0) {
+		t.Fail()
+	}
+	var msg1 csptp.Message
+	err := csptp.DecodeMessage(&msg1, b1[0:csptp.MinMessageLength])
+	if err != nil {
+		t.Fail()
+	}
+	if msg1 != msg0 {
+		t.Fail()
+	}
+	var tlv1 csptp.ResponseTLV
+	err = csptp.DecodeResponseTLV(&tlv1, b1[csptp.MinMessageLength:])
+	if err != nil {
+		t.Fail()
+	}
+	if tlv1 != tlv0 {
+		t.Fail()
 	}
 }
