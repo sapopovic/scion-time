@@ -23,10 +23,12 @@ const (
 
 	DomainNumber = 0
 
-	FlagTwoStep               = 1 << 9
-	FlagUnicast               = 1 << 10
+	MinorSdoID = 0
+
 	FlagCurrentUTCOffsetValid = 1 << 2
 	FlagPTPTimescale          = 1 << 3
+	FlagTwoStep               = 1 << 9
+	FlagUnicast               = 1 << 10
 
 	ControlSync     = 0
 	ControlFollowUp = 2
