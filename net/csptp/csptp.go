@@ -380,6 +380,16 @@ func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
 		tlv.ServerStateDS.StepsRemoved = uint16(b[50])<<8 | uint16(b[51])
 		tlv.ServerStateDS.TimeSource = b[52]
 		tlv.ServerStateDS.Reserved = b[53]
+	} else {
+		tlv.ServerStateDS.GMPriority1 = 0
+		tlv.ServerStateDS.GMClockClass = 0
+		tlv.ServerStateDS.GMClockAccuracy = 0
+		tlv.ServerStateDS.GMClockVariance = 0
+		tlv.ServerStateDS.GMPriority2 = 0
+		tlv.ServerStateDS.GMClockID = 0
+		tlv.ServerStateDS.StepsRemoved = 0
+		tlv.ServerStateDS.TimeSource = 0
+		tlv.ServerStateDS.Reserved = 0
 	}
 
 	return nil
