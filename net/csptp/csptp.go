@@ -152,6 +152,7 @@ func DurationFromTimeInterval(i int64) time.Duration {
 const MinMessageLength = 44
 
 func EncodeMessage(b []byte, msg *Message) {
+	_ = b[43]
 	b[0] = byte(msg.SdoIDMessageType)
 	b[1] = byte(msg.PTPVersion)
 	b[2] = byte(msg.MessageLength >> 8)
@@ -207,6 +208,7 @@ func DecodeMessage(msg *Message, b []byte) error {
 		return errUnexpectedMessageSize
 	}
 
+	_ = b[43]
 	msg.SdoIDMessageType = b[0]
 	msg.PTPVersion = b[1]
 	msg.MessageLength = uint16(b[2])<<8 | uint16(b[3])
@@ -237,6 +239,7 @@ func EncodedRequestTLVLength(tlv *RequestTLV) int {
 }
 
 func EncodeRequestTLV(b []byte, tlv *RequestTLV) {
+	_ = b[35]
 	b[0] = byte(tlv.Type >> 8)
 	b[1] = byte(tlv.Type)
 	b[2] = byte(tlv.Length >> 8)
@@ -255,6 +258,7 @@ func EncodeRequestTLV(b []byte, tlv *RequestTLV) {
 		b[i] = 0
 	}
 	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
+		_ = b[53]
 		for i := 36; i != 54; i++ {
 			b[i] = 0
 		}
@@ -269,6 +273,7 @@ func DecodeRequestTLV(tlv *RequestTLV, b []byte) error {
 	if len(b) < 14 {
 		return errUnexpectedRequestTLVSize
 	}
+	_ = b[13]
 	tlv.Type = uint16(b[0])<<8 | uint16(b[1])
 	tlv.Length = uint16(b[2])<<8 | uint16(b[3])
 	tlv.OrganizationID = [3]uint8{b[4], b[5], b[6]}
@@ -290,6 +295,7 @@ func EncodedResponseTLVLength(tlv *ResponseTLV) int {
 }
 
 func EncodeResponseTLV(b []byte, tlv *ResponseTLV) {
+	_ = b[35]
 	b[0] = byte(tlv.Type >> 8)
 	b[1] = byte(tlv.Type)
 	b[2] = byte(tlv.Length >> 8)
@@ -327,6 +333,7 @@ func EncodeResponseTLV(b []byte, tlv *ResponseTLV) {
 	b[34] = byte(tlv.UTCOffset >> 8)
 	b[35] = byte(tlv.UTCOffset)
 	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
+		_ = b[53]
 		b[36] = byte(tlv.ServerStateDS.GMPriority1)
 		b[37] = byte(tlv.ServerStateDS.GMClockClass)
 		b[38] = byte(tlv.ServerStateDS.GMClockAccuracy)
@@ -356,6 +363,7 @@ func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
 	if len(b) < 14 {
 		return errUnexpectedResponseTLVSize
 	}
+	_ = b[13]
 	tlv.Type = uint16(b[0])<<8 | uint16(b[1])
 	tlv.Length = uint16(b[2])<<8 | uint16(b[3])
 	tlv.OrganizationID = [3]uint8{b[4], b[5], b[6]}
@@ -365,6 +373,7 @@ func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
 		return errUnexpectedResponseTLVSize
 	}
 
+	_ = b[35]
 	tlv.Error = uint16(b[14])<<8 | uint16(b[15])
 	tlv.RequestIngressTimestamp.Seconds = [6]uint8{b[16], b[17], b[18], b[19], b[20], b[21]}
 	tlv.RequestIngressTimestamp.Nanoseconds = uint32(b[22])<<24 | uint32(b[23])<<16 | uint32(b[24])<<8 | uint32(b[25])
@@ -372,6 +381,7 @@ func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
 		uint64(b[30])<<24 | uint64(b[31])<<16 | uint64(b[32])<<8 | uint64(b[33]))
 	tlv.UTCOffset = int16(uint16(b[34])<<8 | uint16(b[35]))
 	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
+		_ = b[53]
 		tlv.ServerStateDS.GMPriority1 = b[36]
 		tlv.ServerStateDS.GMClockClass = b[37]
 		tlv.ServerStateDS.GMClockAccuracy = b[38]
