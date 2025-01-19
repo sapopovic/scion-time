@@ -1,7 +1,6 @@
 package ntp
 
 import (
-	"encoding/binary"
 	"errors"
 	"time"
 )
@@ -119,23 +118,56 @@ func EncodePacket(b *[]byte, pkt *Packet) {
 		*b = (*b)[:PacketLen]
 	}
 
-	(*b)[0] = byte(pkt.LVM)
-	(*b)[1] = byte(pkt.Stratum)
-	(*b)[2] = byte(pkt.Poll)
-	(*b)[3] = byte(pkt.Precision)
-	binary.BigEndian.PutUint16((*b)[4:], pkt.RootDelay.Seconds)
-	binary.BigEndian.PutUint16((*b)[6:], pkt.RootDelay.Fraction)
-	binary.BigEndian.PutUint16((*b)[8:], pkt.RootDispersion.Seconds)
-	binary.BigEndian.PutUint16((*b)[10:], pkt.RootDispersion.Fraction)
-	binary.BigEndian.PutUint32((*b)[12:], pkt.ReferenceID)
-	binary.BigEndian.PutUint32((*b)[16:], pkt.ReferenceTime.Seconds)
-	binary.BigEndian.PutUint32((*b)[20:], pkt.ReferenceTime.Fraction)
-	binary.BigEndian.PutUint32((*b)[24:], pkt.OriginTime.Seconds)
-	binary.BigEndian.PutUint32((*b)[28:], pkt.OriginTime.Fraction)
-	binary.BigEndian.PutUint32((*b)[32:], pkt.ReceiveTime.Seconds)
-	binary.BigEndian.PutUint32((*b)[36:], pkt.ReceiveTime.Fraction)
-	binary.BigEndian.PutUint32((*b)[40:], pkt.TransmitTime.Seconds)
-	binary.BigEndian.PutUint32((*b)[44:], pkt.TransmitTime.Fraction)
+	buf := *b 
+	_ = buf[47]
+	buf[0] = byte(pkt.LVM)
+	buf[1] = byte(pkt.Stratum)
+	buf[2] = byte(pkt.Poll)
+	buf[3] = byte(pkt.Precision)
+	buf[4] = byte(pkt.RootDelay.Seconds >> 8)
+	buf[5] = byte(pkt.RootDelay.Seconds)
+	buf[6] = byte(pkt.RootDelay.Fraction >> 8)
+	buf[7] = byte(pkt.RootDelay.Fraction)
+	buf[8] = byte(pkt.RootDispersion.Seconds >> 8)
+	buf[9] = byte(pkt.RootDispersion.Seconds)
+	buf[10] = byte(pkt.RootDispersion.Fraction >> 8)
+	buf[11] = byte(pkt.RootDispersion.Fraction)
+	buf[12] = byte(pkt.ReferenceID >> 24)
+	buf[13] = byte(pkt.ReferenceID >> 16)
+	buf[14] = byte(pkt.ReferenceID >> 8)
+	buf[15] = byte(pkt.ReferenceID)
+	buf[16] = byte(pkt.ReferenceTime.Seconds >> 24)
+	buf[17] = byte(pkt.ReferenceTime.Seconds >> 16)
+	buf[18] = byte(pkt.ReferenceTime.Seconds >> 8)
+	buf[19] = byte(pkt.ReferenceTime.Seconds)
+	buf[20] = byte(pkt.ReferenceTime.Fraction >> 24)
+	buf[21] = byte(pkt.ReferenceTime.Fraction >> 16)
+	buf[22] = byte(pkt.ReferenceTime.Fraction >> 8)
+	buf[23] = byte(pkt.ReferenceTime.Fraction)
+	buf[24] = byte(pkt.OriginTime.Seconds >> 24)
+	buf[25] = byte(pkt.OriginTime.Seconds >> 16)
+	buf[26] = byte(pkt.OriginTime.Seconds >> 8)
+	buf[27] = byte(pkt.OriginTime.Seconds)
+	buf[28] = byte(pkt.OriginTime.Fraction >> 24)
+	buf[29] = byte(pkt.OriginTime.Fraction >> 16)
+	buf[30] = byte(pkt.OriginTime.Fraction >> 8)
+	buf[31] = byte(pkt.OriginTime.Fraction)
+	buf[32] = byte(pkt.ReceiveTime.Seconds >> 24)
+	buf[33] = byte(pkt.ReceiveTime.Seconds >> 16)
+	buf[34] = byte(pkt.ReceiveTime.Seconds >> 8)
+	buf[35] = byte(pkt.ReceiveTime.Seconds)
+	buf[36] = byte(pkt.ReceiveTime.Fraction >> 24)
+	buf[37] = byte(pkt.ReceiveTime.Fraction >> 16)
+	buf[38] = byte(pkt.ReceiveTime.Fraction >> 8)
+	buf[39] = byte(pkt.ReceiveTime.Fraction)
+	buf[40] = byte(pkt.TransmitTime.Seconds >> 24)
+	buf[41] = byte(pkt.TransmitTime.Seconds >> 16)
+	buf[42] = byte(pkt.TransmitTime.Seconds >> 8)
+	buf[43] = byte(pkt.TransmitTime.Seconds)
+	buf[44] = byte(pkt.TransmitTime.Fraction >> 24)
+	buf[45] = byte(pkt.TransmitTime.Fraction >> 16)
+	buf[46] = byte(pkt.TransmitTime.Fraction >> 8)
+	buf[47] = byte(pkt.TransmitTime.Fraction)
 }
 
 func DecodePacket(pkt *Packet, b []byte) error {
@@ -143,23 +175,24 @@ func DecodePacket(pkt *Packet, b []byte) error {
 		return errUnexpectedPacketSize
 	}
 
+	_ = b[47]
 	pkt.LVM = uint8(b[0])
 	pkt.Stratum = uint8(b[1])
 	pkt.Poll = int8(b[2])
 	pkt.Precision = int8(b[3])
-	pkt.RootDelay.Seconds = binary.BigEndian.Uint16(b[4:])
-	pkt.RootDelay.Fraction = binary.BigEndian.Uint16(b[6:])
-	pkt.RootDispersion.Seconds = binary.BigEndian.Uint16(b[8:])
-	pkt.RootDispersion.Fraction = binary.BigEndian.Uint16(b[10:])
-	pkt.ReferenceID = binary.BigEndian.Uint32(b[12:])
-	pkt.ReferenceTime.Seconds = binary.BigEndian.Uint32(b[16:])
-	pkt.ReferenceTime.Fraction = binary.BigEndian.Uint32(b[20:])
-	pkt.OriginTime.Seconds = binary.BigEndian.Uint32(b[24:])
-	pkt.OriginTime.Fraction = binary.BigEndian.Uint32(b[28:])
-	pkt.ReceiveTime.Seconds = binary.BigEndian.Uint32(b[32:])
-	pkt.ReceiveTime.Fraction = binary.BigEndian.Uint32(b[36:])
-	pkt.TransmitTime.Seconds = binary.BigEndian.Uint32(b[40:])
-	pkt.TransmitTime.Fraction = binary.BigEndian.Uint32(b[44:])
+	pkt.RootDelay.Seconds = uint16(b[4])<<8 | uint16(b[5])
+	pkt.RootDelay.Fraction = uint16(b[6])<<8 | uint16(b[7])
+	pkt.RootDispersion.Seconds = uint16(b[8])<<8 | uint16(b[9])
+	pkt.RootDispersion.Fraction = uint16(b[10])<<8 | uint16(b[11])
+	pkt.ReferenceID = uint32(b[12])<<24 | uint32(b[13])<<16 | uint32(b[14])<<8 | uint32(b[15])
+	pkt.ReferenceTime.Seconds = uint32(b[16])<<24 | uint32(b[17])<<16 | uint32(b[18])<<8 | uint32(b[19])
+	pkt.ReferenceTime.Fraction = uint32(b[20])<<24 | uint32(b[21])<<16 | uint32(b[22])<<8 | uint32(b[23])
+	pkt.OriginTime.Seconds = uint32(b[24])<<24 | uint32(b[25])<<16 | uint32(b[26])<<8 | uint32(b[27])
+	pkt.OriginTime.Fraction = uint32(b[28])<<24 | uint32(b[29])<<16 | uint32(b[30])<<8 | uint32(b[31])
+	pkt.ReceiveTime.Seconds = uint32(b[32])<<24 | uint32(b[33])<<16 | uint32(b[34])<<8 | uint32(b[35])
+	pkt.ReceiveTime.Fraction = uint32(b[36])<<24 | uint32(b[37])<<16 | uint32(b[38])<<8 | uint32(b[39])
+	pkt.TransmitTime.Seconds = uint32(b[40])<<24 | uint32(b[41])<<16 | uint32(b[42])<<8 | uint32(b[43])
+	pkt.TransmitTime.Fraction = uint32(b[44])<<24 | uint32(b[45])<<16 | uint32(b[46])<<8 | uint32(b[47])
 
 	return nil
 }
