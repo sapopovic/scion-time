@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"syscall"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/snet"
@@ -51,6 +52,23 @@ func UDPAddrFromSnet(a *snet.UDPAddr) UDPAddr {
 
 func TimestampLen() int {
 	return unix.CmsgSpace(3 * 16)
+}
+
+func SetsockoptReuseAddrPort(network, address string, c syscall.RawConn) error {
+	var res struct {
+		err error
+	}
+	err := c.Control(func(fd uintptr) {
+		res.err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEADDR, 1)
+		if res.err != nil {
+			return
+		}
+		res.err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+	})
+	if err != nil {
+		return err
+	}
+	return res.err
 }
 
 func SetDSCP(conn *net.UDPConn, dscp uint8) error {

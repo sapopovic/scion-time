@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/libp2p/go-reuseport"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -213,20 +212,15 @@ func StartIPServer(ctx context.Context, log *slog.Logger,
 
 	mtrcs := newIPServerMetrics()
 
-	if ipServerNumGoroutine == 1 {
-		conn, err := net.ListenUDP("udp", localHost)
+	lc := net.ListenConfig{
+		Control: udp.SetsockoptReuseAddrPort,
+	}
+	address := net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port))
+	for range ipServerNumGoroutine {
+		conn, err := lc.ListenPacket(ctx, "udp", address)
 		if err != nil {
 			logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
 		}
-		go runIPServer(ctx, log, mtrcs, conn, localHost.Zone, dscp, provider)
-	} else {
-		for range ipServerNumGoroutine {
-			conn, err := reuseport.ListenPacket("udp",
-				net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port)))
-			if err != nil {
-				logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
-			}
-			go runIPServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, dscp, provider)
-		}
+		go runIPServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, dscp, provider)
 	}
 }

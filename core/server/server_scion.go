@@ -6,13 +6,11 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
-	"slices"
 	"strconv"
 	"time"
 
 	"github.com/google/gopacket"
 
-	"github.com/libp2p/go-reuseport"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -576,25 +574,18 @@ func StartSCIONServer(ctx context.Context, log *slog.Logger,
 			slog.Uint64("port", scion.EndhostPort))
 	}
 
+	lc := net.ListenConfig{
+		Control: udp.SetsockoptReuseAddrPort,
+	}
 	for _, localHostPort := range []int{localHost.Port, scion.EndhostPort} {
-		if scionServerNumGoroutine == 1 {
+		address := net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHostPort))
+		for range scionServerNumGoroutine {
 			fetcher := scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
-			conn, err := net.ListenUDP("udp", &net.UDPAddr{
-				IP: slices.Clone(localHost.IP), Port: localHostPort, Zone: localHost.Zone})
+			conn, err := lc.ListenPacket(ctx, "udp", address)
 			if err != nil {
 				logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
 			}
-			go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHost.Port, dscp, fetcher, provider)
-		} else {
-			for range scionServerNumGoroutine {
-				fetcher := scion.NewFetcher(scion.NewDaemonConnector(ctx, daemonAddr))
-				conn, err := reuseport.ListenPacket("udp",
-					net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHostPort)))
-				if err != nil {
-					logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
-				}
-				go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, localHost.Port, dscp, fetcher, provider)
-			}
+			go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, localHost.Port, dscp, fetcher, provider)
 		}
 	}
 }
@@ -614,11 +605,13 @@ func StartSCIONDispatcher(ctx context.Context, log *slog.Logger,
 	}
 
 	localHost.Port = scion.EndhostPort
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{
-		IP: slices.Clone(localHost.IP), Port: localHost.Port, Zone: localHost.Zone})
+
+	lc := net.ListenConfig{}
+	address := net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHost.Port))
+	conn, err := lc.ListenPacket(ctx, "udp", address)
 	if err != nil {
 		logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
 	}
-	go runSCIONServer(ctx, log, mtrcs, conn, localHost.Zone, localHost.Port,
+	go runSCIONServer(ctx, log, mtrcs, conn.(*net.UDPConn), localHost.Zone, localHost.Port,
 		0 /* DSCP */, nil /* DRKey fetcher */, nil /* NTSKE provider */)
 }

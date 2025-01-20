@@ -5,7 +5,6 @@ go 1.23.5
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2
 	github.com/google/gopacket v1.1.19
-	github.com/libp2p/go-reuseport v0.4.0
 	github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
 	github.com/mmcloughlin/profile v0.1.1
 	github.com/pelletier/go-toml/v2 v2.2.3
