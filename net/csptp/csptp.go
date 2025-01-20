@@ -406,3 +406,21 @@ func DecodeResponseTLV(tlv *ResponseTLV, b []byte) error {
 
 	return nil
 }
+
+func C2SDelay(t0, t1 time.Time, t1Corr, utcCorr time.Duration) time.Duration {
+	return (t1.Sub(t0) - t1Corr) - utcCorr
+}
+
+func S2CDelay(t2, t3 time.Time, t3Corr, utcCorr time.Duration) time.Duration {
+	return (t3.Sub(t2) - t3Corr) + utcCorr
+}
+
+func MeanPathDelay(t0, t1, t2, t3 time.Time, t1Corr, t3Corr time.Duration) time.Duration {
+	return ((t1.Sub(t0) - t1Corr) + (t3.Sub(t2) - t3Corr)) / 2
+}
+
+func ClockOffset(t0, t1, t2, t3 time.Time, t1Corr, t3Corr time.Duration) time.Duration {
+	return ((t1.Sub(t0) - t1Corr) - (t3.Sub(t2) - t3Corr)) / 2
+}
+
+
