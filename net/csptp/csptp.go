@@ -114,15 +114,6 @@ type ResponseTLV struct {
 	ServerStateDS           ServerStateDS
 }
 
-//lint:ignore U1000 work in progress
-func flagField(twoStep bool) uint16 {
-	f := uint16(FlagUnicast)
-	if twoStep {
-		f |= FlagTwoStep
-	}
-	return f
-}
-
 func TimestampFromTime(t time.Time) Timestamp {
 	s := t.Unix()
 	if s < 0 {
