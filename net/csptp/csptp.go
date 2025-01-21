@@ -422,5 +422,3 @@ func MeanPathDelay(t0, t1, t2, t3 time.Time, t1Corr, t3Corr time.Duration) time.
 func ClockOffset(t0, t1, t2, t3 time.Time, t1Corr, t3Corr time.Duration) time.Duration {
 	return ((t1.Sub(t0) - t1Corr) - (t3.Sub(t2) - t3Corr)) / 2
 }
-
-

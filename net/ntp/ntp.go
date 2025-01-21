@@ -118,7 +118,7 @@ func EncodePacket(b *[]byte, pkt *Packet) {
 		*b = (*b)[:PacketLen]
 	}
 
-	buf := *b 
+	buf := *b
 	_ = buf[47]
 	buf[0] = byte(pkt.LVM)
 	buf[1] = byte(pkt.Stratum)
