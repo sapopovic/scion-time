@@ -141,6 +141,7 @@ func DurationFromTimeInterval(i int64) time.Duration {
 }
 
 const MinMessageLength = 44
+const MaxMessageLength = 98
 
 func EncodeMessage(b []byte, msg *Message) {
 	_ = b[43]
@@ -221,6 +222,8 @@ func DecodeMessage(msg *Message, b []byte) error {
 	return nil
 }
 
+const MaxEncodedRequestTLVLength = 54
+
 func EncodedRequestTLVLength(tlv *RequestTLV) int {
 	len := 14 + /* padding: */ 22
 	if tlv.FlagField&TLVFlagServerStateDS == TLVFlagServerStateDS {
@@ -276,6 +279,8 @@ func DecodeRequestTLV(tlv *RequestTLV, b []byte) error {
 
 	return nil
 }
+
+const MaxEncodedResponseTLVLength = 54
 
 func EncodedResponseTLVLength(tlv *ResponseTLV) int {
 	len := 36

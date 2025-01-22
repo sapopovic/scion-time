@@ -4,31 +4,61 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log/slog"
+	"net/netip"
+	"os"
 	"time"
 
+	"example.com/scion-time/base/logbase"
+	"example.com/scion-time/core/client"
+	"example.com/scion-time/core/timebase"
 	"example.com/scion-time/driver/clocks"
-	_ "example.com/scion-time/net/csptp"
-	"example.com/scion-time/net/ntp"
 )
 
 func runX() {
-	initLogger(true /* verbose */)
+	var (
+		laddr, raddr string
+		dscp         uint
+		periodic     bool
+	)
 
+	toolFlags := flag.NewFlagSet("tool", flag.ExitOnError)
+	toolFlags.StringVar(&laddr, "local", "", "Local address")
+	toolFlags.StringVar(&raddr, "remote", "", "Remote address")
+	toolFlags.UintVar(&dscp, "dscp", 0, "Differentiated services codepoint, must be in range [0, 63]")
+	toolFlags.BoolVar(&periodic, "periodic", false, "Perform periodic offset measurements")
+
+	err := toolFlags.Parse(os.Args[2:])
+	if err != nil || toolFlags.NArg() != 0 {
+		panic("failed to parse arguments")
+	}
+	localAddr := netip.MustParseAddr(laddr)
+	remoteAddr := netip.MustParseAddr(raddr)
+
+	initLogger(true /* verbose */)
 	log := slog.Default()
 
-	clk := clocks.NewSystemClock(log, clocks.UnknownDrift)
-	log.Debug("local clock", slog.Time("now", clk.Now()))
-	clk.Step(-1 * time.Second)
-	log.Debug("local clock", slog.Time("now", clk.Now()))
+	ctx := context.Background()
 
-	now := time.Now().UTC()
+	lclk := clocks.NewSystemClock(log, clocks.UnknownDrift)
+	timebase.RegisterClock(lclk)
 
-	now64 := ntp.Time64FromTime(now)
-	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
-		slog.Any("now", ntp.Time64LogValuer{T: now64}))
+	c := &client.CSPTPClientIP{
+		Log:  log,
+		DSCP: uint8(dscp),
+	}
 
-	var pkt ntp.Packet
-	log.LogAttrs(context.Background(), slog.LevelDebug, "test",
-		slog.Any("pkt", ntp.PacketLogValuer{Pkt: &pkt}))
+	for {
+		ts, off, err := c.MeasureClockOffset(ctx, localAddr, remoteAddr)
+		if err != nil {
+			logbase.Fatal(slog.Default(), "failed to measure clock offset", slog.Any("remote", raddr), slog.Any("error", err))
+		}
+		if !periodic {
+			break
+		}
+		fmt.Printf("%s,%+.9f\n", ts.UTC().Format(time.RFC3339), off.Seconds())
+		lclk.Sleep(1 * time.Second)
+	}
 }
