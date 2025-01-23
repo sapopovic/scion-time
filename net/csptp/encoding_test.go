@@ -994,13 +994,13 @@ func TestFollowUpRequest0(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x0}
 	b1 := make([]byte, msg0.MessageLength)
-	csptp.EncodeMessage(b1[0:csptp.MinMessageLength], &msg0)
+	csptp.EncodeMessage(b1[:csptp.MinMessageLength], &msg0)
 	csptp.EncodeRequestTLV(b1[csptp.MinMessageLength:], &tlv0)
 	if !bytes.Equal(b1, b0) {
 		t.Fail()
 	}
 	var msg1 csptp.Message
-	err := csptp.DecodeMessage(&msg1, b1[0:csptp.MinMessageLength])
+	err := csptp.DecodeMessage(&msg1, b1[:csptp.MinMessageLength])
 	if err != nil {
 		t.Fail()
 	}
@@ -1122,13 +1122,13 @@ func TestFollowUpResponse0(t *testing.T) {
 		0x65, 0xff, 0xfe, 0x74, 0x68, 0x31, 0x00, 0x00,
 		0x60, 0x0}
 	b1 := make([]byte, msg0.MessageLength)
-	csptp.EncodeMessage(b1[0:csptp.MinMessageLength], &msg0)
+	csptp.EncodeMessage(b1[:csptp.MinMessageLength], &msg0)
 	csptp.EncodeResponseTLV(b1[csptp.MinMessageLength:], &tlv0)
 	if !bytes.Equal(b1, b0) {
 		t.Fail()
 	}
 	var msg1 csptp.Message
-	err := csptp.DecodeMessage(&msg1, b1[0:csptp.MinMessageLength])
+	err := csptp.DecodeMessage(&msg1, b1[:csptp.MinMessageLength])
 	if err != nil {
 		t.Fail()
 	}
@@ -1232,13 +1232,13 @@ func TestFollowUpRequest1(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	b1 := make([]byte, msg0.MessageLength)
-	csptp.EncodeMessage(b1[0:csptp.MinMessageLength], &msg0)
+	csptp.EncodeMessage(b1[:csptp.MinMessageLength], &msg0)
 	csptp.EncodeRequestTLV(b1[csptp.MinMessageLength:], &tlv0)
 	if !bytes.Equal(b1, b0) {
 		t.Fail()
 	}
 	var msg1 csptp.Message
-	err := csptp.DecodeMessage(&msg1, b1[0:csptp.MinMessageLength])
+	err := csptp.DecodeMessage(&msg1, b1[:csptp.MinMessageLength])
 	if err != nil {
 		t.Fail()
 	}
@@ -1357,13 +1357,13 @@ func TestFollowUpResponse1(t *testing.T) {
 		0x83, 0xa8, 0x1d, 0x68, 0xb6, 0xb2, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0}
 	b1 := make([]byte, msg0.MessageLength)
-	csptp.EncodeMessage(b1[0:csptp.MinMessageLength], &msg0)
+	csptp.EncodeMessage(b1[:csptp.MinMessageLength], &msg0)
 	csptp.EncodeResponseTLV(b1[csptp.MinMessageLength:], &tlv0)
 	if !bytes.Equal(b1, b0) {
 		t.Fail()
 	}
 	var msg1 csptp.Message
-	err := csptp.DecodeMessage(&msg1, b1[0:csptp.MinMessageLength])
+	err := csptp.DecodeMessage(&msg1, b1[:csptp.MinMessageLength])
 	if err != nil {
 		t.Fail()
 	}
