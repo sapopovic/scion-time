@@ -139,7 +139,141 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		c.Log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp", slog.Any("error", err))
 	}
 
-	_, _, _ = cTxTime0, cTxTime1, cTxTime2
+	const maxNumRetries = 1
+	numRetries := 0
+	oob := make([]byte, udp.TimestampLen())
+	for {
+		buf = buf[:cap(buf)]
+		oob = oob[:cap(oob)]
+		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
+		if err != nil {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet", slog.Any("error", err))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+		if flags != 0 {
+			err = errUnexpectedPacketFlags
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet", slog.Int("flags", flags))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+		oob = oob[:oobn]
+		cRxTime0, err := udp.TimestampFromOOBData(oob)
+		if err != nil {
+			cRxTime0 = timebase.Now()
+			c.Log.LogAttrs(ctx, slog.LevelError, "failed to read packet rx timestamp", slog.Any("error", err))
+		}
+		buf = buf[:n]
+
+		if srcAddr.Compare(netip.AddrPortFrom(remoteAddr, csptp.EventPortIP)) != 0 {
+			err = errUnexpectedPacketSource
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received packet from unexpected source")
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+
+		var respmsg0 csptp.Message
+		err = csptp.DecodeMessage(&respmsg0, buf)
+		if err != nil {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+
+		if len(buf) != int(respmsg0.MessageLength) {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+
+		buf = buf[:cap(buf)]
+		oob = oob[:cap(oob)]
+		n, oobn, flags, srcAddr, err = conn.ReadMsgUDPAddrPort(buf, oob)
+		if err != nil {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet", slog.Any("error", err))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+		if flags != 0 {
+			err = errUnexpectedPacketFlags
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet", slog.Int("flags", flags))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+		oob = oob[:oobn]
+		cRxTime1, err := udp.TimestampFromOOBData(oob)
+		if err != nil {
+			cRxTime1 = timebase.Now()
+			c.Log.LogAttrs(ctx, slog.LevelError, "failed to read packet rx timestamp", slog.Any("error", err))
+		}
+		buf = buf[:n]
+
+		if srcAddr.Compare(netip.AddrPortFrom(remoteAddr, csptp.GeneralPortIP)) != 0 {
+			err = errUnexpectedPacketSource
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received packet from unexpected source")
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+
+		var respmsg1 csptp.Message
+		err = csptp.DecodeMessage(&respmsg1, buf[:csptp.MinMessageLength])
+		if err != nil {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+		var resptlv csptp.ResponseTLV
+		err = csptp.DecodeResponseTLV(&resptlv, buf[csptp.MinMessageLength:])
+		if err != nil {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+
+		if len(buf) != int(respmsg1.MessageLength) {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+
+		_, _, _ = cTxTime0, cTxTime1, cTxTime2
+		_, _ = cRxTime0, cRxTime1
+
+		break
+	}
 
 	return
 }
