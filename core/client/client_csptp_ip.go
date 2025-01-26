@@ -296,8 +296,28 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		break
 	}
 
-	_, _ = cTxTime0, cTxTime1
-	_, _ = cRxTime0, cRxTime1
+	t0 := cTxTime0
+	t1 := csptp.TimeFromTimestamp(resptlv.RequestIngressTimestamp)
+	t1Corr := csptp.DurationFromTimeInterval(resptlv.RequestCorrectionField)
+	t2 := csptp.TimeFromTimestamp(respmsg1.Timestamp)
+	t3 := cRxTime0
+	t3Corr := csptp.DurationFromTimeInterval(respmsg0.CorrectionField) +
+		csptp.DurationFromTimeInterval(respmsg1.CorrectionField)
+	var utcCorr time.Duration
+	if respmsg1.FlagField&csptp.FlagCurrentUTCOffsetValid == csptp.FlagCurrentUTCOffsetValid {
+		utcCorr = time.Duration(int64(resptlv.UTCOffset) * time.Second.Nanoseconds())
+	}
+
+	_ = cTxTime1
+
+	c.Log.LogAttrs(ctx, slog.LevelDebug, "evaluated response",
+		slog.Time("at", cRxTime1),
+		slog.String("from", remoteAddr.String()),
+		slog.Duration("C2S delay", csptp.C2SDelay(t0, t1, t1Corr, utcCorr)),
+		slog.Duration("S2C delay", csptp.S2CDelay(t2, t3, t3Corr, utcCorr)),
+		slog.Duration("clock offset", csptp.ClockOffset(t0, t1, t2, t3, t1Corr, t3Corr)),
+		slog.Duration("mean path delay", csptp.MeanPathDelay(t0, t1, t2, t3, t1Corr, t3Corr)),
+	)
 
 	c.Log.LogAttrs(ctx, slog.LevelInfo, "completed offset measurement")
 
