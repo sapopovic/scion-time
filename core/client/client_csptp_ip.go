@@ -44,8 +44,7 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to set DSCP", slog.Any("error", err))
 	}
 
-	cTxTime0 := timebase.Now()
-	var cTxTime1, cTxTime2, cRxTime0, cRxTime1 time.Time
+	var cTxTime0, cTxTime1, cRxTime0, cRxTime1 time.Time
 
 	buf := make([]byte, csptp.MaxMessageLength)
 	var n int
@@ -82,9 +81,9 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 	if n != len(buf) {
 		return time.Time{}, 0, errWrite
 	}
-	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
+	cTxTime0, id, err := udp.ReadTXTimestamp(conn)
 	if err != nil || id != 0 {
-		cTxTime1 = timebase.Now()
+		cTxTime0 = timebase.Now()
 		c.Log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp", slog.Any("error", err))
 	}
 
@@ -135,7 +134,7 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 	if n != len(buf) {
 		return time.Time{}, 0, errWrite
 	}
-	cTxTime2, id, err = udp.ReadTXTimestamp(conn)
+	cTxTime1, id, err = udp.ReadTXTimestamp(conn)
 	if err != nil || id != 0 {
 		cTxTime1 = timebase.Now()
 		c.Log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp", slog.Any("error", err))
@@ -284,7 +283,7 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		break
 	}
 
-	_, _, _ = cTxTime0, cTxTime1, cTxTime2
+	_, _ = cTxTime0, cTxTime1
 	_, _ = cRxTime0, cRxTime1
 
 	c.Log.LogAttrs(ctx, slog.LevelInfo, "completed offset measurement")
