@@ -280,6 +280,19 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 			}
 			return time.Time{}, 0, err
 		}
+		if resptlv.Type != csptp.TLVTypeOrganizationExtension ||
+			resptlv.OrganizationID[0] != csptp.OrganizationIDMeinberg0 ||
+			resptlv.OrganizationID[1] != csptp.OrganizationIDMeinberg1 ||
+			resptlv.OrganizationID[2] != csptp.OrganizationIDMeinberg2 ||
+			resptlv.OrganizationSubType[0] != csptp.OrganizationSubTypeResponse0 ||
+			resptlv.OrganizationSubType[1] != csptp.OrganizationSubTypeResponse1 ||
+			resptlv.OrganizationSubType[2] != csptp.OrganizationSubTypeResponse2 {
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected response message", slog.Any("error", err))
+				continue
+			}
+			return time.Time{}, 0, err
+		}
 		break
 	}
 
