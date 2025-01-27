@@ -139,6 +139,7 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		cTxTime1 = timebase.Now()
 		c.Log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp", slog.Any("error", err))
 	}
+	_ = cTxTime1
 
 	oob := make([]byte, udp.TimestampLen())
 	var oobn, flags int
@@ -296,6 +297,15 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		break
 	}
 
+	c.Log.LogAttrs(ctx, slog.LevelDebug, "received response",
+		slog.Time("at", cRxTime1),
+		slog.String("from", remoteAddr.String()),
+		slog.String("from", remoteAddr.String()),
+		slog.Any("respmsg0", &respmsg0),
+		slog.Any("respmsg1", &respmsg1),
+		slog.Any("resptlv", &resptlv),
+	)
+
 	t0 := cTxTime0
 	t1 := csptp.TimeFromTimestamp(resptlv.RequestIngressTimestamp)
 	t1Corr := csptp.DurationFromTimeInterval(resptlv.RequestCorrectionField)
@@ -308,18 +318,22 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		utcCorr = time.Duration(int64(resptlv.UTCOffset) * time.Second.Nanoseconds())
 	}
 
-	_ = cTxTime1
+	c2sDelay := csptp.C2SDelay(t0, t1, t1Corr, utcCorr)
+	s2cDelay := csptp.S2CDelay(t2, t3, t3Corr, utcCorr)
+	clockOffset := csptp.ClockOffset(t0, t1, t2, t3, t1Corr, t3Corr)
+	meanPathDelay := csptp.MeanPathDelay(t0, t1, t2, t3, t1Corr, t3Corr)
 
 	c.Log.LogAttrs(ctx, slog.LevelDebug, "evaluated response",
 		slog.Time("at", cRxTime1),
 		slog.String("from", remoteAddr.String()),
-		slog.Duration("C2S delay", csptp.C2SDelay(t0, t1, t1Corr, utcCorr)),
-		slog.Duration("S2C delay", csptp.S2CDelay(t2, t3, t3Corr, utcCorr)),
-		slog.Duration("clock offset", csptp.ClockOffset(t0, t1, t2, t3, t1Corr, t3Corr)),
-		slog.Duration("mean path delay", csptp.MeanPathDelay(t0, t1, t2, t3, t1Corr, t3Corr)),
+		slog.Duration("C2S delay", c2sDelay),
+		slog.Duration("S2C delay", s2cDelay),
+		slog.Duration("clock offset", clockOffset),
+		slog.Duration("mean path delay", meanPathDelay),
 	)
 
-	c.Log.LogAttrs(ctx, slog.LevelInfo, "completed offset measurement")
+	timestamp = cRxTime1
+	offset = clockOffset
 
 	c.sequenceID++
 	return
