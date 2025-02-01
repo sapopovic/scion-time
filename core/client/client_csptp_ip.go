@@ -12,7 +12,6 @@ import (
 	"example.com/scion-time/net/udp"
 )
 
-//lint:ignore U1000 work in progress
 type CSPTPClientIP struct {
 	Log        *slog.Logger
 	DSCP       uint8
