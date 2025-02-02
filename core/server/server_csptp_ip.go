@@ -47,9 +47,49 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 		}
 		buf = buf[:n]
 
-		// decode packet
+		if len(buf) < csptp.MinMessageLength {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet: unexpected structure")
+			continue
+		}
 
-		// validate request
+		var reqmsg csptp.Message
+		err = csptp.DecodeMessage(&reqmsg, buf[:csptp.MinMessageLength])
+		if err != nil {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+			continue
+		}
+
+		if len(buf) != int(reqmsg.MessageLength) {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpectes message length")
+			continue
+		}
+
+		var reqtlv csptp.RequestTLV
+		if reqmsg.SdoIDMessageType != csptp.MessageTypeSync {
+			if len(buf[csptp.MinMessageLength:]) != 0 {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Sync message length")
+				continue
+			}
+		} else if reqmsg.SdoIDMessageType != csptp.MessageTypeFollowUp {
+			err = csptp.DecodeRequestTLV(&reqtlv, buf[csptp.MinMessageLength:])
+			if err != nil {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				continue
+			}
+			if reqtlv.Type != csptp.TLVTypeOrganizationExtension ||
+				reqtlv.OrganizationID[0] != csptp.OrganizationIDMeinberg0 ||
+				reqtlv.OrganizationID[1] != csptp.OrganizationIDMeinberg1 ||
+				reqtlv.OrganizationID[2] != csptp.OrganizationIDMeinberg2 ||
+				reqtlv.OrganizationSubType[0] != csptp.OrganizationSubTypeRequest0 ||
+				reqtlv.OrganizationSubType[1] != csptp.OrganizationSubTypeRequest1 ||
+				reqtlv.OrganizationSubType[2] != csptp.OrganizationSubTypeRequest2 {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message")
+				continue
+			}
+		} else {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message")
+			continue
+		}
 
 		// log request
 		_ = rxt
