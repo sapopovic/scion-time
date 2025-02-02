@@ -178,7 +178,16 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		if srcAddr.Compare(netip.AddrPortFrom(remoteAddr, csptp.EventPortIP)) != 0 {
 			err = errUnexpectedPacketSource
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "received packet from unexpected source")
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet: unexpected source")
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+
+		if len(buf) < csptp.MinMessageLength {
+			err = errUnexpectedPacket
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet: unexpected structure")
 				continue
 			}
 			return time.Time{}, 0, err
@@ -208,6 +217,10 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 				continue
 			}
 			return time.Time{}, 0, err
+		}
+		if len(buf[csptp.MinMessageLength:]) != 0 {
+			c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected Sync message")
+			continue
 		}
 		break
 	}
@@ -241,7 +254,16 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		if srcAddr.Compare(netip.AddrPortFrom(remoteAddr, csptp.GeneralPortIP)) != 0 {
 			err = errUnexpectedPacketSource
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "received packet from unexpected source")
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet: unexpected source")
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+
+		if len(buf) < csptp.MinMessageLength {
+			err = errUnexpectedPacket
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet: unexpected structure")
 				continue
 			}
 			return time.Time{}, 0, err
