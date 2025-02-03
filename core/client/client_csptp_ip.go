@@ -187,7 +187,7 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		if len(buf) < csptp.MinMessageLength {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet: unexpected structure")
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload: unexpected structure")
 				continue
 			}
 			return time.Time{}, 0, err
@@ -202,9 +202,10 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 			return time.Time{}, 0, err
 		}
 
-		if len(buf) != int(respmsg0.MessageLength) {
+		if len(buf) < int(respmsg0.MessageLength) {
+			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected message")
 				continue
 			}
 			return time.Time{}, 0, err
@@ -212,15 +213,21 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 
 		if respmsg0.SdoIDMessageType != csptp.MessageTypeSync ||
 			respmsg0.SequenceID != c.sequenceID {
+			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected response message", slog.Any("error", err))
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected message")
 				continue
 			}
 			return time.Time{}, 0, err
 		}
-		if len(buf[csptp.MinMessageLength:]) != 0 {
-			c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected Sync message")
-			continue
+
+		if len(buf)-csptp.MinMessageLength != 0 {
+			err = errUnexpectedPacket
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected message")
+				continue
+			}
+			return time.Time{}, 0, err
 		}
 		break
 	}
@@ -263,7 +270,7 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 		if len(buf) < csptp.MinMessageLength {
 			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet: unexpected structure")
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload: unexpected structure")
 				continue
 			}
 			return time.Time{}, 0, err
@@ -286,9 +293,10 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 			return time.Time{}, 0, err
 		}
 
-		if len(buf) != int(respmsg1.MessageLength) {
+		if len(buf) < int(respmsg1.MessageLength) {
+			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected message")
 				continue
 			}
 			return time.Time{}, 0, err
@@ -296,8 +304,9 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 
 		if respmsg1.SdoIDMessageType != csptp.MessageTypeFollowUp ||
 			respmsg1.SequenceID != c.sequenceID {
+			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected response message", slog.Any("error", err))
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected message")
 				continue
 			}
 			return time.Time{}, 0, err
@@ -309,8 +318,17 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 			resptlv.OrganizationSubType[0] != csptp.OrganizationSubTypeResponse0 ||
 			resptlv.OrganizationSubType[1] != csptp.OrganizationSubTypeResponse1 ||
 			resptlv.OrganizationSubType[2] != csptp.OrganizationSubTypeResponse2 {
+			err = errUnexpectedPacket
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
-				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected response message", slog.Any("error", err))
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected message")
+				continue
+			}
+			return time.Time{}, 0, err
+		}
+		if len(buf)-csptp.MinMessageLength != csptp.EncodedResponseTLVLength(&resptlv) {
+			err = errUnexpectedPacket
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received unexpected message")
 				continue
 			}
 			return time.Time{}, 0, err

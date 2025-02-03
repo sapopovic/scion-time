@@ -48,7 +48,7 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 		buf = buf[:n]
 
 		if len(buf) < csptp.MinMessageLength {
-			log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet: unexpected structure")
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload: unexpected structure")
 			continue
 		}
 
@@ -59,14 +59,14 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 			continue
 		}
 
-		if len(buf) != int(reqmsg.MessageLength) {
-			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpectes message length")
+		if len(buf) < int(reqmsg.MessageLength) {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message length")
 			continue
 		}
 
 		var reqtlv csptp.RequestTLV
 		if reqmsg.SdoIDMessageType != csptp.MessageTypeSync {
-			if len(buf[csptp.MinMessageLength:]) != 0 {
+			if len(buf)-csptp.MinMessageLength != 0 {
 				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Sync message length")
 				continue
 			}
@@ -84,6 +84,10 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 				reqtlv.OrganizationSubType[1] != csptp.OrganizationSubTypeRequest1 ||
 				reqtlv.OrganizationSubType[2] != csptp.OrganizationSubTypeRequest2 {
 				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message")
+				continue
+			}
+			if len(buf)-csptp.MinMessageLength != csptp.EncodedRequestTLVLength(&reqtlv) {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message length")
 				continue
 			}
 		} else {
