@@ -412,6 +412,15 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 			}
 			return time.Time{}, 0, err
 		}
+		if len(buf) < int(udpLayer.Length) {
+			err = errUnexpectedPacket
+			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
+				c.Log.LogAttrs(ctx, slog.LevelInfo, "received packet with unexpected type or structure")
+				numRetries++
+				continue
+			}
+			return time.Time{}, 0, err
+		}
 		validSrc := scionLayer.SrcIA == remoteAddr.IA &&
 			compareIPs(scionLayer.RawSrcAddr, remoteAddr.Host.IP) == 0
 		validDst := scionLayer.DstIA == localAddr.IA &&

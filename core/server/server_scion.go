@@ -223,6 +223,11 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 			continue
 		}
 
+		if len(buf) < int(udpLayer.Length) {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet", slog.String("cause", "unexpected structure"))
+			continue
+		}
+
 		srcAddr, ok := netip.AddrFromSlice(scionLayer.RawSrcAddr)
 		if !ok {
 			panic("unexpected IP address byte slice")
