@@ -1,6 +1,6 @@
 module example.com/scion-time
 
-go 1.23.5
+go 1.23.6
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2
