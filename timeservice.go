@@ -580,7 +580,7 @@ func runClient(configFile string) {
 	runMonitor()
 }
 
-func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
+func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify, periodic bool) {
 	ctx := context.Background()
 	log := slog.Default()
@@ -612,7 +612,7 @@ func runIPTool(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	}
 }
 
-func runSCIONTool(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr,
+func runToolSCION(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr,
 	dscp uint8, authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) {
 	var err error
 	ctx := context.Background()
@@ -686,16 +686,16 @@ func runBenchmark(configFile string) {
 	ntskeServer := ntskeServerFromRemoteAddr(cfg.RemoteAddr)
 
 	if !remoteAddr.IA.IsZero() {
-		runSCIONBenchmark(daemonAddr, localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
+		runBenchmarkSCION(daemonAddr, localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
 	} else {
 		if daemonAddr != "" {
 			exitWithUsage()
 		}
-		runIPBenchmark(localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
+		runBenchmarkIP(localAddr, remoteAddr, cfg.AuthModes, ntskeServer, log)
 	}
 }
 
-func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
+func runBenchmarkIP(localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
 	lclk := clocks.NewSystemClock(
 		slog.New(logbase.DiscardHandler),
 		clocks.UnknownDrift,
@@ -704,7 +704,7 @@ func runIPBenchmark(localAddr, remoteAddr *snet.UDPAddr, authModes []string, nts
 	benchmark.RunIPBenchmark(localAddr.Host, remoteAddr.Host, authModes, ntskeServer, log)
 }
 
-func runSCIONBenchmark(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
+func runBenchmarkSCION(daemonAddr string, localAddr, remoteAddr *snet.UDPAddr, authModes []string, ntskeServer string, log *slog.Logger) {
 	lclk := clocks.NewSystemClock(
 		slog.New(logbase.DiscardHandler),
 		clocks.UnknownDrift,
@@ -869,7 +869,7 @@ func main() {
 			}
 			ntskeServer := ntskeServerFromRemoteAddr(remoteAddrStr)
 			initLogger(verbose)
-			runSCIONTool(daemonAddr, dispatcherMode, &localAddr, &remoteAddr, uint8(dscp),
+			runToolSCION(daemonAddr, dispatcherMode, &localAddr, &remoteAddr, uint8(dscp),
 				authModes, ntskeServer, ntskeInsecureSkipVerify)
 		} else {
 			if daemonAddr != "" {
@@ -880,7 +880,7 @@ func main() {
 			}
 			ntskeServer := ntskeServerFromRemoteAddr(remoteAddrStr)
 			initLogger(verbose)
-			runIPTool(&localAddr, &remoteAddr, uint8(dscp),
+			runToolIP(&localAddr, &remoteAddr, uint8(dscp),
 				authModes, ntskeServer, ntskeInsecureSkipVerify, periodic)
 		}
 	case benchmarkFlags.Name():
