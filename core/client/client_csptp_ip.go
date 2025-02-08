@@ -339,7 +339,6 @@ func (c *CSPTPClientIP) MeasureClockOffset(ctx context.Context, localAddr, remot
 	c.Log.LogAttrs(ctx, slog.LevelDebug, "received response",
 		slog.Time("at", cRxTime1),
 		slog.String("from", remoteAddr.String()),
-		slog.String("from", remoteAddr.String()),
 		slog.Any("respmsg0", &respmsg0),
 		slog.Any("respmsg1", &respmsg1),
 		slog.Any("resptlv", &resptlv),
