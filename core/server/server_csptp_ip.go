@@ -64,13 +64,45 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 			continue
 		}
 
-		var reqtlv csptp.RequestTLV
+		var txt0 time.Time
 		if reqmsg.SdoIDMessageType != csptp.MessageTypeSync {
 			if len(buf)-csptp.MinMessageLength != 0 {
 				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Sync message length")
 				continue
 			}
+
+			log.LogAttrs(ctx, slog.LevelDebug, "received request",
+				slog.Time("at", rxt),
+				slog.String("from", srcAddr.String()),
+				slog.Any("respmsg1", &reqmsg),
+			)
+
+			// Handle Sync Request
+
+			// Encode response
+			respmsg := csptp.Message{
+				SdoIDMessageType:    csptp.MessageTypeSync,
+				PTPVersion:          csptp.PTPVersion,
+				MessageLength:       csptp.MinMessageLength,
+				DomainNumber:        csptp.DomainNumber,
+				MinorSdoID:          csptp.MinorSdoID,
+				FlagField:           csptp.FlagTwoStep | csptp.FlagUnicast,
+				CorrectionField:     0,
+				MessageTypeSpecific: 0,
+				SourcePortIdentity: csptp.PortID{
+					ClockID: 1,
+					Port:    1,
+				},
+				SequenceID:         reqmsg.SequenceID,
+				ControlField:       csptp.ControlSync,
+				LogMessageInterval: csptp.LogMessageInterval,
+				Timestamp:          csptp.Timestamp{},
+			}
+
+			buf = buf[:respmsg.MessageLength]
+			csptp.EncodeMessage(buf, &respmsg)
 		} else if reqmsg.SdoIDMessageType != csptp.MessageTypeFollowUp {
+			var reqtlv csptp.RequestTLV
 			err = csptp.DecodeRequestTLV(&reqtlv, buf[csptp.MinMessageLength:])
 			if err != nil {
 				log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
@@ -90,18 +122,72 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message length")
 				continue
 			}
+
+			log.LogAttrs(ctx, slog.LevelDebug, "received request",
+				slog.Time("at", rxt),
+				slog.String("from", srcAddr.String()),
+				slog.Any("respmsg1", &reqmsg),
+				slog.Any("resptlv", &reqtlv),
+			)
+
+			// Handle Follow Up Request
+
+			respmsg := csptp.Message{
+				SdoIDMessageType:    csptp.MessageTypeFollowUp,
+				PTPVersion:          csptp.PTPVersion,
+				MessageLength:       csptp.MinMessageLength,
+				DomainNumber:        csptp.DomainNumber,
+				MinorSdoID:          csptp.MinorSdoID,
+				FlagField:           csptp.FlagUnicast,
+				CorrectionField:     0,
+				MessageTypeSpecific: 0,
+				SourcePortIdentity: csptp.PortID{
+					ClockID: 1,
+					Port:    1,
+				},
+				SequenceID:         reqmsg.SequenceID,
+				ControlField:       csptp.ControlFollowUp,
+				LogMessageInterval: csptp.LogMessageInterval,
+				Timestamp:          csptp.Timestamp{}, /* TODO */
+			}
+			resptlv := csptp.ResponseTLV{
+				Type:   csptp.TLVTypeOrganizationExtension,
+				Length: 0,
+				OrganizationID: [3]uint8{
+					csptp.OrganizationIDMeinberg0,
+					csptp.OrganizationIDMeinberg1,
+					csptp.OrganizationIDMeinberg2},
+				OrganizationSubType: [3]uint8{
+					csptp.OrganizationSubTypeResponse0,
+					csptp.OrganizationSubTypeResponse1,
+					csptp.OrganizationSubTypeResponse2},
+				FlagField:               csptp.TLVFlagServerStateDS,
+				Error:                   0,
+				RequestIngressTimestamp: csptp.Timestamp{}, /* TODO */
+				RequestCorrectionField:  0,
+				UTCOffset:               0,
+				ServerStateDS: csptp.ServerStateDS{
+					GMPriority1:     0, /* TODO */
+					GMClockClass:    0, /* TODO */
+					GMClockAccuracy: 0, /* TODO */
+					GMClockVariance: 0, /* TODO */
+					GMPriority2:     0, /* TODO */
+					GMClockID:       0, /* TODO */
+					StepsRemoved:    0, /* TODO */
+					TimeSource:      0, /* TODO */
+					Reserved:        0,
+				},
+			}
+			respmsg.MessageLength += uint16(csptp.EncodedResponseTLVLength(&resptlv))
+			resptlv.Length = uint16(csptp.EncodedResponseTLVLength(&resptlv))
+
+			buf = buf[:respmsg.MessageLength]
+			csptp.EncodeMessage(buf[:csptp.MinMessageLength], &respmsg)
+			csptp.EncodeResponseTLV(buf[csptp.MinMessageLength:], &resptlv)
 		} else {
 			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message")
 			continue
 		}
-
-		// log request
-		_ = rxt
-
-		var txt0 time.Time
-		// handle request: req -> resp
-
-		// encode response
 
 		n, err = conn.WriteToUDPAddrPort(buf, srcAddr)
 		if err != nil || n != len(buf) {
@@ -122,7 +208,7 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 			txID++
 		}
 
-		// update tx timestamp
+		// Update tx timestamp
 		_ = txt1
 	}
 }
