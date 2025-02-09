@@ -904,7 +904,7 @@ func main() {
 		serverMode := drkeyMode == "server"
 		initLogger(verbose)
 		runDRKeyDemo(daemonAddr, serverMode, &drkeyServerAddr, &drkeyClientAddr)
-	case "x":
+	case "t":
 		runX()
 	default:
 		exitWithUsage()
