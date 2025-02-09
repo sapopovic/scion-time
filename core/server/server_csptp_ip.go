@@ -65,7 +65,7 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 		}
 
 		var txt0 time.Time
-		if reqmsg.SdoIDMessageType != csptp.MessageTypeSync {
+		if reqmsg.SdoIDMessageType == csptp.MessageTypeSync {
 			if len(buf)-csptp.MinMessageLength != 0 {
 				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Sync message length")
 				continue
@@ -74,7 +74,7 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 			log.LogAttrs(ctx, slog.LevelDebug, "received request",
 				slog.Time("at", rxt),
 				slog.String("from", srcAddr.String()),
-				slog.Any("respmsg1", &reqmsg),
+				slog.Any("reqmsg", &reqmsg),
 			)
 
 			// Handle Sync Request
@@ -101,7 +101,7 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 
 			buf = buf[:respmsg.MessageLength]
 			csptp.EncodeMessage(buf, &respmsg)
-		} else if reqmsg.SdoIDMessageType != csptp.MessageTypeFollowUp {
+		} else if reqmsg.SdoIDMessageType == csptp.MessageTypeFollowUp {
 			var reqtlv csptp.RequestTLV
 			err = csptp.DecodeRequestTLV(&reqtlv, buf[csptp.MinMessageLength:])
 			if err != nil {
@@ -126,8 +126,8 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 			log.LogAttrs(ctx, slog.LevelDebug, "received request",
 				slog.Time("at", rxt),
 				slog.String("from", srcAddr.String()),
-				slog.Any("respmsg1", &reqmsg),
-				slog.Any("resptlv", &reqtlv),
+				slog.Any("reqmsg", &reqmsg),
+				slog.Any("reqtlv", &reqtlv),
 			)
 
 			// Handle Follow Up Request
