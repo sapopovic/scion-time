@@ -53,7 +53,7 @@ func runX() {
 
 		server.StartCSPTPServerIP(ctx, log, localAddr, 0)
 
-		select{}
+		select {}
 	} else {
 		localAddr := netip.MustParseAddr(laddr)
 		remoteAddr := netip.MustParseAddr(raddr)
