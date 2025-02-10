@@ -576,7 +576,7 @@ func StartSCIONServer(ctx context.Context, log *slog.Logger,
 
 	if localHost.Port == scion.EndhostPort {
 		logbase.FatalContext(ctx, log, "invalid listener port",
-			slog.Uint64("port", scion.EndhostPort))
+			slog.Int("port", localHost.Port))
 	}
 
 	lc := net.ListenConfig{
@@ -606,7 +606,7 @@ func StartSCIONDispatcher(ctx context.Context, log *slog.Logger,
 
 	if localHost.Port == scion.EndhostPort {
 		logbase.FatalContext(ctx, log, "invalid listener port",
-			slog.Uint64("port", scion.EndhostPort))
+			slog.Int("port", localHost.Port))
 	}
 
 	localHost.Port = scion.EndhostPort
