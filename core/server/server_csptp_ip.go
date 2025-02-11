@@ -16,35 +16,35 @@ import (
 )
 
 type messageHandler func(ctx context.Context, log *slog.Logger,
-	buf *[]byte, srcAddr netip.AddrPort, rxt time.Time) error
+	buf []byte, srcAddr netip.AddrPort, rxt time.Time) error
 
 var (
 	errUnexpectedMessage = errors.New("failed to read message: unexpected type or structure")
 )
 
 func handleMessage(ctx context.Context, log *slog.Logger,
-	buf *[]byte, srcAddr netip.AddrPort, rxt time.Time) error {
+	buf []byte, srcAddr netip.AddrPort, rxt time.Time) error {
 	var err error
 
-	if len(*buf) < csptp.MinMessageLength {
+	if len(buf) < csptp.MinMessageLength {
 		log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload: unexpected structure")
 		return errUnexpectedMessage
 	}
 
 	var reqmsg csptp.Message
-	err = csptp.DecodeMessage(&reqmsg, (*buf)[:csptp.MinMessageLength])
+	err = csptp.DecodeMessage(&reqmsg, buf[:csptp.MinMessageLength])
 	if err != nil {
 		log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
 		return err
 	}
 
-	if len(*buf) < int(reqmsg.MessageLength) {
+	if len(buf) < int(reqmsg.MessageLength) {
 		log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message length")
 		return errUnexpectedMessage
 	}
 
 	if reqmsg.SdoIDMessageType == csptp.MessageTypeSync {
-		if len(*buf)-csptp.MinMessageLength != 0 {
+		if len(buf)-csptp.MinMessageLength != 0 {
 			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Sync message length")
 			return errUnexpectedMessage
 		}
@@ -77,11 +77,13 @@ func handleMessage(ctx context.Context, log *slog.Logger,
 			Timestamp:          csptp.Timestamp{},
 		}
 
-		*buf = (*buf)[:respmsg.MessageLength]
-		csptp.EncodeMessage(*buf, &respmsg)
+		if len(buf) != int(respmsg.MessageLength) {
+			panic("inconsistent decoding/encoding")
+		}
+		csptp.EncodeMessage(buf, &respmsg)
 	} else if reqmsg.SdoIDMessageType == csptp.MessageTypeFollowUp {
 		var reqtlv csptp.RequestTLV
-		err = csptp.DecodeRequestTLV(&reqtlv, (*buf)[csptp.MinMessageLength:])
+		err = csptp.DecodeRequestTLV(&reqtlv, buf[csptp.MinMessageLength:])
 		if err != nil {
 			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
 			return err
@@ -96,7 +98,7 @@ func handleMessage(ctx context.Context, log *slog.Logger,
 			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message")
 			return errUnexpectedMessage
 		}
-		if len(*buf)-csptp.MinMessageLength != csptp.EncodedRequestTLVLength(&reqtlv) {
+		if len(buf)-csptp.MinMessageLength != csptp.EncodedRequestTLVLength(&reqtlv) {
 			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message length")
 			return errUnexpectedMessage
 		}
@@ -159,9 +161,11 @@ func handleMessage(ctx context.Context, log *slog.Logger,
 		respmsg.MessageLength += uint16(csptp.EncodedResponseTLVLength(&resptlv))
 		resptlv.Length = uint16(csptp.EncodedResponseTLVLength(&resptlv))
 
-		*buf = (*buf)[:respmsg.MessageLength]
-		csptp.EncodeMessage((*buf)[:csptp.MinMessageLength], &respmsg)
-		csptp.EncodeResponseTLV((*buf)[csptp.MinMessageLength:], &resptlv)
+		if len(buf) != int(respmsg.MessageLength) {
+			panic("inconsistent decoding/encoding")
+		}
+		csptp.EncodeMessage(buf[:csptp.MinMessageLength], &respmsg)
+		csptp.EncodeResponseTLV(buf[csptp.MinMessageLength:], &resptlv)
 	} else {
 		log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message")
 		return errUnexpectedMessage
@@ -204,7 +208,7 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 		}
 		buf = buf[:n]
 
-		err = handleMessage(ctx, log, &buf, srcAddr, rxt)
+		err = handleMessage(ctx, log, buf, srcAddr, rxt)
 		if err != nil {
 			continue
 		}
