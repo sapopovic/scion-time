@@ -131,7 +131,7 @@ func main() {
 	fn1 := fn0[:len(fn0)-len(fext)] + ".pdf"
 	f1, err := os.Create(fn1)
 	if err != nil {
-		log.Fatalf("failed to create file: %s", fn1, err)
+		log.Fatalf("failed to create file: %s, %s", fn1, err)
 	}
 	defer f1.Close()
 	_, err = c.WriteTo(f1)

@@ -202,7 +202,7 @@ func DecodePacket(pkt *Packet, b []byte) (err error) {
 // FirstCookie returns the first cookie byte slice a packet contains.
 func (pkt *Packet) FirstCookie() ([]byte, error) {
 	var cookie []byte
-	if pkt.Cookies == nil || len(pkt.Cookies) < 1 {
+	if len(pkt.Cookies) == 0 {
 		return cookie, errNoCookies
 	}
 	cookie = pkt.Cookies[0].Cookie
