@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"example.com/scion-time/base/logbase"
-
 	"example.com/scion-time/core/server"
 	"example.com/scion-time/core/timebase"
 
@@ -17,7 +15,7 @@ import (
 
 func init() {
 	lclk := clocks.NewSystemClock(
-		slog.New(logbase.DiscardHandler),
+		slog.New(slog.DiscardHandler),
 		clocks.UnknownDrift,
 	)
 	timebase.RegisterClock(lclk)
