@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -148,6 +149,13 @@ func initLogger(verbose bool) {
 			Level:       level,
 			ReplaceAttr: replaceAttr,
 		})))
+}
+
+func showInfo() {
+	bi, ok := debug.ReadBuildInfo()
+	if ok {
+		fmt.Print(bi.String())
+	}
 }
 
 func runMonitor() {
@@ -787,6 +795,7 @@ func main() {
 		periodic                bool
 	)
 
+	infoFlags := flag.NewFlagSet("info", flag.ExitOnError)
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	clientFlags := flag.NewFlagSet("client", flag.ExitOnError)
 	toolFlags := flag.NewFlagSet("tool", flag.ExitOnError)
@@ -823,6 +832,12 @@ func main() {
 	}
 
 	switch os.Args[1] {
+	case infoFlags.Name():
+		err := infoFlags.Parse(os.Args[2:])
+		if err != nil || serverFlags.NArg() != 0 {
+			exitWithUsage()
+		}
+		showInfo()
 	case serverFlags.Name():
 		err := serverFlags.Parse(os.Args[2:])
 		if err != nil || serverFlags.NArg() != 0 {
