@@ -15,6 +15,18 @@ import (
 	"example.com/scion-time/net/udp"
 )
 
+//lint:ignore U1000 work in progress
+type ntpItem struct {
+	rxt, txt time.Time
+}
+
+//lint:ignore U1000 work in progress
+type csptpItem struct {
+	srcPort, seqID, flags uint16
+	rxt                   time.Time
+	corr                  time.Duration
+}
+
 type messageHandler func(ctx context.Context, log *slog.Logger,
 	buf []byte, srcAddr netip.AddrPort, rxt time.Time) error
 
