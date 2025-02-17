@@ -920,7 +920,7 @@ func main() {
 		initLogger(verbose)
 		runDRKeyDemo(daemonAddr, serverMode, &drkeyServerAddr, &drkeyClientAddr)
 	case "t":
-		runX()
+		runT()
 	default:
 		exitWithUsage()
 	}

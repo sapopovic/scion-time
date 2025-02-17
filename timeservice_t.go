@@ -19,7 +19,7 @@ import (
 	"example.com/scion-time/driver/clocks"
 )
 
-func runX() {
+func runT() {
 	var (
 		laddr, raddr string
 		dscp         uint
@@ -46,12 +46,10 @@ func runX() {
 	timebase.RegisterClock(lclk)
 
 	if raddr == "" {
-		localAddr, err := net.ResolveUDPAddr("udp", laddr)
-		if err != nil {
-			panic(err)
-		}
+		localAddr := netip.MustParseAddr(laddr)
+		localHost := net.UDPAddrFromAddrPort(netip.AddrPortFrom(localAddr, 0))
 
-		server.StartCSPTPServerIP(ctx, log, localAddr, 0)
+		server.StartCSPTPServerIP(ctx, log, localHost, uint8(dscp))
 
 		select {}
 	} else {
