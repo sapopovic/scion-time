@@ -2,13 +2,11 @@ package server
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net"
 	"net/netip"
 	"strconv"
 	"sync"
-	"time"
 
 	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/core/timebase"
@@ -25,85 +23,15 @@ type csptpContext struct {
 }
 
 var (
-	errUnexpectedMessage = errors.New("failed to read message: unexpected type or structure")
-
 	//lint:ignore U1000 work in progress
 	csptpCtxs map[netip.Addr][]csptpContext
 	//lint:ignore U1000 work in progress
-	csptpMu   sync.Mutex
+	csptpMu sync.Mutex
 )
 
-func handleCSPTP(ctx context.Context, log *slog.Logger,
-	buf []byte, srcAddr netip.AddrPort, rxt time.Time) (*csptpContext, error) {
-	var err error
-
-	if len(buf) < csptp.MinMessageLength {
-		log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload: unexpected structure")
-		return nil, errUnexpectedMessage
-	}
-
-	var reqmsg csptp.Message
-	err = csptp.DecodeMessage(&reqmsg, buf[:csptp.MinMessageLength])
-	if err != nil {
-		log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
-		return nil, err
-	}
-
-	if len(buf) < int(reqmsg.MessageLength) {
-		log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message length")
-		return nil, errUnexpectedMessage
-	}
-
-	if reqmsg.SdoIDMessageType == csptp.MessageTypeSync {
-		if len(buf)-csptp.MinMessageLength != 0 {
-			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Sync message length")
-			return nil, errUnexpectedMessage
-		}
-
-		log.LogAttrs(ctx, slog.LevelDebug, "received request",
-			slog.Time("at", rxt),
-			slog.String("from", srcAddr.String()),
-			slog.Any("reqmsg", &reqmsg),
-		)
-	} else if reqmsg.SdoIDMessageType == csptp.MessageTypeFollowUp {
-		var reqtlv csptp.RequestTLV
-		err = csptp.DecodeRequestTLV(&reqtlv, buf[csptp.MinMessageLength:])
-		if err != nil {
-			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
-			return nil, err
-		}
-		if reqtlv.Type != csptp.TLVTypeOrganizationExtension ||
-			reqtlv.OrganizationID[0] != csptp.OrganizationIDMeinberg0 ||
-			reqtlv.OrganizationID[1] != csptp.OrganizationIDMeinberg1 ||
-			reqtlv.OrganizationID[2] != csptp.OrganizationIDMeinberg2 ||
-			reqtlv.OrganizationSubType[0] != csptp.OrganizationSubTypeRequest0 ||
-			reqtlv.OrganizationSubType[1] != csptp.OrganizationSubTypeRequest1 ||
-			reqtlv.OrganizationSubType[2] != csptp.OrganizationSubTypeRequest2 {
-			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message")
-			return nil, errUnexpectedMessage
-		}
-		if len(buf)-csptp.MinMessageLength != csptp.EncodedRequestTLVLength(&reqtlv) {
-			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message length")
-			return nil, errUnexpectedMessage
-		}
-
-		log.LogAttrs(ctx, slog.LevelDebug, "received request",
-			slog.Time("at", rxt),
-			slog.String("from", srcAddr.String()),
-			slog.Any("reqmsg", &reqmsg),
-			slog.Any("reqtlv", &reqtlv),
-		)
-	} else {
-		log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message")
-		return nil, errUnexpectedMessage
-	}
-
-	return &csptpContext{}, nil
-}
-
 func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
-	conn *net.UDPConn, iface string, dscp uint8) {
-	err := udp.EnableTimestamping(conn, iface)
+	conn *net.UDPConn, localHostIface string, localHostPort int, dscp uint8) {
+	err := udp.EnableTimestamping(conn, localHostIface)
 	if err != nil {
 		log.LogAttrs(ctx, slog.LevelError, "failed to enable timestamping", slog.Any("error", err))
 	}
@@ -135,8 +63,70 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 		}
 		buf = buf[:n]
 
-		csptpCtx, err := handleCSPTP(ctx, log, buf, srcAddr, rxt)
+		if len(buf) < csptp.MinMessageLength {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload: unexpected structure")
+			continue
+		}
+
+		var reqmsg csptp.Message
+		err = csptp.DecodeMessage(&reqmsg, buf[:csptp.MinMessageLength])
 		if err != nil {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+			continue
+		}
+
+		if len(buf) != int(reqmsg.MessageLength) {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message length")
+			continue
+		}
+
+		var csptpCtx *csptpContext
+
+		if reqmsg.SdoIDMessageType == csptp.MessageTypeSync && localHostPort == csptp.EventPortIP {
+			if len(buf)-csptp.MinMessageLength != 0 {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Sync message length")
+				continue
+			}
+
+			log.LogAttrs(ctx, slog.LevelDebug, "received request",
+				slog.Time("at", rxt),
+				slog.String("from", srcAddr.String()),
+				slog.Any("reqmsg", &reqmsg),
+			)
+
+			csptpCtx = &csptpContext{}
+		} else if reqmsg.SdoIDMessageType == csptp.MessageTypeFollowUp && localHostPort == csptp.GeneralPortIP {
+			var reqtlv csptp.RequestTLV
+			err = csptp.DecodeRequestTLV(&reqtlv, buf[csptp.MinMessageLength:])
+			if err != nil {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet payload", slog.Any("error", err))
+				continue
+			}
+			if reqtlv.Type != csptp.TLVTypeOrganizationExtension ||
+				reqtlv.OrganizationID[0] != csptp.OrganizationIDMeinberg0 ||
+				reqtlv.OrganizationID[1] != csptp.OrganizationIDMeinberg1 ||
+				reqtlv.OrganizationID[2] != csptp.OrganizationIDMeinberg2 ||
+				reqtlv.OrganizationSubType[0] != csptp.OrganizationSubTypeRequest0 ||
+				reqtlv.OrganizationSubType[1] != csptp.OrganizationSubTypeRequest1 ||
+				reqtlv.OrganizationSubType[2] != csptp.OrganizationSubTypeRequest2 {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message")
+				continue
+			}
+			if len(buf)-csptp.MinMessageLength != csptp.EncodedRequestTLVLength(&reqtlv) {
+				log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected Follow Up message length")
+				continue
+			}
+
+			log.LogAttrs(ctx, slog.LevelDebug, "received request",
+				slog.Time("at", rxt),
+				slog.String("from", srcAddr.String()),
+				slog.Any("reqmsg", &reqmsg),
+				slog.Any("reqtlv", &reqtlv),
+			)
+
+			csptpCtx = &csptpContext{}
+		} else {
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to validate packet payload: unexpected message")
 			continue
 		}
 
@@ -282,14 +272,14 @@ func StartCSPTPServerIP(ctx context.Context, log *slog.Logger,
 	lc := net.ListenConfig{
 		Control: udp.SetsockoptReuseAddrPort,
 	}
-	for _, port := range []int{csptp.EventPortIP, csptp.GeneralPortIP} {
-		address := net.JoinHostPort(localHost.IP.String(), strconv.Itoa(port))
+	for _, localHostPort := range []int{csptp.EventPortIP, csptp.GeneralPortIP} {
+		address := net.JoinHostPort(localHost.IP.String(), strconv.Itoa(localHostPort))
 		for range ipServerNumGoroutine {
 			conn, err := lc.ListenPacket(ctx, "udp", address)
 			if err != nil {
 				logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
 			}
-			go runCSPTPServerIP(ctx, log, conn.(*net.UDPConn), localHost.Zone, dscp)
+			go runCSPTPServerIP(ctx, log, conn.(*net.UDPConn), localHost.Zone, localHostPort, dscp)
 		}
 	}
 }
