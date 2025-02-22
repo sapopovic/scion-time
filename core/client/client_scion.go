@@ -138,10 +138,16 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 	}
 	var authKey []byte
 
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.Host.IP})
+	laddr, ok := netip.AddrFromSlice(localAddr.Host.IP)
+	if !ok {
+		return time.Time{}, 0, err
+	}
+	var lc net.ListenConfig
+	pconn, err := lc.ListenPacket(ctx, "udp", netip.AddrPortFrom(laddr, 0).String())
 	if err != nil {
 		return time.Time{}, 0, err
 	}
+	conn := pconn.(*net.UDPConn)
 	defer conn.Close()
 	deadline, deadlineIsSet := ctx.Deadline()
 	if deadlineIsSet {

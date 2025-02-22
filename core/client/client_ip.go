@@ -101,11 +101,16 @@ func (c *IPClient) ResetInterleavedMode() {
 func (c *IPClient) measureClockOffsetIP(ctx context.Context, mtrcs *ipClientMetrics,
 	localAddr, remoteAddr *net.UDPAddr) (
 	timestamp time.Time, offset time.Duration, err error) {
-
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: localAddr.IP})
+	laddr, ok := netip.AddrFromSlice(localAddr.IP)
+	if !ok {
+		return time.Time{}, 0, err
+	}
+	var lc net.ListenConfig
+	pconn, err := lc.ListenPacket(ctx, "udp", netip.AddrPortFrom(laddr, 0).String())
 	if err != nil {
 		return time.Time{}, 0, err
 	}
+	conn := pconn.(*net.UDPConn)
 	defer conn.Close()
 	deadline, deadlineIsSet := ctx.Deadline()
 	if deadlineIsSet {
