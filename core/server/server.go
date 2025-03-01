@@ -32,12 +32,10 @@ type tssItem struct {
 	qidx int
 }
 
-type tssMap map[string]*tssItem
-
 type tssQueue []*tssItem
 
 var (
-	tss        = make(tssMap)
+	tss        = make(map[string]*tssItem)
 	tssQ       = make(tssQueue, 0, tssCap)
 	tssMetrics = struct {
 		reqsServedInterleaved prometheus.Counter
