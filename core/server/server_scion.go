@@ -83,7 +83,7 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 		log.LogAttrs(ctx, slog.LevelInfo, "failed to set DSCP", slog.Any("error", err))
 	}
 
-	var txID uint32
+	var txid uint32
 	buf := make([]byte, scion.MTU)
 	oob := make([]byte, udp.TimestampLen())
 
@@ -212,12 +212,12 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 			if err != nil {
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
 					slog.Any("error", err))
-			} else if id != txID {
+			} else if id != txid {
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
-					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txID)))
-				txID = id + 1
+					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txid)))
+				txid = id + 1
 			} else {
-				txID++
+				txid++
 			}
 
 			continue
@@ -305,12 +305,12 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 			if err != nil {
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
 					slog.Any("error", err))
-			} else if id != txID {
+			} else if id != txid {
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
-					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txID)))
-				txID = id + 1
+					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txid)))
+				txid = id + 1
 			} else {
-				txID++
+				txid++
 			}
 
 			mtrcs.pktsForwarded.Inc()
@@ -550,13 +550,13 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 				txt1 = txt0
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
 					slog.Any("error", err))
-			} else if id != txID {
+			} else if id != txid {
 				txt1 = txt0
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
-					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txID)))
-				txID = id + 1
+					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txid)))
+				txid = id + 1
 			} else {
-				txID++
+				txid++
 			}
 			updateTXTimestamp(clientID, rxt, &txt1)
 

@@ -20,9 +20,15 @@ const (
 	csptpClientCap  = 1 << 20
 )
 
+type udpConn struct {
+	c    *net.UDPConn
+	mu   sync.Mutex
+	txid uint32
+}
+
 //lint:ignore U1000 work in progress
 type csptpContext struct {
-	conn       *net.UDPConn
+	conn       *udpConn
 	srcPort    uint16
 	rxTime     time.Time
 	sequenceID uint16
@@ -74,25 +80,24 @@ func (q *csptpClientQueue) Pop() any {
 }
 
 func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
-	conn *net.UDPConn, localHostIface string, localHostPort int, dscp uint8) {
-	err := udp.EnableTimestamping(conn, localHostIface)
+	conn *udpConn, localHostIface string, localHostPort int, dscp uint8) {
+	err := udp.EnableTimestamping(conn.c, localHostIface)
 	if err != nil {
 		log.LogAttrs(ctx, slog.LevelError, "failed to enable timestamping", slog.Any("error", err))
 	}
-	err = udp.SetDSCP(conn, dscp)
+	err = udp.SetDSCP(conn.c, dscp)
 	if err != nil {
 		log.LogAttrs(ctx, slog.LevelInfo, "failed to set DSCP", slog.Any("error", err))
 	}
 
-	var eConn, gConn *net.UDPConn
-	var eTxID, gTxID uint32
+	var eConn, gConn *udpConn
 
 	buf := make([]byte, csptp.MaxMessageLength)
 	oob := make([]byte, udp.TimestampLen())
 	for {
 		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
-		n, oobn, flags, srcAddr, err := conn.ReadMsgUDPAddrPort(buf, oob)
+		n, oobn, flags, srcAddr, err := conn.c.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
 			log.LogAttrs(ctx, slog.LevelError, "failed to read packet", slog.Any("error", err))
 			continue
@@ -212,26 +217,29 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 			buf = buf[:msg.MessageLength]
 			csptp.EncodeMessage(buf, &msg)
 
-			n, err = eConn.WriteToUDPAddrPort(
+			eConn.mu.Lock()
+			n, err = eConn.c.WriteToUDPAddrPort(
 				buf, netip.AddrPortFrom(srcAddr.Addr(), syncSrcPort))
 			if err != nil || n != len(buf) {
 				log.LogAttrs(ctx, slog.LevelError, "failed to write packet", slog.Any("error", err))
+				eConn.mu.Unlock()
 				continue
 			}
-			cTxTime0, id, err := udp.ReadTXTimestamp(eConn)
+			cTxTime0, id, err := udp.ReadTXTimestamp(eConn.c)
 			if err != nil {
 				cTxTime0 = timebase.Now()
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
 					slog.Any("error", err))
-			} else if id != eTxID {
+			} else if id != eConn.txid {
 				cTxTime0 = timebase.Now()
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
-					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(eTxID)))
-				eTxID = id + 1
+					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(eConn.txid)))
+				eConn.txid = id + 1
 			} else {
-				eTxID++
+				eConn.txid++
 			}
 			_ = cTxTime0
+			eConn.mu.Unlock()
 
 			buf = buf[:cap(buf)]
 
@@ -288,26 +296,29 @@ func runCSPTPServerIP(ctx context.Context, log *slog.Logger,
 			csptp.EncodeMessage(buf[:csptp.MinMessageLength], &msg)
 			csptp.EncodeResponseTLV(buf[csptp.MinMessageLength:], &resptlv)
 
-			n, err = gConn.WriteToUDPAddrPort(
+			gConn.mu.Lock()
+			n, err = gConn.c.WriteToUDPAddrPort(
 				buf, netip.AddrPortFrom(srcAddr.Addr(), followUpSrcPort))
 			if err != nil || n != len(buf) {
 				log.LogAttrs(ctx, slog.LevelError, "failed to write packet", slog.Any("error", err))
+				gConn.mu.Unlock()
 				continue
 			}
-			cTxTime1, id, err := udp.ReadTXTimestamp(gConn)
+			cTxTime1, id, err := udp.ReadTXTimestamp(gConn.c)
 			if err != nil {
 				cTxTime1 = timebase.Now()
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
 					slog.Any("error", err))
-			} else if id != gTxID {
+			} else if id != gConn.txid {
 				cTxTime1 = timebase.Now()
 				log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
-					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(gTxID)))
-				gTxID = id + 1
+					slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(gConn.txid)))
+				gConn.txid = id + 1
 			} else {
-				gTxID++
+				gConn.txid++
 			}
 			_ = cTxTime1
+			gConn.mu.Unlock()
 		}
 	}
 }
@@ -333,7 +344,7 @@ func StartCSPTPServerIP(ctx context.Context, log *slog.Logger,
 			if err != nil {
 				logbase.FatalContext(ctx, log, "failed to listen for packets", slog.Any("error", err))
 			}
-			go runCSPTPServerIP(ctx, log, conn.(*net.UDPConn), localHost.Zone, localHostPort, dscp)
+			go runCSPTPServerIP(ctx, log, &udpConn{c: conn.(*net.UDPConn)}, localHost.Zone, localHostPort, dscp)
 		}
 	}
 }
