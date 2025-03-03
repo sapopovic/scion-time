@@ -109,7 +109,7 @@ cd ~
 git clone https://github.com/marcfrei/scion-time.git
 
 cd ~/scion-time
-go build timeservice.go timeservicex.go
+go build timeservice.go timeservice_t.go
 ```
 
 ## Starting the SCION test network
