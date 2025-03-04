@@ -67,6 +67,7 @@ const (
 
 type svcConfig struct {
 	LocalAddr               string   `toml:"local_address,omitempty"`
+	LocalMetricsAddr        string   `toml:"local_metrics_address,omitempty"`
 	SCIONDaemonAddr         string   `toml:"scion_daemon_address,omitempty"`
 	SCIONConfigDir          string   `toml:"scion_config_dir,omitempty"`
 	SCIONDataDir            string   `toml:"scion_data_dir,omitempty"`
@@ -158,10 +159,14 @@ func showInfo() {
 	}
 }
 
-func runMonitor() {
-	http.Handle("/metrics", promhttp.Handler())
-	err := http.ListenAndServe("127.0.0.1:8080", nil)
-	logbase.Fatal(slog.Default(), "failed to serve metrics", slog.Any("error", err))
+func runMonitor(cfg svcConfig) {
+	if cfg.LocalMetricsAddr != "" {
+		http.Handle("/metrics", promhttp.Handler())
+		err := http.ListenAndServe(cfg.LocalMetricsAddr, nil)
+		logbase.Fatal(slog.Default(), "failed to serve metrics", slog.Any("error", err))
+	} else {
+		select {}
+	}
 }
 
 func ntskeServerFromRemoteAddr(remoteAddr string) string {
@@ -543,7 +548,7 @@ func runServer(configFile string) {
 
 	go sync.Run(log, syncCfg, lclk, adj, refClocks, peerClocks)
 
-	runMonitor()
+	runMonitor(cfg)
 }
 
 func runClient(configFile string) {
@@ -585,7 +590,7 @@ func runClient(configFile string) {
 
 	go sync.Run(log, syncCfg, lclk, adj, refClocks, peerClocks)
 
-	runMonitor()
+	runMonitor(cfg)
 }
 
 func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
