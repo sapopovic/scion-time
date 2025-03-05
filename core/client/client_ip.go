@@ -309,7 +309,7 @@ func (c *IPClient) measureClockOffsetIP(ctx context.Context, mtrcs *ipClientMetr
 			t3 = cRxTime
 		}
 
-		err = ntp.ValidateResponseTimestamps(t0, t1, t1, t3)
+		err = ntp.ValidateResponseTimestamps(t0, t1, t2, t3)
 		if err != nil {
 			return time.Time{}, 0, err
 		}
