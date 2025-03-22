@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
+import sys
 from plumbum import local
 from acceptance.common import scion
 
 def main():
-	gen_dir = local.path("gen")
+	gen_dir = local.path(sys.argv[1])
 	isd_ases = scion.ASList.load(gen_dir / "as_list.yml").all
 
 	for isd_as in isd_ases:
