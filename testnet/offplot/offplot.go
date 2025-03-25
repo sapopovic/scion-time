@@ -13,6 +13,8 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
+	"image/color"
 	"log"
 	"math"
 	"os"
@@ -42,13 +44,24 @@ func main() {
 
 	n := 0
 	var t0 time.Time
-	var data plotter.XYs
+	var data, data_not_ok plotter.XYs
+	gitRevision := ""
 
 	s := bufio.NewScanner(f0)
 	for s.Scan() {
 		l := s.Text()
 		ts := strings.Fields(l)
+
+		if strings.HasPrefix(l, "GIT_REVISION") {
+			parts := strings.Split(l, "=")
+			if len(parts) > 1 {
+				gitRevision = strings.TrimSpace(parts[1])
+			}
+			continue
+		}
+
 		var ok bool
+		var ok2 bool
 		var t time.Time
 		var off float64
 		if len(ts) >= 6 && ts[0] == "GNS181PEX:" {
@@ -64,6 +77,16 @@ func main() {
 			off, err = strconv.ParseFloat(y, 64)
 			if err != nil {
 				log.Fatalf("failed to parse offset on line: %s, %s", l, err)
+			}
+			st := ts[16]
+			if len(st) != 0 && st[len(st)-1] == ',' {
+				st = st[:len(st)-1]
+			}
+			println(st)
+			if st != "0x0014" {
+				ok2 = false
+			} else {
+				ok2 = true
 			}
 			ok = true
 		} else if len(ts) >= 10 &&
@@ -86,15 +109,28 @@ func main() {
 			off = float64(y) / 1e9
 			ok = true
 		}
-		if ok {
-			if n == 0 {
-				t0 = t
+		if ok2 { // add to data
+			if ok {
+				if n == 0 {
+					t0 = t
+				}
+				data = append(data, plotter.XY{
+					X: float64(t.Unix() - t0.Unix()),
+					Y: off,
+				})
 			}
-			data = append(data, plotter.XY{
-				X: float64(t.Unix() - t0.Unix()),
-				Y: off,
-			})
+		} else { // add to data_not_ok
+			if ok {
+				if n == 0 {
+					t0 = t
+				}
+				data_not_ok = append(data_not_ok, plotter.XY{
+					X: float64(t.Unix() - t0.Unix()),
+					Y: off,
+				})
+			}
 		}
+
 		n++
 	}
 	if err := s.Err(); err != nil {
@@ -107,13 +143,31 @@ func main() {
 	p.Y.Label.Text = "Offset [s]"
 	p.Y.Label.Padding = vg.Points(5)
 
+	if gitRevision != "" {
+		p.Title.Text = fmt.Sprintf("SCION Offset (Rev: %s)", gitRevision)
+	} else {
+		p.Title.Text = "Chrony Offset"
+	}
+
 	p.Add(plotter.NewGrid())
 
-	line, err := plotter.NewLine(data)
+	scatter, err := plotter.NewScatter(data)
+	scatter2, err2 := plotter.NewScatter(data_not_ok)
 	if err != nil {
 		log.Fatalf("error during plot: %s", err)
 	}
-	p.Add(line)
+	if err2 != nil {
+		log.Fatalf("error during plot: %s", err2)
+	}
+
+	scatter.GlyphStyle.Color = color.RGBA{R: 0, G: 255, B: 0, A: 255}
+	scatter2.GlyphStyle.Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+	scatter.GlyphStyle.Radius = vg.Points(3)
+
+	p.Add(scatter)
+	p.Add(scatter2)
+	// p.Add(scatter1)
+	// p.Add(scatter2)
 
 	if limit != 0.0 {
 		p.Y.Max = math.Abs(limit)
@@ -122,6 +176,7 @@ func main() {
 
 	c := vgpdf.New(8.5*vg.Inch, 3*vg.Inch)
 	c.EmbedFonts(true)
+
 	dc := draw.New(c)
 	dc = draw.Crop(dc, 1*vg.Millimeter, -1*vg.Millimeter, 1*vg.Millimeter, -1*vg.Millimeter)
 
