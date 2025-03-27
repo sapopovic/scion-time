@@ -67,6 +67,7 @@ func main() {
 		if len(ts) >= 6 && ts[0] == "GNS181PEX:" {
 			x := ts[1] + "T" + ts[2] + "Z"
 			t, err = time.Parse(time.RFC3339, x)
+
 			if err != nil {
 				log.Fatalf("failed to parse timestamp on line: %s, %s", l, err)
 			}
@@ -82,7 +83,6 @@ func main() {
 			if len(st) != 0 && st[len(st)-1] == ',' {
 				st = st[:len(st)-1]
 			}
-			println(st)
 			if st != "0x0014" {
 				ok2 = false
 			} else {
@@ -109,8 +109,9 @@ func main() {
 			off = float64(y) / 1e9
 			ok = true
 		}
-		if ok2 { // add to data
-			if ok {
+
+		if ok {
+			if ok2 { // add to data
 				if n == 0 {
 					t0 = t
 				}
@@ -118,9 +119,7 @@ func main() {
 					X: float64(t.Unix() - t0.Unix()),
 					Y: off,
 				})
-			}
-		} else { // add to data_not_ok
-			if ok {
+			} else { // add to data_not_ok
 				if n == 0 {
 					t0 = t
 				}
@@ -129,9 +128,11 @@ func main() {
 					Y: off,
 				})
 			}
+			n++
+			// fmt.Printf("\nx axis = %v\n", t0)
+			// fmt.Printf("x axis = %v\n", t)
+			// fmt.Printf("x axis = %v\n", float64(t.Unix()-t0.Unix()))
 		}
-
-		n++
 	}
 	if err := s.Err(); err != nil {
 		log.Fatalf("error during scan: %s", err)
