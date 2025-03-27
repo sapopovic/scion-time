@@ -37,7 +37,8 @@ type LuckyPacketFilter struct {
 
 var _ measurements.Filter = (*LuckyPacketFilter)(nil)
 
-func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
+func NewLuckyPacketFilter(cfg []int) *LuckyPacketFilter {
+	cap, pick := cfg[0], cfg[1]
 	if cap <= 0 {
 		panic("cap must be greater than 0")
 	}

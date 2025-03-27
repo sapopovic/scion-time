@@ -89,6 +89,7 @@ type svcConfig struct {
 	PeerClockCutoff         float64  `toml:"peer_clock_cutoff,omitempty"`
 	SyncTimeout             float64  `toml:"sync_timeout,omitempty"`
 	SyncInterval            float64  `toml:"sync_interval,omitempty"`
+	flashPTP_filter         []int    `toml:"flashPTP_filter,omitempty"`
 }
 
 type ntpReferenceClockIP struct {
@@ -207,7 +208,7 @@ func configureIPClientNTS(c *client.IPClient, ntskeServer string, ntskeInsecureS
 }
 
 func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr, dscp uint8,
-	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockIP {
+	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool, flashPTP_cfg []int) *ntpReferenceClockIP {
 	c := &ntpReferenceClockIP{
 		log:        log,
 		localAddr:  localAddr,
@@ -218,7 +219,8 @@ func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}
-	c.ntpc.Filter = client.NewNtimedFilter(log)
+	c.ntpc.Filter = client.NewLuckyPacketFilter(flashPTP_cfg)
+	// c.ntpc.Filter = client.NewNtimedFilter(log)
 	if slices.Contains(authModes, authModeNTS) {
 		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
@@ -449,6 +451,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 				cfg.AuthModes,
 				ntskeServer,
 				cfg.NTSKEInsecureSkipVerify,
+				cfg.flashPTP_filter,
 			))
 		}
 	}
