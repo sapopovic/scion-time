@@ -160,9 +160,12 @@ func main() {
 		log.Fatalf("error during plot: %s", err2)
 	}
 
-	scatter.GlyphStyle.Color = color.RGBA{R: 0, G: 255, B: 0, A: 255}
+	scatter.GlyphStyle.Shape = draw.CircleGlyph{}
+	scatter2.GlyphStyle.Shape = draw.CircleGlyph{}
+	scatter.GlyphStyle.Color = color.RGBA{R: 0, G: 0, B: 0, A: 255}
 	scatter2.GlyphStyle.Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
-	scatter.GlyphStyle.Radius = vg.Points(3)
+	scatter.GlyphStyle.Radius = vg.Points(1)
+	scatter2.GlyphStyle.Radius = vg.Points(1)
 
 	p.Add(scatter)
 	p.Add(scatter2)
