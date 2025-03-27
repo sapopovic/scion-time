@@ -89,7 +89,7 @@ type svcConfig struct {
 	PeerClockCutoff         float64  `toml:"peer_clock_cutoff,omitempty"`
 	SyncTimeout             float64  `toml:"sync_timeout,omitempty"`
 	SyncInterval            float64  `toml:"sync_interval,omitempty"`
-	flashPTP_filter         []int    `toml:"flashPTP_filter,omitempty"`
+	FlashPTP_filter         []int    `toml:"flashPTP_filter,omitempty"`
 }
 
 type ntpReferenceClockIP struct {
@@ -451,7 +451,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 				cfg.AuthModes,
 				ntskeServer,
 				cfg.NTSKEInsecureSkipVerify,
-				cfg.flashPTP_filter,
+				cfg.FlashPTP_filter,
 			))
 		}
 	}
