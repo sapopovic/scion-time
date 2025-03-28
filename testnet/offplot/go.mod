@@ -2,7 +2,7 @@ module example.com/m
 
 go 1.24.1
 
-require gonum.org/v1/plot v0.15.2
+require gonum.org/v1/plot v0.16.0
 
 require (
 	codeberg.org/go-fonts/liberation v0.5.0 // indirect
