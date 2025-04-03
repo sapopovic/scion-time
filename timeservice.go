@@ -220,6 +220,9 @@ func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr
 		InterleavedMode: true,
 	}
 	c.ntpc.Filter = client.NewLuckyPacketFilter(flashPTP_cfg)
+	log.LogAttrs(context.Background(), slog.LevelDebug, "Setting Filter",
+		slog.Any("Filter", "Lucky Packet Filter"),
+		slog.Any("Config", flashPTP_cfg))
 	// c.ntpc.Filter = client.NewNtimedFilter(log)
 	if slices.Contains(authModes, authModeNTS) {
 		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify, log)
@@ -254,7 +257,7 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 }
 
 func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, remoteAddr udp.UDPAddr, dscp uint8,
-	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockSCION {
+	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool, flashPTP_cfg []int) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
 		log:        log,
 		localAddr:  localAddr,
@@ -266,7 +269,11 @@ func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, r
 			DSCP:            dscp,
 			InterleavedMode: true,
 		}
-		c.ntpcs[i].Filter = client.NewNtimedFilter(log)
+		c.ntpcs[i].Filter = client.NewLuckyPacketFilter(flashPTP_cfg)
+		log.LogAttrs(context.Background(), slog.LevelDebug, "Setting Filter",
+			slog.Any("Filter", "Lucky Packet Filter"),
+			slog.Any("Config", flashPTP_cfg))
+		// c.ntpcs[i].Filter = client.NewNtimedFilter(log)
 		if slices.Contains(authModes, authModeNTS) {
 			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr, log)
 		}
@@ -440,6 +447,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 				cfg.AuthModes,
 				ntskeServer,
 				cfg.NTSKEInsecureSkipVerify,
+				cfg.FlashPTP_filter,
 			))
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		} else {
@@ -474,6 +482,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 			cfg.AuthModes,
 			ntskeServer,
 			cfg.NTSKEInsecureSkipVerify,
+			cfg.FlashPTP_filter,
 		))
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
