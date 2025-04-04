@@ -7,7 +7,7 @@
 // - https://kb.meinbergglobal.com/kb/driver_software/command_line_tools_mbgtools#mbgsvcd
 // - https://git.meinbergglobal.com/drivers/mbgtools-lx.git/tree/mbgsvcd/mbgsvcd.c
 // - https://www.meinbergglobal.com/english/sw/#linux
-
+// ./offplot mbg-output-file timeservice-log
 package main
 
 import (
@@ -30,6 +30,45 @@ import (
 	"gonum.org/v1/plot/vg/vgpdf"
 )
 
+/*
+type interleavedStruct struct {
+	time time.Time
+	b    bool
+}
+*/
+
+/*
+	func get_times(fn string) []interleavedStruct {
+		interleaved_mode_t := make([]interleavedStruct, 0) // contains times where interleaved mode was stated
+		f, err := os.Open(fn)
+		if err != nil {
+			log.Fatalf("failed to open file: '%s', %s", fn, err)
+		}
+		defer f.Close()
+
+		s := bufio.NewScanner(f)
+		for s.Scan() {
+			l := s.Text()
+			ts := strings.Fields(l)
+			var temp_t string
+			var temp_t_struct time.Time
+			print("HEELLLOOOOO\n")
+			if len(ts) >= 13 && (ts[12] == "interleaved=false" || ts[12] == "interleaved=true") {
+				print(ts[12])
+				if strings.HasPrefix(ts[5], "time=") == true {
+					temp_t = ts[5][5:] // remove "time=" and only save time
+					temp_t_struct, _ = time.Parse(time.RFC3339, temp_t)
+					b, _ := strconv.ParseBool(ts[12][12:])
+					interleaved_mode_t = append(interleaved_mode_t, interleavedStruct{temp_t_struct, b}) // true or false
+					print(temp_t_struct.String())
+
+				}
+			}
+		}
+
+		return interleaved_mode_t
+	}
+*/
 func main() {
 	var limit float64
 	flag.Float64Var(&limit, "l", 0.0, "limit")
@@ -42,8 +81,10 @@ func main() {
 	}
 	defer f0.Close()
 
+	// no_interleave_modes := get_times(flag.Arg(1))
+
 	n := 0
-	var t0 time.Time
+	var t0, start_time time.Time
 	var data, data_not_ok plotter.XYs
 	gitRevision := ""
 
@@ -83,11 +124,40 @@ func main() {
 			if len(st) != 0 && st[len(st)-1] == ',' {
 				st = st[:len(st)-1]
 			}
+			ok2 = true
+
 			if st != "0x0014" {
 				ok2 = false
 			} else {
 				ok2 = true
 			}
+			/*
+				fmt.Println("Length of the slice:", len(no_interleave_modes))
+				for i := 0; i < len(no_interleave_modes)-1; i++ { // last element not reached through loop
+					stct_prev := no_interleave_modes[i]
+					stct_next := no_interleave_modes[i+1]
+					fmt.Println(t.String())
+					fmt.Println(stct_prev.time.String())
+					fmt.Println(stct_next.time.String())
+					fmt.Println(stct_prev.b)
+					fmt.Println()
+					if i == 0 && stct_prev.b == false && t.Compare(stct_prev.time) == -1 {
+						ok2 = false
+						fmt.Println("here?")
+						break
+					} else if (t.Compare(stct_prev.time) == 1 || t.Compare(stct_prev.time) == 0) && t.Compare(stct_next.time) == -1 && stct_prev.b == false {
+						ok2 = false
+						// no_interleave_modes = no_interleave_modes[i+1:] // optimization
+						break
+					} else if (t.Compare(stct_prev.time) == -1 || t.Compare(stct_prev.time) == 0) && t.Compare(stct_prev.time) == 0 && t.Compare(stct_next.time) == -1 {
+						ok2 = false
+						break
+					} else {
+						ok2 = true
+					}
+				}
+				fmt.Println("Do we continue?")
+			*/
 			ok = true
 		} else if len(ts) >= 10 &&
 			strings.HasPrefix(ts[0], "phc2sys[") &&
@@ -114,6 +184,7 @@ func main() {
 			if ok2 { // add to data
 				if n == 0 {
 					t0 = t
+					start_time = t
 				}
 				data = append(data, plotter.XY{
 					X: float64(t.Unix() - t0.Unix()),
@@ -122,6 +193,7 @@ func main() {
 			} else { // add to data_not_ok
 				if n == 0 {
 					t0 = t
+					start_time = t
 				}
 				data_not_ok = append(data_not_ok, plotter.XY{
 					X: float64(t.Unix() - t0.Unix()),
@@ -129,9 +201,6 @@ func main() {
 				})
 			}
 			n++
-			// fmt.Printf("\nx axis = %v\n", t0)
-			// fmt.Printf("x axis = %v\n", t)
-			// fmt.Printf("x axis = %v\n", float64(t.Unix()-t0.Unix()))
 		}
 	}
 	if err := s.Err(); err != nil {
@@ -145,9 +214,9 @@ func main() {
 	p.Y.Label.Padding = vg.Points(5)
 
 	if gitRevision != "" {
-		p.Title.Text = fmt.Sprintf("SCION Offset (Rev: %s)", gitRevision)
+		p.Title.Text = fmt.Sprintf("SCION Offset (Rev: %s)", gitRevision) + "\nMeasurement started at: " + start_time.Format(time.DateTime)
 	} else {
-		p.Title.Text = "Chrony Offset"
+		p.Title.Text = "Chrony Offset\n" + "Measurement started at: " + start_time.Format(time.DateTime)
 	}
 
 	p.Add(plotter.NewGrid())
@@ -170,8 +239,6 @@ func main() {
 
 	p.Add(scatter)
 	p.Add(scatter2)
-	// p.Add(scatter1)
-	// p.Add(scatter2)
 
 	if limit != 0.0 {
 		p.Y.Max = math.Abs(limit)
