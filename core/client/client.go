@@ -10,8 +10,6 @@ import (
 
 	"github.com/scionproto/scion/pkg/snet"
 
-	"example.com/scion-time/base/crypto"
-
 	"example.com/scion-time/core/measurements"
 
 	"example.com/scion-time/net/udp"
@@ -107,43 +105,58 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 	mtrcs := scionMetrics.Load()
 
 	sps := make([]snet.Path, len(ntpcs))
-	nsps := 0
-	for i, c := range ntpcs {
-		pf := c.InterleavedModePath()
-		if pf != "" {
-			for j := range len(ps) {
-				if p := ps[j]; snet.Fingerprint(p).String() == pf {
-					ps[j] = ps[len(ps)-1]
-					ps = ps[:len(ps)-1]
-					sps[i] = p
-					nsps++
-					break
+
+	chosenPath_fp := "13bccc350de9e99b0a1a93b16fee3e2107d98fd6b2c0a77e51573f42fad7d137"
+	for _, p := range ps {
+		pf := snet.Fingerprint(p).String()
+		if pf == chosenPath_fp {
+			sps[0] = p
+			break
+		}
+	}
+
+	nsps := 1
+
+	/*
+		sps := make([]snet.Path, len(ntpcs))
+		nsps := 0
+			for i, c := range ntpcs {
+				pf := c.InterleavedModePath()
+				if pf != "" {
+					for j := range len(ps) {
+						if p := ps[j]; snet.Fingerprint(p).String() == pf {
+							ps[j] = ps[len(ps)-1]
+							ps = ps[:len(ps)-1]
+							sps[i] = p
+							nsps++
+							break
+						}
+					}
+				}
+				if sps[i] == nil {
+					c.ResetInterleavedMode()
+					if c.Filter != nil {
+						c.Filter.Reset()
+					}
 				}
 			}
-		}
-		if sps[i] == nil {
-			c.ResetInterleavedMode()
-			if c.Filter != nil {
-				c.Filter.Reset()
+			n, err := crypto.Sample(ctx, len(sps)-nsps, len(ps), func(dst, src int) {
+				ps[dst] = ps[src]
+			})
+			if err != nil {
+				return time.Time{}, 0, err
 			}
-		}
-	}
-	n, err := crypto.Sample(ctx, len(sps)-nsps, len(ps), func(dst, src int) {
-		ps[dst] = ps[src]
-	})
-	if err != nil {
-		return time.Time{}, 0, err
-	}
-	if nsps+n == 0 {
-		return time.Time{}, 0, errNoPath
-	}
-	for i, j := 0, 0; j != n; j++ {
-		for sps[i] != nil {
-			i++
-		}
-		sps[i] = ps[j]
-		nsps++
-	}
+			if nsps+n == 0 {
+				return time.Time{}, 0, errNoPath
+			}
+			for i, j := 0, 0; j != n; j++ {
+				for sps[i] != nil {
+					i++
+				}
+				sps[i] = ps[j]
+				nsps++
+			}
+	*/
 
 	ms := make([]measurements.Measurement, nsps)
 	msc := make(chan measurements.Measurement)

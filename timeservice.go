@@ -62,7 +62,7 @@ const (
 
 	tlsCertReloadInterval = time.Minute * 10
 
-	scionRefClockNumClient = 7
+	scionRefClockNumClient = 1 // Only one path
 )
 
 type svcConfig struct {
@@ -293,6 +293,14 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 		}}
 	} else {
 		ps = c.pather.Paths(c.remoteAddr.IA)
+		c.log.LogAttrs(ctx, slog.LevelDebug, "----------------------ALL PATHS AVAILABLE----------------------------->")
+		for _, p := range ps {
+			c.log.LogAttrs(ctx, slog.LevelDebug, "",
+				slog.Any("Path", snet.Fingerprint(p).String()),
+			)
+		}
+		c.log.LogAttrs(ctx, slog.LevelDebug, "-----------------------------------------------------------------------<")
+
 	}
 	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps)
 }
