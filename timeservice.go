@@ -595,7 +595,6 @@ func runClient(configFile string) {
 
 func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify, periodic bool) {
-	ctx := context.Background()
 	log := slog.Default()
 
 	lclk := clocks.NewSystemClock(log, clocks.UnknownDrift)
@@ -606,17 +605,19 @@ func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	c := &client.IPClient{
 		Log:             log,
 		DSCP:            dscp,
-		InterleavedMode: true,
+		// InterleavedMode: true,
 	}
 	if slices.Contains(authModes, authModeNTS) {
 		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
 
 	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Second)
 		ts, off, err := client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 		if err != nil {
 			logbase.Fatal(slog.Default(), "failed to measure clock offset", slog.Any("remote", raddr), slog.Any("error", err))
 		}
+		cancel()
 		if !periodic {
 			break
 		}
