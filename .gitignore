@@ -4,7 +4,8 @@
 certs
 crypto
 keys
-testnet/offplot/offplot
+testnet/journaltail/journaltail
 testnet/ntimed/ntimed-tool
+testnet/offplot/offplot
 timeservice
 trcs
