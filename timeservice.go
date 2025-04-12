@@ -622,7 +622,7 @@ func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 			break
 		}
 		fmt.Printf("%s,%+.9f,%t\n", ts.UTC().Format(time.RFC3339), off.Seconds(), c.InInterleavedMode())
-		lclk.Sleep(1 * time.Second)
+		lclk.Sleep(8 * time.Second)
 	}
 }
 
