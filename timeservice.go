@@ -615,13 +615,16 @@ func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 		ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Second)
 		ts, off, err := client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 		if err != nil {
-			logbase.Fatal(slog.Default(), "failed to measure clock offset", slog.Any("remote", raddr), slog.Any("error", err))
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to measure clock offset",
+				slog.Any("remote", raddr), slog.Any("error", err))
 		}
 		cancel()
 		if !periodic {
 			break
 		}
-		fmt.Printf("%s,%+.9f,%t\n", ts.UTC().Format(time.RFC3339), off.Seconds(), c.InInterleavedMode())
+		if err == nil {
+			fmt.Printf("%s,%+.9f,%t\n", ts.UTC().Format(time.RFC3339), off.Seconds(), c.InInterleavedMode())
+		}
 		lclk.Sleep(8 * time.Second)
 	}
 }
