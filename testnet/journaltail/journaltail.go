@@ -97,28 +97,36 @@ func startUploader(sess *session.Session, wg *sync.WaitGroup, ch chan uploadRequ
 
 func main() {
 	var (
-		follow bool
-		bucket string
 		region string
+		bucket string
+		follow bool
 	)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] UNIT\n\nCaptures journald entries for the specified systemd unit and uploads to S3.\n\nOptions:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [options] UNIT\n\n"+
+			"Captures journald entries for the specified systemd unit and uploads to S3.\n\n"+
+			"Options:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	flag.BoolVar(&follow, "f", false, "Follow the journal (wait for new entries)")
-	flag.StringVar(&bucket, "bucket", "", "AWS S3 bucket name (required)")
 	flag.StringVar(&region, "region", "us-east-1", "AWS S3 region")
+	flag.StringVar(&bucket, "bucket", "", "AWS S3 bucket name (required)")
+	flag.BoolVar(&follow, "f", false, "Follow the journal (wait for new entries)")
 	flag.Parse()
-	if flag.NArg() != 1 {
-		flag.Usage()
-		os.Exit(1)
-	}
 	if bucket == "" {
 		fmt.Fprintf(os.Stderr, "Error: AWS S3 bucket name is required\n")
 		flag.Usage()
 		os.Exit(1)
 	}
+	if flag.NArg() != 1 {
+		fmt.Fprintf(os.Stderr, "Error: Systemd unit name is required\n")
+		flag.Usage()
+		os.Exit(1)
+	}
 	unit := flag.Arg(0)
+	if unit == "" {
+		fmt.Fprintf(os.Stderr, "Error: Systemd unit name is required\n")
+		flag.Usage()
+		os.Exit(1)
+	}
 
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
@@ -128,7 +136,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ch := make(chan uploadRequest, 1) // Buffer capacity 1 - only one upload at a time
+	ch := make(chan uploadRequest, 1) // cap(ch) == 1; only one upload at a time
 	var wg sync.WaitGroup
 	startUploader(sess, &wg, ch)
 	cleanup := func() {
