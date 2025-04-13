@@ -159,8 +159,6 @@ func main() {
 	go func() {
 		<-sigChan
 		cmd.Process.Kill()
-		cleanup()
-		os.Exit(0)
 	}()
 
 	var buf []byte
@@ -184,14 +182,13 @@ func main() {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		if _, ok := err.(*exec.ExitError); ok && follow {
+		if _, ok := err.(*exec.ExitError); !ok {
+			fmt.Fprintf(os.Stderr, "Error running journalctl: %s\n", err)
 			cleanup()
-			os.Exit(0)
+			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "Error running journalctl: %s\n", err)
-		cleanup()
-		os.Exit(1)
 	}
 
 	cleanup()
+	os.Exit(0)
 }
