@@ -31,7 +31,7 @@ type uploadRequest struct {
 }
 
 func newKey(unit string) string {
-	timestamp := time.Now().Format("20060102-150405.000")
+	timestamp := time.Now().UTC().Format("20060102-150405.000")
 	return fmt.Sprintf("%s_%s.log.gz", unit, timestamp)
 }
 
