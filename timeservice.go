@@ -603,8 +603,8 @@ func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	laddr := localAddr.Host
 	raddr := remoteAddr.Host
 	c := &client.IPClient{
-		Log:             log,
-		DSCP:            dscp,
+		Log:  log,
+		DSCP: dscp,
 		// InterleavedMode: true,
 	}
 	if slices.Contains(authModes, authModeNTS) {
@@ -612,7 +612,7 @@ func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	}
 
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		ts, off, err := client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 		if err != nil {
 			log.LogAttrs(ctx, slog.LevelInfo, "failed to measure clock offset",
