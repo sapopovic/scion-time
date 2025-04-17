@@ -26,10 +26,8 @@ func RunSCIONBenchmark(
 	daemonAddr string, localAddr, remoteAddr *snet.UDPAddr,
 	authModes []string, ntskeServer string,
 	log *slog.Logger) {
-	// const numClientGoroutine = 8
-	// const numRequestPerClient = 10000
-	const numClientGoroutine = 1
-	const numRequestPerClient = 20_000
+	const numClientGoroutine = 10
+	const numRequestPerClient = 10_000
 
 	ctx := context.Background()
 
@@ -74,7 +72,7 @@ func RunSCIONBenchmark(
 			raddr := udp.UDPAddrFromSnet(remoteAddr)
 			c := &client.SCIONClient{
 				Log:             log,
-				InterleavedMode: true,
+				// InterleavedMode: true,
 				Histogram:       hg,
 			}
 
@@ -107,6 +105,7 @@ func RunSCIONBenchmark(
 			<-sg
 			ntpcs := []*client.SCIONClient{c}
 			for range numRequestPerClient {
+				ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
 				_, _, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps)
 				if err != nil {
 					log.LogAttrs(ctx, slog.LevelInfo,
@@ -124,5 +123,5 @@ func RunSCIONBenchmark(
 	t0 := time.Now()
 	close(sg)
 	wg.Wait()
-	log.LogAttrs(ctx, slog.LevelInfo, "time elbasped", slog.Duration("duration", time.Since(t0)))
+	log.LogAttrs(ctx, slog.LevelInfo, "time elapsed", slog.Duration("duration", time.Since(t0)))
 }
