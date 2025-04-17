@@ -34,9 +34,9 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 			hg := hdrhistogram.New(1, 50000, 5)
 
 			c := &client.IPClient{
-				Log:             log,
+				Log: log,
 				// InterleavedMode: true,
-				Histogram:       hg,
+				Histogram: hg,
 			}
 
 			if slices.Contains(authModes, "nts") {
@@ -58,7 +58,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 			defer wg.Done()
 			<-sg
 			for range numRequestPerClient {
-				ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 				_, _, err = client.MeasureClockOffsetIP(ctx, log, c, localAddr, remoteAddr)
 				if err != nil {
 					log.LogAttrs(ctx, slog.LevelInfo,
@@ -66,6 +66,7 @@ func RunIPBenchmark(localAddr, remoteAddr *net.UDPAddr, authModes []string, ntsk
 						slog.Any("error", err),
 					)
 				}
+				cancel()
 			}
 			mu.Lock()
 			defer mu.Unlock()

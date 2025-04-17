@@ -71,9 +71,9 @@ func RunSCIONBenchmark(
 			laddr := udp.UDPAddrFromSnet(localAddr)
 			raddr := udp.UDPAddrFromSnet(remoteAddr)
 			c := &client.SCIONClient{
-				Log:             log,
+				Log: log,
 				// InterleavedMode: true,
-				Histogram:       hg,
+				Histogram: hg,
 			}
 
 			if slices.Contains(authModes, "spao") {
@@ -105,7 +105,7 @@ func RunSCIONBenchmark(
 			<-sg
 			ntpcs := []*client.SCIONClient{c}
 			for range numRequestPerClient {
-				ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 				_, _, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps)
 				if err != nil {
 					log.LogAttrs(ctx, slog.LevelInfo,
@@ -114,6 +114,7 @@ func RunSCIONBenchmark(
 						slog.Any("error", err),
 					)
 				}
+				cancel()
 			}
 			mu.Lock()
 			defer mu.Unlock()
