@@ -57,7 +57,7 @@ const (
 	dispatcherModeInternal = "internal"
 	authModeNTS            = "nts"
 	authModeSPAO           = "spao"
-	clockAlgoNtimed        = "ntimed"
+	clockAlgoKalman        = "kalman"
 	clockAlgoPI            = "pi"
 
 	tlsCertReloadInterval = time.Minute * 10
@@ -264,7 +264,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, r
 			DSCP:            dscp,
 			InterleavedMode: true,
 		}
-		c.ntpcs[i].Filter = client.NewNtimedFilter(log)
+		c.ntpcs[i].Filter = client.NewKalmanFilter(log)
 		if slices.Contains(authModes, authModeNTS) {
 			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr, log)
 		}
