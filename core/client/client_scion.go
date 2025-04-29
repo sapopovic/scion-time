@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"log/slog"
+	"math"
 	"net"
 	"net/netip"
 	"time"
@@ -56,6 +57,11 @@ type SCIONClient struct {
 		cRxTime     ntp.Time64
 		sRxTime     ntp.Time64
 	}
+	offsets [60]time.Duration // fixed-size ring buffer
+	sum     time.Duration     // running sum
+	index   int               // current index in buffer
+	count   int
+	avg     time.Duration
 }
 
 type scionClientMetrics struct {
@@ -125,6 +131,40 @@ func (c *SCIONClient) InterleavedModePath() string {
 
 func (c *SCIONClient) ResetInterleavedMode() {
 	c.prev.reference = ""
+}
+
+func (c *SCIONClient) updateOffsetAverage(newOffset time.Duration) time.Duration {
+	if c.count < len(c.offsets) {
+		c.sum += newOffset
+		c.offsets[c.index] = newOffset
+		c.count++
+	} else {
+		c.sum -= c.offsets[c.index]
+		c.sum += newOffset
+		c.offsets[c.index] = newOffset
+	}
+	c.index = (c.index + 1) % len(c.offsets)
+
+	if c.count == 0 {
+		return 0
+	}
+	return c.sum / time.Duration(c.count)
+}
+
+func (c *SCIONClient) isOutlier(newOffset time.Duration) bool {
+
+	sumSquares := time.Duration(0)
+	for i := 0; i < c.count; i++ {
+		diff := c.offsets[i] - c.avg
+		sumSquares += diff * diff
+	}
+	stdDev := time.Duration(math.Sqrt(float64(sumSquares) / float64(c.count)))
+
+	if time.Duration(math.Abs(float64(newOffset-c.avg))) <= 2*stdDev {
+		return false
+	}
+
+	return true
 }
 
 func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionClientMetrics,
@@ -606,8 +646,12 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		timestamp = cRxTime
 		if c.Filter == nil {
 			offset = off
+		} else if c.isOutlier(off) { // if its an outlier --> IGNORE
+			c.updateOffsetAverage(off)
+			return time.Time{}, 0, err
 		} else {
 			offset = c.Filter.Do(t0, t1, t2, t3)
+			c.updateOffsetAverage(off)
 		}
 
 		if c.Histogram != nil {

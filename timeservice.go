@@ -218,7 +218,7 @@ func newNTPReferenceClockIP(log *slog.Logger, localAddr, remoteAddr *net.UDPAddr
 		DSCP:            dscp,
 		InterleavedMode: true,
 	}
-	c.ntpc.Filter = client.NewNtimedFilter(log)
+	c.ntpc.Filter = client.NewKalmanFilter(log)
 	if slices.Contains(authModes, authModeNTS) {
 		configureIPClientNTS(c.ntpc, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
