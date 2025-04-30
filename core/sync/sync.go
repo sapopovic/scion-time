@@ -23,6 +23,7 @@ type Config struct {
 	PeerClockCutoff      time.Duration
 	SyncTimeout          time.Duration
 	SyncInterval         time.Duration
+	PI                   []float64
 }
 
 type localReferenceClock struct{}
@@ -43,7 +44,7 @@ func measureOffsetToRefClks(refClkClient client.ReferenceClockClient,
 }
 
 func Run(log *slog.Logger, cfg Config,
-	clk timebase.SystemClock, adj adjustments.Adjustment,
+	clk timebase.SystemClock,
 	refClks, peerClks []client.ReferenceClock) {
 	ctx := context.Background()
 	if cfg.ReferenceClockImpact <= 1.0 {
@@ -69,6 +70,13 @@ func Run(log *slog.Logger, cfg Config,
 	if peerClkMaxCorr <= 0 {
 		panic("unexpected system clock behavior")
 	}
+
+	adj := &adjustments.PIController{
+		KP:            float64(cfg.PI[0]),     // adjustments.PIControllerDefaultPRatio,
+		KI:            float64(cfg.PI[1]),     // adjustments.PIControllerDefaultIRatio,
+		StepThreshold: 100 * time.Millisecond, // adjustments.PIControllerDefaultStepThreshold,
+	}
+
 	var refClkClient client.ReferenceClockClient
 	refClkOffsets := make([]measurements.Measurement, len(refClks))
 	refClkOffCh := make(chan time.Duration)

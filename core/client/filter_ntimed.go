@@ -24,6 +24,7 @@ type NtimedFilter struct {
 var _ measurements.Filter = (*NtimedFilter)(nil)
 
 func NewNtimedFilter(log *slog.Logger) *NtimedFilter {
+	log.Info("Ntimed Filter activated")
 	return &NtimedFilter{log: log, logCtx: context.Background()}
 }
 

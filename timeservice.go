@@ -38,7 +38,6 @@ import (
 	"example.com/scion-time/core/client"
 	"example.com/scion-time/core/server"
 	"example.com/scion-time/core/sync"
-	"example.com/scion-time/core/sync/adjustments"
 	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/driver/clocks"
@@ -66,29 +65,32 @@ const (
 )
 
 type svcConfig struct {
-	LocalAddr               string   `toml:"local_address,omitempty"`
-	LocalMetricsAddr        string   `toml:"local_metrics_address,omitempty"`
-	SCIONDaemonAddr         string   `toml:"scion_daemon_address,omitempty"`
-	SCIONConfigDir          string   `toml:"scion_config_dir,omitempty"`
-	SCIONDataDir            string   `toml:"scion_data_dir,omitempty"`
-	RemoteAddr              string   `toml:"remote_address,omitempty"`
-	MBGReferenceClocks      []string `toml:"mbg_reference_clocks,omitempty"`
-	PHCReferenceClocks      []string `toml:"phc_reference_clocks,omitempty"`
-	SHMReferenceClocks      []string `toml:"shm_reference_clocks,omitempty"`
-	NTPReferenceClocks      []string `toml:"ntp_reference_clocks,omitempty"`
-	SCIONPeers              []string `toml:"scion_peer_clocks,omitempty"`
-	NTSKECertFile           string   `toml:"ntske_cert_file,omitempty"`
-	NTSKEKeyFile            string   `toml:"ntske_key_file,omitempty"`
-	NTSKEServerName         string   `toml:"ntske_server_name,omitempty"`
-	AuthModes               []string `toml:"auth_modes,omitempty"`
-	NTSKEInsecureSkipVerify bool     `toml:"ntske_insecure_skip_verify,omitempty"`
-	DSCP                    uint8    `toml:"dscp,omitempty"` // must be in range [0, 63]
-	ClockDrift              float64  `toml:"clock_drift,omitempty"`
-	ReferenceClockImpact    float64  `toml:"reference_clock_impact,omitempty"`
-	PeerClockImpact         float64  `toml:"peer_clock_impact,omitempty"`
-	PeerClockCutoff         float64  `toml:"peer_clock_cutoff,omitempty"`
-	SyncTimeout             float64  `toml:"sync_timeout,omitempty"`
-	SyncInterval            float64  `toml:"sync_interval,omitempty"`
+	LocalAddr                string    `toml:"local_address,omitempty"`
+	LocalMetricsAddr         string    `toml:"local_metrics_address,omitempty"`
+	SCIONDaemonAddr          string    `toml:"scion_daemon_address,omitempty"`
+	SCIONConfigDir           string    `toml:"scion_config_dir,omitempty"`
+	SCIONDataDir             string    `toml:"scion_data_dir,omitempty"`
+	RemoteAddr               string    `toml:"remote_address,omitempty"`
+	MBGReferenceClocks       []string  `toml:"mbg_reference_clocks,omitempty"`
+	PHCReferenceClocks       []string  `toml:"phc_reference_clocks,omitempty"`
+	SHMReferenceClocks       []string  `toml:"shm_reference_clocks,omitempty"`
+	NTPReferenceClocks       []string  `toml:"ntp_reference_clocks,omitempty"`
+	SCIONPeers               []string  `toml:"scion_peer_clocks,omitempty"`
+	NTSKECertFile            string    `toml:"ntske_cert_file,omitempty"`
+	NTSKEKeyFile             string    `toml:"ntske_key_file,omitempty"`
+	NTSKEServerName          string    `toml:"ntske_server_name,omitempty"`
+	AuthModes                []string  `toml:"auth_modes,omitempty"`
+	NTSKEInsecureSkipVerify  bool      `toml:"ntske_insecure_skip_verify,omitempty"`
+	DSCP                     uint8     `toml:"dscp,omitempty"` // must be in range [0, 63]
+	ClockDrift               float64   `toml:"clock_drift,omitempty"`
+	ReferenceClockImpact     float64   `toml:"reference_clock_impact,omitempty"`
+	PeerClockImpact          float64   `toml:"peer_clock_impact,omitempty"`
+	PeerClockCutoff          float64   `toml:"peer_clock_cutoff,omitempty"`
+	SyncTimeout              float64   `toml:"sync_timeout,omitempty"`
+	SyncInterval             float64   `toml:"sync_interval,omitempty"`
+	PI                       []float64 `toml:"pi_values,omitempty"`
+	FilterType               string    `toml:"filter_type,omitempty"` // ntimed, kalman, lpf
+	LuckyPacketConfiguration []int     `toml:"lucky_packet_filter_configuration,omitempty"`
 }
 
 type ntpReferenceClockIP struct {
@@ -251,8 +253,7 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 	c.Auth.NTSKEFetcher.QUIC.RemoteAddr = remoteAddr
 }
 
-func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, remoteAddr udp.UDPAddr, dscp uint8,
-	authModes []string, ntskeServer string, ntskeInsecureSkipVerify bool) *ntpReferenceClockSCION {
+func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
 		log:        log,
 		localAddr:  localAddr,
@@ -264,9 +265,19 @@ func newNTPReferenceClockSCION(log *slog.Logger, daemonAddr string, localAddr, r
 			DSCP:            dscp,
 			InterleavedMode: true,
 		}
-		c.ntpcs[i].Filter = client.NewNtimedFilter(log)
-		if slices.Contains(authModes, authModeNTS) {
-			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, ntskeInsecureSkipVerify, daemonAddr, localAddr, remoteAddr, log)
+		switch cfg.FilterType {
+		case "lpf":
+			c.ntpcs[i].Filter = client.NewLuckyPacketFilter(cfg.LuckyPacketConfiguration[0], cfg.LuckyPacketConfiguration[1]) // cap, pick
+		case "kalman":
+			c.ntpcs[i].Filter = client.NewKalmanFilter(log)
+		case "ntimed":
+			c.ntpcs[i].Filter = client.NewNtimedFilter(log)
+		default:
+			fmt.Println("Unknown filter type")
+		}
+
+		if slices.Contains(cfg.AuthModes, authModeNTS) {
+			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, cfg.NTSKEInsecureSkipVerify, cfg.SCIONDaemonAddr, localAddr, remoteAddr, log)
 		}
 	}
 	return c
@@ -431,13 +442,11 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		if !remoteAddr.IA.IsZero() {
 			refClocks = append(refClocks, newNTPReferenceClockSCION(
 				log,
-				cfg.SCIONDaemonAddr,
 				udp.UDPAddrFromSnet(localAddr),
 				udp.UDPAddrFromSnet(remoteAddr),
 				dscp,
-				cfg.AuthModes,
 				ntskeServer,
-				cfg.NTSKEInsecureSkipVerify,
+				cfg,
 			))
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		} else {
@@ -464,13 +473,11 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		ntskeServer := ntskeServerFromRemoteAddr(s)
 		peerClocks = append(peerClocks, newNTPReferenceClockSCION(
 			log,
-			cfg.SCIONDaemonAddr,
 			udp.UDPAddrFromSnet(localAddr),
 			udp.UDPAddrFromSnet(remoteAddr),
 			dscp,
-			cfg.AuthModes,
 			ntskeServer,
-			cfg.NTSKEInsecureSkipVerify,
+			cfg,
 		))
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
@@ -540,13 +547,7 @@ func runServer(configFile string) {
 
 	syncCfg := syncConfig(cfg)
 
-	adj := &adjustments.PIController{
-		KP:            adjustments.PIControllerDefaultPRatio,
-		KI:            adjustments.PIControllerDefaultIRatio,
-		StepThreshold: adjustments.PIControllerDefaultStepThreshold,
-	}
-
-	go sync.Run(log, syncCfg, lclk, adj, refClocks, peerClocks)
+	go sync.Run(log, syncCfg, lclk, refClocks, peerClocks)
 
 	runMonitor(cfg)
 }
@@ -582,13 +583,7 @@ func runClient(configFile string) {
 
 	syncCfg := syncConfig(cfg)
 
-	adj := &adjustments.PIController{
-		KP:            adjustments.PIControllerDefaultPRatio,
-		KI:            adjustments.PIControllerDefaultIRatio,
-		StepThreshold: adjustments.PIControllerDefaultStepThreshold,
-	}
-
-	go sync.Run(log, syncCfg, lclk, adj, refClocks, peerClocks)
+	go sync.Run(log, syncCfg, lclk, refClocks, peerClocks)
 
 	runMonitor(cfg)
 }

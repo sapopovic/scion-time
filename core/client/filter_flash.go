@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"example.com/scion-time/net/ntp"
+	"github.com/scionproto/scion/pkg/log"
 
 	"example.com/scion-time/core/measurements"
 )
@@ -44,6 +45,7 @@ func NewLuckyPacketFilter(cap, pick int) *LuckyPacketFilter {
 	if pick <= 0 {
 		panic("pick must be greater than 0")
 	}
+	log.Info("Lucky Packet Filter activated")
 	return &LuckyPacketFilter{
 		pick:      min(pick, cap),
 		state:     make([]measurement, 0, cap),
