@@ -12,6 +12,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/csv"
 	"flag"
 	"log"
 	"math"
@@ -66,6 +67,7 @@ func main() {
 				log.Fatalf("failed to parse offset on line: %s, %s", l, err)
 			}
 			ok = true
+			n++
 		} else if len(ts) >= 10 &&
 			strings.HasPrefix(ts[0], "phc2sys[") &&
 			strings.HasSuffix(ts[0], "]:") {
@@ -85,9 +87,26 @@ func main() {
 			}
 			off = float64(y) / 1e9
 			ok = true
+			n++
+		} else if len(ts) >= 1 {
+			r := csv.NewReader(strings.NewReader(ts[len(ts)-1]))
+			rs, err := r.ReadAll()
+			if err == nil && len(rs) == 1 && len(rs[0]) == 3 {
+				t, err = time.Parse(time.RFC3339, rs[0][0])
+				if err == nil {
+					off, err = strconv.ParseFloat(rs[0][1], 64)
+					if err == nil {
+						_, err = strconv.ParseBool(rs[0][2])
+						if err == nil {
+							ok = true
+							n++
+						}
+					}
+				}
+			}
 		}
 		if ok {
-			if n == 0 {
+			if n == 1 {
 				t0 = t
 			}
 			data = append(data, plotter.XY{
@@ -95,7 +114,6 @@ func main() {
 				Y: off,
 			})
 		}
-		n++
 	}
 	if err := s.Err(); err != nil {
 		log.Fatalf("error during scan: %s", err)
