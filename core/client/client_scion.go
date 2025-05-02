@@ -47,6 +47,7 @@ type SCIONClient struct {
 		NTSKEFetcher ntske.Fetcher
 	}
 	Filter    measurements.Filter
+	PreFilter measurements.PreFilter
 	Histogram *hdrhistogram.Histogram
 	prev      struct {
 		reference   string
@@ -604,10 +605,24 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		}
 
 		timestamp = cRxTime
-		if c.Filter == nil {
-			offset = off
+
+		if c.PreFilter != nil {
+			isOutlier := c.PreFilter.Do(t0, t1, t2, t3)
+			if isOutlier {
+				return time.Time{}, 0, err // it is an outlier, so we dont process it further.
+			} else {
+				if c.Filter == nil {
+					offset = off
+				} else {
+					offset = c.Filter.Do(t0, t1, t2, t3)
+				}
+			}
 		} else {
-			offset = c.Filter.Do(t0, t1, t2, t3)
+			if c.Filter == nil {
+				offset = off
+			} else {
+				offset = c.Filter.Do(t0, t1, t2, t3)
+			}
 		}
 
 		if c.Histogram != nil {

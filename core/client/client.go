@@ -102,47 +102,61 @@ loop:
 }
 
 func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
-	ntpcs []*SCIONClient, localAddr, remoteAddr udp.UDPAddr, ps []snet.Path) (
+	ntpcs []*SCIONClient, localAddr, remoteAddr udp.UDPAddr, ps []snet.Path, chosenPaths []string) (
 	time.Time, time.Duration, error) {
 	mtrcs := scionMetrics.Load()
 
 	sps := make([]snet.Path, len(ntpcs))
 	nsps := 0
-	for i, c := range ntpcs {
-		pf := c.InterleavedModePath()
-		if pf != "" {
-			for j := range len(ps) {
-				if p := ps[j]; snet.Fingerprint(p).String() == pf {
-					ps[j] = ps[len(ps)-1]
-					ps = ps[:len(ps)-1]
+
+	if chosenPaths != nil {
+		for _, chosenPath := range chosenPaths { // iterate through fingerprints
+			for i, p := range ps {
+				pf := snet.Fingerprint(p).String()
+				if pf == chosenPath {
 					sps[i] = p
 					nsps++
 					break
 				}
 			}
 		}
-		if sps[i] == nil {
-			c.ResetInterleavedMode()
-			if c.Filter != nil {
-				c.Filter.Reset()
+	} else {
+		for i, c := range ntpcs {
+			pf := c.InterleavedModePath()
+			if pf != "" {
+				for j := range len(ps) {
+					if p := ps[j]; snet.Fingerprint(p).String() == pf {
+						ps[j] = ps[len(ps)-1]
+						ps = ps[:len(ps)-1]
+						sps[i] = p
+						nsps++
+						break
+					}
+				}
+			}
+			if sps[i] == nil {
+				c.ResetInterleavedMode()
+				if c.Filter != nil {
+					c.Filter.Reset()
+				}
 			}
 		}
-	}
-	n, err := crypto.Sample(ctx, len(sps)-nsps, len(ps), func(dst, src int) {
-		ps[dst] = ps[src]
-	})
-	if err != nil {
-		return time.Time{}, 0, err
-	}
-	if nsps+n == 0 {
-		return time.Time{}, 0, errNoPath
-	}
-	for i, j := 0, 0; j != n; j++ {
-		for sps[i] != nil {
-			i++
+		n, err := crypto.Sample(ctx, len(sps)-nsps, len(ps), func(dst, src int) {
+			ps[dst] = ps[src]
+		})
+		if err != nil {
+			return time.Time{}, 0, err
 		}
-		sps[i] = ps[j]
-		nsps++
+		if nsps+n == 0 {
+			return time.Time{}, 0, errNoPath
+		}
+		for i, j := 0, 0; j != n; j++ {
+			for sps[i] != nil {
+				i++
+			}
+			sps[i] = ps[j]
+			nsps++
+		}
 	}
 
 	ms := make([]measurements.Measurement, nsps)

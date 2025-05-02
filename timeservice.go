@@ -91,6 +91,8 @@ type svcConfig struct {
 	PI                       []float64 `toml:"pi_values,omitempty"`
 	FilterType               string    `toml:"filter_type,omitempty"` // ntimed, kalman, lpf
 	LuckyPacketConfiguration []int     `toml:"lucky_packet_filter_configuration,omitempty"`
+	PreFilterType            string    `toml:"pre_filter_type,omitempty"` // avg
+	ChosenPaths              []string  `toml:"specified_paths,omitempty"`
 }
 
 type ntpReferenceClockIP struct {
@@ -101,11 +103,12 @@ type ntpReferenceClockIP struct {
 }
 
 type ntpReferenceClockSCION struct {
-	log        *slog.Logger
-	ntpcs      [scionRefClockNumClient]*client.SCIONClient
-	localAddr  udp.UDPAddr
-	remoteAddr udp.UDPAddr
-	pather     *scion.Pather
+	log         *slog.Logger
+	ntpcs       [scionRefClockNumClient]*client.SCIONClient
+	localAddr   udp.UDPAddr
+	remoteAddr  udp.UDPAddr
+	pather      *scion.Pather
+	chosenPaths []string
 }
 
 type tlsCertCache struct {
@@ -276,9 +279,19 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			fmt.Println("Unknown filter type")
 		}
 
+		switch cfg.FilterType {
+		case "avg":
+			c.ntpcs[i].PreFilter = client.NewAvgPreFilter(log)
+		default:
+			fmt.Println("Unknown prefilter type")
+		}
+
 		if slices.Contains(cfg.AuthModes, authModeNTS) {
 			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, cfg.NTSKEInsecureSkipVerify, cfg.SCIONDaemonAddr, localAddr, remoteAddr, log)
 		}
+	}
+	if cfg.ChosenPaths != nil {
+		c.chosenPaths = cfg.ChosenPaths
 	}
 	return c
 }
@@ -296,7 +309,7 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	} else {
 		ps = c.pather.Paths(c.remoteAddr.IA)
 	}
-	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps)
+	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths)
 }
 
 func loadConfig(configFile string) svcConfig {
@@ -673,7 +686,7 @@ func runToolSCION(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, daemonAddr, laddr, raddr, log)
 	}
 
-	_, _, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps)
+	_, _, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps, nil) // nil since new chosen paths available
 	if err != nil {
 		logbase.Fatal(slog.Default(), "failed to measure clock offset",
 			slog.Any("remote", remoteAddr),
