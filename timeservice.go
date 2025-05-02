@@ -268,6 +268,10 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			DSCP:            dscp,
 			InterleavedMode: true,
 		}
+
+		log.Info("----Configuration Details----")
+
+		log.Info("Filter Selection", "filter", cfg.FilterType)
 		switch cfg.FilterType {
 		case "lpf":
 			c.ntpcs[i].Filter = client.NewLuckyPacketFilter(cfg.LuckyPacketConfiguration[0], cfg.LuckyPacketConfiguration[1]) // cap, pick
@@ -275,21 +279,20 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			c.ntpcs[i].Filter = client.NewKalmanFilter(log)
 		case "ntimed":
 			c.ntpcs[i].Filter = client.NewNtimedFilter(log)
-		default:
-			fmt.Println("Unknown filter type")
-		}
 
-		switch cfg.FilterType {
-		case "avg":
-			c.ntpcs[i].PreFilter = client.NewAvgPreFilter(log)
-		default:
-			fmt.Println("Unknown prefilter type")
-		}
+			log.Info("Pre Filter Selection", "prefilter", cfg.PreFilterType)
+			switch cfg.PreFilterType {
+			case "avg":
+				c.ntpcs[i].PreFilter = client.NewAvgPreFilter(log)
+			}
 
-		if slices.Contains(cfg.AuthModes, authModeNTS) {
-			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, cfg.NTSKEInsecureSkipVerify, cfg.SCIONDaemonAddr, localAddr, remoteAddr, log)
+			if slices.Contains(cfg.AuthModes, authModeNTS) {
+				configureSCIONClientNTS(c.ntpcs[i], ntskeServer, cfg.NTSKEInsecureSkipVerify, cfg.SCIONDaemonAddr, localAddr, remoteAddr, log)
+			}
 		}
 	}
+
+	log.Info("Path Selection", "paths", cfg.ChosenPaths)
 	if cfg.ChosenPaths != nil {
 		c.chosenPaths = cfg.ChosenPaths
 	}
