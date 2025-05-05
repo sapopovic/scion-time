@@ -72,10 +72,13 @@ func Run(log *slog.Logger, cfg Config,
 	}
 
 	adj := &adjustments.PIController{
-		KP:            float64(cfg.PI[0]),     // adjustments.PIControllerDefaultPRatio,
-		KI:            float64(cfg.PI[1]),     // adjustments.PIControllerDefaultIRatio,
+		KP:            cfg.PI[0],              // adjustments.PIControllerDefaultPRatio,
+		KI:            cfg.PI[1],              // adjustments.PIControllerDefaultIRatio,
 		StepThreshold: 100 * time.Millisecond, // adjustments.PIControllerDefaultStepThreshold,
 	}
+	log.LogAttrs(ctx, slog.LevelDebug, "Clock Settings",
+		slog.Float64("P value", adj.KP),
+		slog.Float64("I value", adj.KI))
 
 	var refClkClient client.ReferenceClockClient
 	refClkOffsets := make([]measurements.Measurement, len(refClks))

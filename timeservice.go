@@ -262,6 +262,12 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 		localAddr:  localAddr,
 		remoteAddr: remoteAddr,
 	}
+
+	log.Info("----Configuration Details----")
+	log.Info("Filter Selection", "filter", cfg.FilterType)
+	log.Info("Pre Filter Selection", "prefilter", cfg.PreFilterType)
+	log.Info("Path Selection", "paths", cfg.ChosenPaths)
+
 	for i := range len(c.ntpcs) {
 		c.ntpcs[i] = &client.SCIONClient{
 			Log:             log,
@@ -269,30 +275,26 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			InterleavedMode: true,
 		}
 
-		log.Info("----Configuration Details----")
-
-		log.Info("Filter Selection", "filter", cfg.FilterType)
 		switch cfg.FilterType {
 		case "lpf":
+			// add error handling
 			c.ntpcs[i].Filter = client.NewLuckyPacketFilter(cfg.LuckyPacketConfiguration[0], cfg.LuckyPacketConfiguration[1]) // cap, pick
 		case "kalman":
 			c.ntpcs[i].Filter = client.NewKalmanFilter(log)
 		case "ntimed":
 			c.ntpcs[i].Filter = client.NewNtimedFilter(log)
+		}
 
-			log.Info("Pre Filter Selection", "prefilter", cfg.PreFilterType)
-			switch cfg.PreFilterType {
-			case "avg":
-				c.ntpcs[i].PreFilter = client.NewAvgPreFilter(log)
-			}
+		switch cfg.PreFilterType {
+		case "avg":
+			c.ntpcs[i].PreFilter = client.NewAvgPreFilter(log)
+		}
 
-			if slices.Contains(cfg.AuthModes, authModeNTS) {
-				configureSCIONClientNTS(c.ntpcs[i], ntskeServer, cfg.NTSKEInsecureSkipVerify, cfg.SCIONDaemonAddr, localAddr, remoteAddr, log)
-			}
+		if slices.Contains(cfg.AuthModes, authModeNTS) {
+			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, cfg.NTSKEInsecureSkipVerify, cfg.SCIONDaemonAddr, localAddr, remoteAddr, log)
 		}
 	}
 
-	log.Info("Path Selection", "paths", cfg.ChosenPaths)
 	if cfg.ChosenPaths != nil {
 		c.chosenPaths = cfg.ChosenPaths
 	}
@@ -381,6 +383,7 @@ func syncConfig(cfg svcConfig) sync.Config {
 		PeerClockCutoff:      timemath.Duration(cfg.PeerClockCutoff),
 		SyncTimeout:          timemath.Duration(cfg.SyncTimeout),
 		SyncInterval:         timemath.Duration(cfg.SyncInterval),
+		PI:                   cfg.PI,
 	}
 
 	if syncCfg.ReferenceClockImpact == 0 {
