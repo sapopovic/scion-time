@@ -88,6 +88,7 @@ type svcConfig struct {
 	PeerClockCutoff          float64   `toml:"peer_clock_cutoff,omitempty"`
 	SyncTimeout              float64   `toml:"sync_timeout,omitempty"`
 	SyncInterval             float64   `toml:"sync_interval,omitempty"`
+	PIType                   string    `toml:"pi_type,omitempty"` // pi_linux, pi_fuzzed
 	PI                       []float64 `toml:"pi_values,omitempty"`
 	FilterType               string    `toml:"filter_type,omitempty"` // ntimed, kalman, lpf
 	LuckyPacketConfiguration []int     `toml:"lucky_packet_filter_configuration,omitempty"`
@@ -384,6 +385,7 @@ func syncConfig(cfg svcConfig) sync.Config {
 		SyncTimeout:          timemath.Duration(cfg.SyncTimeout),
 		SyncInterval:         timemath.Duration(cfg.SyncInterval),
 		PI:                   cfg.PI,
+		PIType:               cfg.PIType,
 	}
 
 	if syncCfg.ReferenceClockImpact == 0 {

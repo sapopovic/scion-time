@@ -24,6 +24,7 @@ type Config struct {
 	SyncTimeout          time.Duration
 	SyncInterval         time.Duration
 	PI                   []float64
+	PIType               string
 }
 
 type localReferenceClock struct{}
@@ -71,14 +72,29 @@ func Run(log *slog.Logger, cfg Config,
 		panic("unexpected system clock behavior")
 	}
 
-	adj := &adjustments.PIController{
-		KP:            cfg.PI[0],              // adjustments.PIControllerDefaultPRatio,
-		KI:            cfg.PI[1],              // adjustments.PIControllerDefaultIRatio,
-		StepThreshold: 100 * time.Millisecond, // adjustments.PIControllerDefaultStepThreshold,
+	var adj adjustments.Adjustment
+	switch cfg.PIType {
+	case "pi_fuzzed":
+		adj = &adjustments.FuzzyPIController{
+			KP:            0.1,                    // adjustments.PIControllerDefaultPRatio,
+			KI:            0.05,                   // adjustments.PIControllerDefaultIRatio,
+			StepThreshold: 100 * time.Millisecond, // adjustments.PIControllerDefaultStepThreshold,
+			ReversalLimit: 4,
+			WindowSize:    20,
+		}
+		log.LogAttrs(ctx, slog.LevelDebug, "Clock Settings",
+			slog.String("PI Type", "Activated PI_FUZZED"))
+	default:
+		adj = &adjustments.PIController{
+			KP:            cfg.PI[0],              // adjustments.PIControllerDefaultPRatio,
+			KI:            cfg.PI[1],              // adjustments.PIControllerDefaultIRatio,
+			StepThreshold: 100 * time.Millisecond, // adjustments.PIControllerDefaultStepThreshold,
+		}
+		log.LogAttrs(ctx, slog.LevelDebug, "Clock Settings",
+			slog.String("PI Type", "Activated PI_LINUX"),
+			slog.Float64("P value", cfg.PI[0]),
+			slog.Float64("I value", cfg.PI[1]))
 	}
-	log.LogAttrs(ctx, slog.LevelDebug, "Clock Settings",
-		slog.Float64("P value", adj.KP),
-		slog.Float64("I value", adj.KI))
 
 	var refClkClient client.ReferenceClockClient
 	refClkOffsets := make([]measurements.Measurement, len(refClks))
