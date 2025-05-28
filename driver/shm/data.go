@@ -77,9 +77,9 @@ func initSegment(shm *segment, unit int) error {
 		panic("SHM already initialized")
 	}
 
-	var key int = 0x4e545030 + unit
-	var size int = 96 /* sizeof(struct shmTime) */
-	var flags int = 01000 /* IPC_CREAT */ | 0600
+	key := 0x4e545030 + unit
+	size := 96 /* sizeof(struct shmTime) */
+	flags := 01000 /* IPC_CREAT */ | 0600
 	id, _, errno := unix.Syscall(unix.SYS_SHMGET, uintptr(key), uintptr(size), uintptr(flags))
 	if int(id) < 0 {
 		if int(id) != -1 {

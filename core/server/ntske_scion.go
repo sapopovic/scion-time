@@ -40,7 +40,7 @@ func handleKeyExchangeQUIC(ctx context.Context, log *slog.Logger,
 	if err != nil {
 		return err
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	var data ntske.Data
 	reader := bufio.NewReader(stream)
@@ -85,7 +85,7 @@ func handleKeyExchangeQUIC(ctx context.Context, log *slog.Logger,
 
 func runNTSKEServerQUIC(ctx context.Context, log *slog.Logger,
 	listener *scion.QUICListener, localPort int, provider *ntske.Provider) {
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	for {
 		conn, err := listener.Accept(ctx)
 		if err != nil {
