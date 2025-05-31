@@ -70,7 +70,7 @@ func newSCIONServerMetrics() *scionServerMetrics {
 func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMetrics,
 	conn *net.UDPConn, localHostIface string, localHostPort int, dscp uint8,
 	fetcher *scion.Fetcher, provider *ntske.Provider) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	localConnPort := conn.LocalAddr().(*net.UDPAddr).Port
 

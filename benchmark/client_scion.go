@@ -26,10 +26,8 @@ func RunSCIONBenchmark(
 	daemonAddr string, localAddr, remoteAddr *snet.UDPAddr,
 	authModes []string, ntskeServer string,
 	log *slog.Logger) {
-	// const numClientGoroutine = 8
-	// const numRequestPerClient = 10000
-	const numClientGoroutine = 1
-	const numRequestPerClient = 20_000
+	const numClientGoroutine = 10
+	const numRequestPerClient = 10_000
 
 	ctx := context.Background()
 
@@ -73,9 +71,9 @@ func RunSCIONBenchmark(
 			laddr := udp.UDPAddrFromSnet(localAddr)
 			raddr := udp.UDPAddrFromSnet(remoteAddr)
 			c := &client.SCIONClient{
-				Log:             log,
-				InterleavedMode: true,
-				Histogram:       hg,
+				Log: log,
+				// InterleavedMode: true,
+				Histogram: hg,
 			}
 
 			if slices.Contains(authModes, "spao") {
@@ -107,7 +105,8 @@ func RunSCIONBenchmark(
 			<-sg
 			ntpcs := []*client.SCIONClient{c}
 			for range numRequestPerClient {
-				_, _, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps, nil)
+				ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				_, _, err = client.MeasureClockOffsetSCION(ctx, log, ntpcs, laddr, raddr, ps)
 				if err != nil {
 					log.LogAttrs(ctx, slog.LevelInfo,
 						"failed to measure clock offset",
@@ -115,6 +114,7 @@ func RunSCIONBenchmark(
 						slog.Any("error", err),
 					)
 				}
+				cancel()
 			}
 			mu.Lock()
 			defer mu.Unlock()
@@ -124,5 +124,5 @@ func RunSCIONBenchmark(
 	t0 := time.Now()
 	close(sg)
 	wg.Wait()
-	log.LogAttrs(ctx, slog.LevelInfo, "time elbasped", slog.Duration("duration", time.Since(t0)))
+	log.LogAttrs(ctx, slog.LevelInfo, "time elapsed", slog.Duration("duration", time.Since(t0)))
 }

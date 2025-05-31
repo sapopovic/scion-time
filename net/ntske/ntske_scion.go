@@ -79,7 +79,7 @@ func exchangeDataQUIC(ctx context.Context, log *slog.Logger, conn *scion.QUICCon
 	if err != nil {
 		return err
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	var msg ExchangeMsg
 

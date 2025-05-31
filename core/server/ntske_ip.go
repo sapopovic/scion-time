@@ -32,7 +32,7 @@ func writeNTSKEErrorMsgTLS(ctx context.Context, log *slog.Logger, conn *tls.Conn
 }
 
 func handleKeyExchangeTLS(ctx context.Context, log *slog.Logger, conn *tls.Conn, localPort int, provider *ntske.Provider) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	var err error
 	var data ntske.Data
@@ -76,7 +76,7 @@ func handleKeyExchangeTLS(ctx context.Context, log *slog.Logger, conn *tls.Conn,
 
 func runNTSKEServerTLS(ctx context.Context, log *slog.Logger,
 	listener net.Listener, localPort int, provider *ntske.Provider) {
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	for {
 		conn, err := ntske.AcceptTLSConn(listener)
 		if err != nil {

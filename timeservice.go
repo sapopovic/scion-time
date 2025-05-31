@@ -611,7 +611,6 @@ func runClient(configFile string) {
 
 func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	authModes []string, ntskeServer string, ntskeInsecureSkipVerify, periodic bool) {
-	ctx := context.Background()
 	log := slog.Default()
 
 	lclk := clocks.NewSystemClock(log, clocks.UnknownDrift)
@@ -620,24 +619,29 @@ func runToolIP(localAddr, remoteAddr *snet.UDPAddr, dscp uint8,
 	laddr := localAddr.Host
 	raddr := remoteAddr.Host
 	c := &client.IPClient{
-		Log:             log,
-		DSCP:            dscp,
-		InterleavedMode: true,
+		Log:  log,
+		DSCP: dscp,
+		// InterleavedMode: true,
 	}
 	if slices.Contains(authModes, authModeNTS) {
 		configureIPClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, log)
 	}
 
 	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		ts, off, err := client.MeasureClockOffsetIP(ctx, log, c, laddr, raddr)
 		if err != nil {
-			logbase.Fatal(slog.Default(), "failed to measure clock offset", slog.Any("remote", raddr), slog.Any("error", err))
+			log.LogAttrs(ctx, slog.LevelInfo, "failed to measure clock offset",
+				slog.Any("remote", raddr), slog.Any("error", err))
 		}
+		cancel()
 		if !periodic {
 			break
 		}
-		fmt.Printf("%s,%+.9f,%t\n", ts.UTC().Format(time.RFC3339), off.Seconds(), c.InInterleavedMode())
-		lclk.Sleep(1 * time.Second)
+		if err == nil {
+			fmt.Printf("%s,%+.9f,%t\n", ts.UTC().Format(time.RFC3339), off.Seconds(), c.InInterleavedMode())
+		}
+		lclk.Sleep(8 * time.Second)
 	}
 }
 

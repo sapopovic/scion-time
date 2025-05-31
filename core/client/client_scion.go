@@ -149,7 +149,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		return time.Time{}, 0, err
 	}
 	conn := pconn.(*net.UDPConn)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	deadline, deadlineIsSet := ctx.Deadline()
 	if deadlineIsSet {
 		err = conn.SetDeadline(deadline)
