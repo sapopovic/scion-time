@@ -46,10 +46,11 @@ type SCIONClient struct {
 		mac          []byte
 		NTSKEFetcher ntske.Fetcher
 	}
-	Filter    measurements.Filter
-	PreFilter measurements.PreFilter
-	Histogram *hdrhistogram.Histogram
-	prev      struct {
+	Filter          measurements.Filter
+	PreFilter       measurements.PreFilter
+	Histogram       *hdrhistogram.Histogram
+	SelectionMethod string
+	prev            struct {
 		reference   string
 		path        string
 		interleaved bool

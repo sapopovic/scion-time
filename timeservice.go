@@ -94,6 +94,7 @@ type svcConfig struct {
 	LuckyPacketConfiguration []int     `toml:"lucky_packet_filter_configuration,omitempty"`
 	PreFilterType            string    `toml:"pre_filter_type,omitempty"` // avg
 	ChosenPaths              []string  `toml:"specified_paths,omitempty"`
+	SelectionMethod          string    `toml:"selection_method,omitempty"` // average, midpoint, median
 }
 
 type ntpReferenceClockIP struct {
@@ -104,12 +105,13 @@ type ntpReferenceClockIP struct {
 }
 
 type ntpReferenceClockSCION struct {
-	log         *slog.Logger
-	ntpcs       [scionRefClockNumClient]*client.SCIONClient
-	localAddr   udp.UDPAddr
-	remoteAddr  udp.UDPAddr
-	pather      *scion.Pather
-	chosenPaths []string
+	log             *slog.Logger
+	ntpcs           [scionRefClockNumClient]*client.SCIONClient
+	localAddr       udp.UDPAddr
+	remoteAddr      udp.UDPAddr
+	pather          *scion.Pather
+	chosenPaths     []string
+	selectionMethod string
 }
 
 type tlsCertCache struct {
@@ -268,6 +270,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 	log.Info("Filter Selection", "filter", cfg.FilterType)
 	log.Info("Pre Filter Selection", "prefilter", cfg.PreFilterType)
 	log.Info("Path Selection", "paths", cfg.ChosenPaths)
+	log.Info("Offset Selection", "selection method", cfg.SelectionMethod)
 
 	for i := range len(c.ntpcs) {
 		c.ntpcs[i] = &client.SCIONClient{
@@ -299,6 +302,14 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 	if cfg.ChosenPaths != nil {
 		c.chosenPaths = cfg.ChosenPaths
 	}
+
+	switch cfg.SelectionMethod {
+	case "median":
+		c.selectionMethod = "median"
+	default:
+		c.selectionMethod = "midpoint"
+	}
+
 	return c
 }
 
@@ -315,7 +326,7 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	} else {
 		ps = c.pather.Paths(c.remoteAddr.IA)
 	}
-	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths)
+	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
 }
 
 func loadConfig(configFile string) svcConfig {
@@ -698,7 +709,7 @@ func runToolSCION(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 		configureSCIONClientNTS(c, ntskeServer, ntskeInsecureSkipVerify, daemonAddr, laddr, raddr, log)
 	}
 
-	_, _, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps, nil) // nil since new chosen paths available
+	_, _, err = client.MeasureClockOffsetSCION(ctx, log, []*client.SCIONClient{c}, laddr, raddr, ps, nil, "") // nil since new chosen paths available
 	if err != nil {
 		logbase.Fatal(slog.Default(), "failed to measure clock offset",
 			slog.Any("remote", remoteAddr),

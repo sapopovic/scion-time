@@ -52,3 +52,12 @@ func FaultTolerantMidpoint(ms []Measurement) Measurement {
 	f := (n - 1) / 3
 	return midpoint(ms[f], ms[n-1-f])
 }
+
+func SelectMethod(ms []Measurement, method string) Measurement {
+	switch method {
+	case "median":
+		return Median(ms)
+	default:
+		return FaultTolerantMidpoint(ms)
+	}
+}

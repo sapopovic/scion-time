@@ -102,7 +102,7 @@ loop:
 }
 
 func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
-	ntpcs []*SCIONClient, localAddr, remoteAddr udp.UDPAddr, ps []snet.Path, chosenPaths []string) (
+	ntpcs []*SCIONClient, localAddr, remoteAddr udp.UDPAddr, ps []snet.Path, chosenPaths []string, selectionMethod string) (
 	time.Time, time.Duration, error) {
 	mtrcs := scionMetrics.Load()
 
@@ -208,7 +208,8 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 		}(ctx, log, mtrcs, ntpcs[i], localAddr, remoteAddr, sps[i])
 	}
 	collectMeasurements(ctx, ms, msc)
-	m := measurements.FaultTolerantMidpoint(ms)
+	log.LogAttrs(ctx, slog.LevelInfo, "Merge offsets with the following", slog.Any("selection method", selectionMethod))
+	m := measurements.SelectMethod(ms, selectionMethod)
 	return m.Timestamp, m.Offset, m.Error
 }
 
