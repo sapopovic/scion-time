@@ -15,7 +15,7 @@ type KalmanFilter struct {
 	Cov           [2][2]float64
 	LastUpdate    time.Time
 	StartTime     time.Time
-	Wander        float64 // frequency wander (process noise)
+	Wander        float64 // frequency wander (process noise) Q
 	R             float64 // measurement noise
 	WarmupOffsets []float64
 	Initialized   bool
