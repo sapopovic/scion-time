@@ -1,0 +1,5 @@
+local_address = "64-2:0:9,192.33.93.151:0"
+scion_daemon_address = "127.0.0.1:30255"
+ntp_reference_clocks = ["71-1140,[2a00:d78:0:713:5054:ff:fe09:8976]:10123"]
+filter_type = "ntimed"
+pi_values=[0.2, 0.05]

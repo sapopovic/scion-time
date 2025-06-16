@@ -13,6 +13,8 @@ import (
 
 const pathRefreshPeriod = 15 * time.Second
 
+var DC daemon.Connector
+
 type Pather struct {
 	log     *slog.Logger
 	mu      sync.Mutex
@@ -34,6 +36,32 @@ func (p *Pather) Paths(dst addr.IA) []snet.Path {
 		return nil
 	}
 	return append(make([]snet.Path, 0, len(paths)), paths...)
+}
+
+func (p *Pather) GetPathsToDest(ctx context.Context, dc daemon.Connector, dstIA addr.IA) ([]snet.Path, error) {
+	localIA, err := dc.LocalIA(ctx)
+	if err != nil {
+		p.log.LogAttrs(ctx, slog.LevelInfo,
+			"failed to look up local IA", slog.Any("error", err))
+		return []snet.Path{}, err
+	}
+
+	paths := []snet.Path{}
+	if dstIA.IsWildcard() {
+		panic("unexpected destination IA: wildcard.")
+	}
+	ps, err := DC.Paths(ctx, dstIA, localIA, daemon.PathReqFlags{Refresh: true})
+	if err != nil {
+		p.log.LogAttrs(ctx, slog.LevelInfo,
+			"failed to look up paths", slog.Any("to", dstIA), slog.Any("error", err))
+	}
+	paths = append(paths, ps...)
+
+	// p.mu.Lock()
+	// p.localIA = localIA
+	return paths, nil
+	// p.mu.Unlock()
+
 }
 
 func update(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.IA) {
@@ -66,6 +94,7 @@ func update(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.I
 func StartPather(ctx context.Context, log *slog.Logger, daemonAddr string, dstIAs []addr.IA) *Pather {
 	p := &Pather{log: log}
 	dc := NewDaemonConnector(ctx, daemonAddr)
+	DC = dc
 	update(ctx, p, dc, dstIAs)
 	go func(ctx context.Context, p *Pather, dc daemon.Connector, dstIAs []addr.IA) {
 		ticker := time.NewTicker(pathRefreshPeriod)

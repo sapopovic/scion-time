@@ -316,6 +316,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
 	var ps []snet.Path
+	log := slog.Default()
 	if c.remoteAddr.IA == c.localAddr.IA {
 		ps = []snet.Path{path.Path{
 			Src:           c.localAddr.IA,
@@ -324,6 +325,12 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 			NextHop:       c.remoteAddr.Host,
 		}}
 	} else {
+		s := "71-20965"
+		address, err := addr.ParseIA(s)
+		log.Debug("Address formating", slog.Any("error", err))
+		// ps_temp := c.pather.Paths(address)
+		ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
+		log.Debug("printing paths", slog.Any("#paths", ps_temp))
 		ps = c.pather.Paths(c.remoteAddr.IA)
 	}
 	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
