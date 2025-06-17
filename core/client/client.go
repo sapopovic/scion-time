@@ -329,15 +329,18 @@ func greedyDisjointPathSelection(paths []snet.Path, nbOfPaths int, k int) []snet
 	for len(selected) < k {
 		var nextBest snet.Path
 		bestScore := math.MinInt
+		bestHopCount := math.MaxInt
 		for _, candidate := range paths {
 			if alreadySelected(candidate, selected) {
 				continue
 			}
 
 			score := disjointnessScore(candidate, usedInterfaces)
-			if score > bestScore {
+			hopCount := len(candidate.Metadata().Interfaces)
+			if score > bestScore || (score == bestScore && hopCount < bestHopCount) { // second part is about prefering paths that are shorter
 				nextBest = candidate
 				bestScore = score
+				bestHopCount = hopCount
 			}
 		}
 
