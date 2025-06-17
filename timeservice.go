@@ -343,9 +343,15 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 			ps_temp_selected := client.ChooseNewPaths(ps_temp, 25) //[]snet.Path
 			//log.Debug("printing selected paths", slog.Any("paths", ps_temp_selected))
 			log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
+
+			// find the best performing 5
+
 		}
 
 		ps = c.pather.Paths(c.remoteAddr.IA)
+		rtt, e := client.Ping(ctx, c.localAddr, c.remoteAddr, ps[0])
+		log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("RTT", rtt))
+		log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("ERROR", e))
 	}
 	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
 }
