@@ -13,6 +13,7 @@ import (
 	"example.com/scion-time/base/crypto"
 
 	"example.com/scion-time/core/measurements"
+	"example.com/scion-time/core/timebase"
 
 	"example.com/scion-time/net/udp"
 )
@@ -91,6 +92,11 @@ loop:
 		case <-ctx.Done():
 			break loop
 		}
+	}
+	ts := timebase.Now()
+	for j != len(ms) {
+		ms[j] = measurements.Measurement{Timestamp: ts}
+		j++
 	}
 	go func(n int) { // drain channel
 		for n != 0 {
