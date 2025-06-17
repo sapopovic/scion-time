@@ -2,9 +2,12 @@ package client
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
+	"math/big"
 	"net"
 	"sync/atomic"
 	"time"
@@ -246,7 +249,7 @@ func (picker *PathPicker) getPaths() []snet.Path {
 	return paths
 }
 
-func ChooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
+func ChooseNewPaths_notscalable(availablePaths []snet.Path, numPaths int) []snet.Path {
 	// Because this path selection takes too long when many paths are available
 	// (tens of seconds), we run it with a timeout and fall back to using the
 	// first few paths if it takes too long.
@@ -282,6 +285,136 @@ func ChooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
 	case <-ch:
 		return computedPathSet
 	}
+}
+
+func ChooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
+	ch := make(chan int, 1)
+	timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var computedPathSet []snet.Path
+
+	go func() {
+		computedPathSet = greedyDisjointPathSelection(availablePaths, len(availablePaths), numPaths)
+		ch <- 1
+	}()
+
+	log := slog.Default()
+	select {
+	case <-timeout.Done():
+		log.Warn(fmt.Sprintf("Path selection took too long! Using first few paths"))
+		return availablePaths[:min(len(availablePaths), numPaths)]
+	case <-ch:
+		return computedPathSet
+	}
+}
+
+func greedyDisjointPathSelection(paths []snet.Path, nbOfPaths int, k int) []snet.Path {
+	if len(paths) <= k {
+		return paths
+	}
+
+	selected := []snet.Path{}
+	usedInterfaces := map[snet.PathInterface]int{}
+
+	// Step 1: Start with a RANDOM path
+	startIdx := secureRandomIndex(len(paths)) // Starting with a random path
+	best := paths[startIdx]
+	selected = append(selected, best)
+	for _, iface := range best.Metadata().Interfaces {
+		usedInterfaces[iface]++
+	}
+
+	// Step 2: Greedily add most disjoint paths
+	for len(selected) < k {
+		var nextBest snet.Path
+		bestScore := math.MinInt
+		for _, candidate := range paths {
+			if alreadySelected(candidate, selected) {
+				continue
+			}
+
+			score := disjointnessScore(candidate, usedInterfaces)
+			if score > bestScore {
+				nextBest = candidate
+				bestScore = score
+			}
+		}
+
+		if nextBest != nil {
+			selected = append(selected, nextBest)
+			for _, iface := range nextBest.Metadata().Interfaces {
+				usedInterfaces[iface]++
+			}
+		} else {
+			break
+		}
+
+	}
+
+	// Step 3: Fill up to k paths using remaining unused paths
+	/*for len(selected) < k {
+		var nextBest snet.Path
+		bestScore := math.MinInt
+		for _, candidate := range paths {
+			if alreadySelected(candidate, selected) {
+				continue
+			}
+			score := disjointnessScore(candidate, usedInterfaces)
+			if score > bestScore {
+				bestScore = score
+				nextBest = candidate
+			}
+		}
+		if nextBest != nil {
+			selected = append(selected, nextBest)
+			for _, iface := range nextBest.Metadata().Interfaces {
+				usedInterfaces[iface]++
+			}
+		} else {
+			break // nothing left
+		}
+	}*/
+
+	return selected
+}
+
+func secureRandomIndex(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	max := big.NewInt(int64(n))
+	i, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0
+	}
+	return int(i.Int64())
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func alreadySelected(p snet.Path, selected []snet.Path) bool {
+	for _, s := range selected {
+		if snet.Fingerprint(s) == snet.Fingerprint(p) {
+			return true
+		}
+	}
+	return false
+}
+
+func disjointnessScore(p snet.Path, used map[snet.PathInterface]int) int {
+	score := 0
+	for _, iface := range p.Metadata().Interfaces {
+		score -= used[iface]
+	}
+	// Zero score = fully disjoint.
+	// Negative score = many shared interfaces.
+	return score
 }
 
 func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
