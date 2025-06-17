@@ -105,13 +105,15 @@ type ntpReferenceClockIP struct {
 }
 
 type ntpReferenceClockSCION struct {
-	log             *slog.Logger
-	ntpcs           [scionRefClockNumClient]*client.SCIONClient
-	localAddr       udp.UDPAddr
-	remoteAddr      udp.UDPAddr
-	pather          *scion.Pather
-	chosenPaths     []string
-	selectionMethod string
+	log               *slog.Logger
+	ntpcs             [scionRefClockNumClient]*client.SCIONClient
+	localAddr         udp.UDPAddr
+	remoteAddr        udp.UDPAddr
+	pather            *scion.Pather
+	chosenPaths       []string
+	selectionMethod   string
+	lastSelection     time.Time
+	selectionInterval time.Duration
 }
 
 type tlsCertCache struct {
@@ -261,9 +263,10 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 
 func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
-		log:        log,
-		localAddr:  localAddr,
-		remoteAddr: remoteAddr,
+		log:               log,
+		localAddr:         localAddr,
+		remoteAddr:        remoteAddr,
+		selectionInterval: time.Hour,
 	}
 
 	log.Info("----Configuration Details----")
@@ -325,12 +328,23 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 			NextHop:       c.remoteAddr.Host,
 		}}
 	} else {
-		s := "71-20965"
-		address, err := addr.ParseIA(s)
-		log.Debug("Address formating", slog.Any("error", err))
-		// ps_temp := c.pather.Paths(address)
-		ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
-		log.Debug("printing paths", slog.Any("#paths", ps_temp))
+		if c.lastSelection.IsZero() || time.Since(c.lastSelection) >= c.selectionInterval {
+			c.lastSelection = time.Now()
+
+			// s := "71-20965" // Geant
+			s := "67-401500" // north america
+			address, _ := addr.ParseIA(s)
+			// log.Debug("Address formating", slog.Any("error", err))
+			// ps_temp := c.pather.Paths(address)
+			ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
+			// ps_temp = ps_temp[:10]
+			//log.Debug("printing paths", slog.Any("paths", ps_temp))
+			log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
+			ps_temp_selected := client.ChooseNewPaths(ps_temp, 25) //[]snet.Path
+			//log.Debug("printing selected paths", slog.Any("paths", ps_temp_selected))
+			log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
+		}
+
 		ps = c.pather.Paths(c.remoteAddr.IA)
 	}
 	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)

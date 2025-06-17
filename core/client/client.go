@@ -3,11 +3,13 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"sync/atomic"
 	"time"
 
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/snet"
 
 	"example.com/scion-time/base/crypto"
@@ -99,6 +101,187 @@ loop:
 		}
 	}(n - i)
 	return j
+}
+
+type PathPickDescriptor struct {
+	ruleIndex int
+	pathIndex int
+}
+
+type PathPicker struct {
+	pathSpec        *[]PathSpec
+	availablePaths  []snet.Path
+	currentPathPick []PathPickDescriptor
+}
+
+type PathInterface struct {
+	ia   addr.IA
+	ifId uint64
+}
+
+func (iface *PathInterface) ID() uint64 {
+	return iface.ifId
+}
+
+func (iface *PathInterface) IA() addr.IA {
+	return iface.ia
+}
+
+type PathSpec []PathInterface
+
+type AppPathSet map[snet.PathFingerprint]snet.Path
+
+func makePathPicker(pathSet []snet.Path, numPaths int) *PathPicker {
+	paths := make([]snet.Path, 0, len(pathSet))
+	for _, path := range pathSet {
+		paths = append(paths, path)
+	}
+	picker := &PathPicker{
+		availablePaths: paths,
+	}
+	picker.reset(numPaths)
+	return picker
+}
+
+func (picker *PathPicker) reset(numPaths int) {
+	descriptor := make([]PathPickDescriptor, numPaths)
+	for i := range descriptor {
+		descriptor[i].ruleIndex = -1
+		descriptor[i].pathIndex = -1
+	}
+	picker.currentPathPick = descriptor
+}
+
+func (picker *PathPicker) disjointnessScore() int {
+	interfaces := map[snet.PathInterface]int{}
+	score := 0
+	for _, pick := range picker.currentPathPick {
+		for _, path := range picker.availablePaths[pick.pathIndex].Metadata().Interfaces {
+			score -= interfaces[path]
+			interfaces[path]++
+		}
+	}
+	return score
+}
+
+func (picker *PathPicker) nextPick() bool {
+	return picker.nextPickIterate(len(picker.currentPathPick) - 1)
+}
+
+func (picker *PathPicker) nextPickIterate(idx int) bool {
+	if idx > 0 && picker.currentPathPick[idx-1].pathIndex == -1 {
+		if !picker.nextPickIterate(idx - 1) {
+			return false
+		}
+	}
+	for true {
+		for pathIdx := picker.currentPathPick[idx].pathIndex + 1; pathIdx < len(picker.availablePaths); pathIdx++ {
+			if !picker.isInUse(pathIdx, idx) && picker.matches(pathIdx, picker.currentPathPick[idx].ruleIndex) {
+				picker.currentPathPick[idx].pathIndex = pathIdx
+				return true
+			}
+		}
+		// overflow
+		if idx > 0 {
+			picker.currentPathPick[idx].pathIndex = -1
+			if !picker.nextPickIterate(idx - 1) {
+				return false
+			}
+		} else {
+			break // cannot overflow, abort
+		}
+	}
+	return false
+}
+
+func (iface *PathInterface) match(pathIface snet.PathInterface) bool {
+	if iface.ifId == 0 {
+		return iface.IA() == pathIface.IA
+	}
+	return iface.ID() == uint64(pathIface.ID) && iface.IA() == pathIface.IA
+}
+
+func (picker *PathPicker) matches(pathIdx, ruleIdx int) bool {
+	return true
+}
+
+func (picker *PathPicker) isInUse(pathIdx, idx int) bool {
+	for i, pick := range picker.currentPathPick {
+		if i > idx {
+			return false
+		}
+		if pick.pathIndex == pathIdx {
+			return true
+		}
+	}
+	return false
+}
+
+func (picker *PathPicker) nextRuleSet() bool {
+	if picker.currentPathPick[0].ruleIndex == -1 {
+		for i := range picker.currentPathPick {
+			picker.currentPathPick[i].ruleIndex = 0
+			picker.currentPathPick[i].pathIndex = -1
+		}
+		return true
+	}
+	return false
+}
+
+func (picker *PathPicker) maxRuleIdx() int {
+	// rule indices are sorted ascending
+	for idx := len(picker.currentPathPick) - 1; idx >= 0; idx++ {
+		if picker.currentPathPick[idx].ruleIndex != -1 {
+			return picker.currentPathPick[idx].ruleIndex
+		}
+	}
+	return -1
+}
+
+func (picker *PathPicker) getPaths() []snet.Path {
+	paths := make([]snet.Path, 0, len(picker.currentPathPick))
+	for _, pick := range picker.currentPathPick {
+		paths = append(paths, picker.availablePaths[pick.pathIndex])
+	}
+	return paths
+}
+
+func ChooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
+	// Because this path selection takes too long when many paths are available
+	// (tens of seconds), we run it with a timeout and fall back to using the
+	// first few paths if it takes too long.
+	ch := make(chan int, 1)
+	timeout, cancel := context.WithTimeout(context.Background(), 55*time.Minute)
+	defer cancel()
+
+	var computedPathSet []snet.Path
+	go func() { // pick paths
+		picker := makePathPicker(availablePaths, numPaths)
+		disjointness := 0 // negative number denoting how many network interfaces are shared among paths (to be maximized)
+		for i := numPaths; i > 0; i-- {
+			picker.reset(i)
+			for picker.nextPick() { // iterate through different choices of paths obeying the rules of the current set of PathSpecs
+				curDisjointness := picker.disjointnessScore()
+				if computedPathSet == nil || disjointness < curDisjointness { // maximize disjointness
+					disjointness = curDisjointness
+					computedPathSet = picker.getPaths()
+				}
+			}
+			if computedPathSet != nil { // if no path set of size i found, try with i-1
+				break
+			}
+		}
+		ch <- 1
+	}()
+
+	log := slog.Default()
+	select {
+	case <-timeout.Done():
+		log.Warn(fmt.Sprintf("Path selection took too long! Using first few paths"))
+		return availablePaths[:min(len(availablePaths), numPaths)]
+	case <-ch:
+		return computedPathSet
+	}
 }
 
 func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
