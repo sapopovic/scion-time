@@ -357,12 +357,12 @@ func dialUDP(ctx context.Context, localAddr, remoteAddr udp.UDPAddr, path snet.P
 }
 
 type QUICConnection struct {
-	quic.Connection
+	*quic.Conn
 	net.PacketConn
 }
 
 func (c *QUICConnection) CloseWithError(code quic.ApplicationErrorCode, desc string) error {
-	err := c.Connection.CloseWithError(code, desc)
+	err := c.Conn.CloseWithError(code, desc)
 	_ = c.PacketConn.Close()
 	return err
 }
