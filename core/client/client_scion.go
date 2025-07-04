@@ -328,7 +328,9 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 	}
 	buffer.PushLayer(scionLayer.LayerType())
 
-	n, err := conn.WriteToUDPAddrPort(buffer.Bytes(), nextHop)
+	m, err := conn.WriteToUDPAddrPort(buffer.Bytes(), nextHop)
+	n := m
+
 	if err != nil {
 		return time.Time{}, 0, err
 	}
@@ -352,6 +354,8 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
+		len_temp := len(path.Metadata().Interfaces)
+		c.Log.LogAttrs(ctx, slog.LevelDebug, "Final Packet Size", slog.Any("OUTGOING #bytes", m), slog.Any("INCOMING #bytes", n), slog.Any("#hops", len_temp), slog.Any("via", snet.Fingerprint(path).String()))
 		if err != nil {
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet", slog.Any("error", err))

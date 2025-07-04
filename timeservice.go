@@ -319,7 +319,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
 	var ps []snet.Path
-	log := slog.Default()
+	//log := slog.Default()
 	if c.remoteAddr.IA == c.localAddr.IA {
 		ps = []snet.Path{path.Path{
 			Src:           c.localAddr.IA,
@@ -328,30 +328,31 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 			NextHop:       c.remoteAddr.Host,
 		}}
 	} else {
-		if c.lastSelection.IsZero() || time.Since(c.lastSelection) >= c.selectionInterval {
-			c.lastSelection = time.Now()
+		/*
+			if c.lastSelection.IsZero() || time.Since(c.lastSelection) >= c.selectionInterval {
+				c.lastSelection = time.Now()
 
-			// s := "71-20965" // Geant
-			s := "67-401500" // north america
-			address, _ := addr.ParseIA(s)
-			// log.Debug("Address formating", slog.Any("error", err))
-			// ps_temp := c.pather.Paths(address)
-			ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
-			// ps_temp = ps_temp[:10]
-			//log.Debug("printing paths", slog.Any("paths", ps_temp))
-			log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
-			ps_temp_selected := client.ChooseNewPaths(ps_temp, 25) //[]snet.Path
-			//log.Debug("printing selected paths", slog.Any("paths", ps_temp_selected))
-			log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
+				// s := "71-20965" // Geant
+				s := "67-401500" // north america
+				address, _ := addr.ParseIA(s)
+				// log.Debug("Address formating", slog.Any("error", err))
+				// ps_temp := c.pather.Paths(address)
+				ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
+				// ps_temp = ps_temp[:10]
+				//log.Debug("printing paths", slog.Any("paths", ps_temp))
+				log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
+				ps_temp_selected := client.ChooseNewPaths(ps_temp, 25) //[]snet.Path
+				//log.Debug("printing selected paths", slog.Any("paths", ps_temp_selected))
+				log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
 
-			// find the best performing 5
+				// find the best performing 5
 
-		}
+			}*/
 
 		ps = c.pather.Paths(c.remoteAddr.IA)
-		rtt, e := client.Ping(ctx, c.localAddr, c.remoteAddr, ps[0])
-		log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("RTT", rtt))
-		log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("ERROR", e))
+		// rtt, e := client.Ping(ctx, c.localAddr, c.remoteAddr, ps[0])
+		// log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("RTT", rtt))
+		// log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("ERROR", e))
 	}
 	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
 }
