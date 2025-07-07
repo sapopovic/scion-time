@@ -267,6 +267,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 		localAddr:         localAddr,
 		remoteAddr:        remoteAddr,
 		selectionInterval: time.Hour,
+		lastSelection:     time.Time{},
 	}
 
 	log.Info("----Configuration Details----")
@@ -319,7 +320,6 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
 	var ps []snet.Path
-	//log := slog.Default()
 	if c.remoteAddr.IA == c.localAddr.IA {
 		ps = []snet.Path{path.Path{
 			Src:           c.localAddr.IA,
@@ -328,32 +328,49 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 			NextHop:       c.remoteAddr.Host,
 		}}
 	} else {
-		/*
-			if c.lastSelection.IsZero() || time.Since(c.lastSelection) >= c.selectionInterval {
-				c.lastSelection = time.Now()
+		cap := 7
+		k := 20
 
-				// s := "71-20965" // Geant
-				s := "67-401500" // north america
-				address, _ := addr.ParseIA(s)
-				// log.Debug("Address formating", slog.Any("error", err))
-				// ps_temp := c.pather.Paths(address)
-				ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
-				// ps_temp = ps_temp[:10]
-				//log.Debug("printing paths", slog.Any("paths", ps_temp))
-				log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
-				ps_temp_selected := client.ChooseNewPaths(ps_temp, 25) //[]snet.Path
-				//log.Debug("printing selected paths", slog.Any("paths", ps_temp_selected))
-				log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
+		if c.lastSelection.IsZero() || time.Since(c.lastSelection) >= c.selectionInterval {
+			c.lastSelection = time.Now()
+			file, _ := os.Create("output.txt") // overwrites if file exists
+			defer file.Close()
 
-				// find the best performing 5
+			c.log.LogAttrs(ctx, slog.LevelDebug, "STATIC SELECTION",
+				slog.Any("------", "------"))
+			// s := "71-20965" // Geant
+			s := "67-401500" // north america
+			address, _ := addr.ParseIA(s)
+			// log.Debug("Address formating", slog.Any("error", err))
+			ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
+			for i, path := range ps_temp {
+				fmt.Fprintf(file, "Path %d: %d\n", i+1, len(path.Metadata().Interfaces))
+			}
 
-			}*/
+			c.log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
+			ps_temp_selected := client.ChooseNewPaths(ps_temp, k) //[]snet.Path
+			for i, path := range ps_temp_selected {
+				fmt.Fprintf(file, "Path %d: %d\n", i+1, len(path.Metadata().Interfaces))
+			}
+			for i, path := range ps_temp_selected {
+				fmt.Fprintf(file, "Path %d: %s\n", i+1, path.Metadata().Interfaces)
+			}
+			c.log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
 
+			// find the best cap performing
+			initPaths := client.PickRandom(ps_temp_selected, cap)
+			for i, path := range initPaths {
+				fmt.Fprintf(file, "Path %d: %s\n", i+1, path.Metadata().Interfaces)
+			}
+		}
+
+		// NTP
 		ps = c.pather.Paths(c.remoteAddr.IA)
 		// rtt, e := client.Ping(ctx, c.localAddr, c.remoteAddr, ps[0])
 		// log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("RTT", rtt))
 		// log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("ERROR", e))
 	}
+	// NTP
 	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
 }
 

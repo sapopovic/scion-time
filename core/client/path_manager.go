@@ -21,7 +21,7 @@ import (
 
 func ChooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
 	ch := make(chan int, 1)
-	timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	timeout, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	var computedPathSet []snet.Path
@@ -42,16 +42,27 @@ func ChooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
 }
 
 func greedyDisjointPathSelection(paths []snet.Path, nbOfPaths int, k int) []snet.Path {
-	if len(paths) <= k {
+	if len(paths) <= k || len(paths) == 0 {
 		return paths
 	}
 
 	selected := []snet.Path{}
 	usedInterfaces := map[snet.PathInterface]int{}
 
-	// Step 1: Start with a RANDOM path
-	startIdx := secureRandomIndex(len(paths)) // Starting with a random path
-	best := paths[startIdx]
+	// Step 1: Pick initial path
+	shortestLength := len(paths[0].Metadata().Interfaces)
+	for _, p := range paths[1:] {
+		if len(p.Metadata().Interfaces) < shortestLength {
+			shortestLength = len(p.Metadata().Interfaces)
+		}
+	}
+	shortestPaths := []snet.Path{}
+	for _, p := range paths {
+		if len(p.Metadata().Interfaces) == shortestLength {
+			shortestPaths = append(shortestPaths, p)
+		}
+	}
+	best := shortestPaths[secureRandomIndex(len(shortestPaths))]
 	selected = append(selected, best)
 	for _, iface := range best.Metadata().Interfaces {
 		usedInterfaces[iface]++
@@ -86,30 +97,6 @@ func greedyDisjointPathSelection(paths []snet.Path, nbOfPaths int, k int) []snet
 		}
 
 	}
-
-	// Step 3: Fill up to k paths using remaining unused paths
-	/*for len(selected) < k {
-		var nextBest snet.Path
-		bestScore := math.MinInt
-		for _, candidate := range paths {
-			if alreadySelected(candidate, selected) {
-				continue
-			}
-			score := disjointnessScore(candidate, usedInterfaces)
-			if score > bestScore {
-				bestScore = score
-				nextBest = candidate
-			}
-		}
-		if nextBest != nil {
-			selected = append(selected, nextBest)
-			for _, iface := range nextBest.Metadata().Interfaces {
-				usedInterfaces[iface]++
-			}
-		} else {
-			break // nothing left
-		}
-	}*/
 
 	return selected
 }
@@ -150,6 +137,122 @@ func disjointnessScore(p snet.Path, used map[snet.PathInterface]int) int {
 	// Zero score = fully disjoint.
 	// Negative score = many shared interfaces.
 	return score
+}
+
+func combinedScore(p snet.Path, used map[snet.PathInterface]int, S []snet.Path, N []snet.Path) float64 {
+	scoreDis := 0
+	for _, iface := range p.Metadata().Interfaces {
+		scoreDis -= used[iface]
+	}
+
+	sizeOfS := len(S)
+	if sizeOfS == 0 || len(p.Metadata().Interfaces) == 0 {
+		return 0 // avoid division by zero
+	}
+	normalizedOverlap := float64(scoreDis) / float64(len(p.Metadata().Interfaces)*sizeOfS)
+
+	// Compute normalizedLen
+	remainingPaths := removePaths(S, N) // N \ S
+	if len(remainingPaths) == 0 {
+		return normalizedOverlap // fallback score
+	}
+
+	shortestLen := float64(findShortestPath(remainingPaths))
+	longestLen := float64(findLongestPath(remainingPaths))
+
+	currLen := float64(len(p.Metadata().Interfaces))
+
+	var normalizedLen float64
+	if longestLen != shortestLen {
+		normalizedLen = (currLen - shortestLen) / (longestLen - shortestLen)
+	} else {
+		normalizedLen = 0 // avoid division by zero if all lengths are equal
+	}
+
+	alpha := 0.5
+	beta := 0.5
+	score := alpha*normalizedLen + beta*normalizedOverlap
+
+	return score
+}
+
+func removePaths(A, B []snet.Path) []snet.Path { // N\S
+	// Collect fingerprints of paths in A
+	aFingerprints := []string{}
+	for _, a := range A {
+		aFingerprints = append(aFingerprints, snet.Fingerprint(a).String())
+	}
+
+	// Filter B to exclude paths that are in A
+	result := []snet.Path{}
+	for _, b := range B {
+		found := false
+		for _, fp := range aFingerprints {
+			if snet.Fingerprint(b).String() == fp {
+				found = true
+				break
+			}
+		}
+		if !found {
+			result = append(result, b)
+		}
+	}
+
+	return result
+}
+
+func findShortestPath(paths []snet.Path) int {
+	if len(paths) == 0 {
+		return 0 // No paths, return zero value and false
+	}
+
+	// catch if len(paths) == 1!
+
+	shortestLength := len(paths[0].Metadata().Interfaces)
+	for _, p := range paths[1:] {
+		if len(p.Metadata().Interfaces) < shortestLength {
+			shortestLength = len(p.Metadata().Interfaces)
+		}
+	}
+	return shortestLength
+}
+
+func findLongestPath(paths []snet.Path) int {
+	if len(paths) == 0 {
+		return 0 // No paths, return zero value and false
+	}
+
+	// catch if len(paths) == 1!
+
+	longestLength := len(paths[0].Metadata().Interfaces)
+	for _, p := range paths[1:] {
+		if len(p.Metadata().Interfaces) > longestLength {
+			longestLength = len(p.Metadata().Interfaces)
+		}
+	}
+	return longestLength
+}
+
+func PickRandom(paths []snet.Path, cap int) []snet.Path {
+	if cap >= len(paths) {
+		return paths
+	}
+
+	remaining := make([]snet.Path, len(paths))
+	copy(remaining, paths)
+
+	selected := make([]snet.Path, 0, cap)
+
+	for i := 0; i < cap; i++ {
+		idx := secureRandomIndex(len(remaining))
+		selected = append(selected, remaining[idx])
+
+		// Remove the selected path from remaining (to avoid duplicates)
+		remaining = append(remaining[:idx], remaining[idx+1:]...)
+	}
+
+	return selected
+
 }
 
 // -------------------network----------------------------
