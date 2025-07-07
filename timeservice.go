@@ -105,15 +105,15 @@ type ntpReferenceClockIP struct {
 }
 
 type ntpReferenceClockSCION struct {
-	log               *slog.Logger
-	ntpcs             [scionRefClockNumClient]*client.SCIONClient
-	localAddr         udp.UDPAddr
-	remoteAddr        udp.UDPAddr
-	pather            *scion.Pather
-	chosenPaths       []string
-	selectionMethod   string
-	lastSelection     time.Time
-	selectionInterval time.Duration
+	log        *slog.Logger
+	ntpcs      [scionRefClockNumClient]*client.SCIONClient
+	localAddr  udp.UDPAddr
+	remoteAddr udp.UDPAddr
+	// pather          *scion.Pather
+	chosenPaths     []string
+	selectionMethod string
+	pathManager     *client.PathManager
+	resetChan       chan struct{}
 }
 
 type tlsCertCache struct {
@@ -262,12 +262,19 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 }
 
 func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig) *ntpReferenceClockSCION {
+	pM := &client.PathManager{
+		StaticSelectionInterval:  24 * time.Hour,
+		StaticLastSelection:      time.Time{},
+		DynamicSelectionInterval: time.Hour,
+		DynamicLastSelection:     time.Time{},
+		WarmupPhase:              5 * time.Minute,
+	}
 	c := &ntpReferenceClockSCION{
-		log:               log,
-		localAddr:         localAddr,
-		remoteAddr:        remoteAddr,
-		selectionInterval: time.Hour,
-		lastSelection:     time.Time{},
+		log:         log,
+		localAddr:   localAddr,
+		remoteAddr:  remoteAddr,
+		pathManager: pM,
+		resetChan:   make(chan struct{}, 1),
 	}
 
 	log.Info("----Configuration Details----")
@@ -328,50 +335,17 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 			NextHop:       c.remoteAddr.Host,
 		}}
 	} else {
-		cap := 7
-		k := 20
 
-		if c.lastSelection.IsZero() || time.Since(c.lastSelection) >= c.selectionInterval {
-			c.lastSelection = time.Now()
-			file, _ := os.Create("output.txt") // overwrites if file exists
-			defer file.Close()
+		// Only concerned with NTP measurements, paths are updated in the background
+		// ps = c.pather.Paths(c.remoteAddr.IA)
 
-			c.log.LogAttrs(ctx, slog.LevelDebug, "STATIC SELECTION",
-				slog.Any("------", "------"))
-			// s := "71-20965" // Geant
-			s := "67-401500" // north america
-			address, _ := addr.ParseIA(s)
-			// log.Debug("Address formating", slog.Any("error", err))
-			ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
-			for i, path := range ps_temp {
-				fmt.Fprintf(file, "Path %d: %d\n", i+1, len(path.Metadata().Interfaces))
-			}
+		ps = c.pathManager.S_Active
 
-			c.log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
-			ps_temp_selected := client.ChooseNewPaths(ps_temp, k) //[]snet.Path
-			for i, path := range ps_temp_selected {
-				fmt.Fprintf(file, "Path %d: %d\n", i+1, len(path.Metadata().Interfaces))
-			}
-			for i, path := range ps_temp_selected {
-				fmt.Fprintf(file, "Path %d: %s\n", i+1, path.Metadata().Interfaces)
-			}
-			c.log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
-
-			// find the best cap performing
-			initPaths := client.PickRandom(ps_temp_selected, cap)
-			for i, path := range initPaths {
-				fmt.Fprintf(file, "Path %d: %s\n", i+1, path.Metadata().Interfaces)
-			}
-		}
-
-		// NTP
-		ps = c.pather.Paths(c.remoteAddr.IA)
-		// rtt, e := client.Ping(ctx, c.localAddr, c.remoteAddr, ps[0])
-		// log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("RTT", rtt))
-		// log.LogAttrs(ctx, slog.LevelDebug, "PINGING", slog.Any("ERROR", e))
 	}
+
+	return client.MeasureClockOffsetSCION_v2(ctx, c.log, c.ntpcs[:], ps, c.localAddr, c.remoteAddr)
 	// NTP
-	return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
+	// return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
 }
 
 func loadConfig(configFile string) svcConfig {
@@ -570,7 +544,8 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		for _, c := range refClocks {
 			scionclk, ok := c.(*ntpReferenceClockSCION)
 			if ok {
-				scionclk.pather = pather
+				// scionclk.pather = pather
+				scionclk.pathManager.Pather = pather
 				if drkeyFetcher != nil {
 					for i := range len(scionclk.ntpcs) {
 						scionclk.ntpcs[i].Auth.Enabled = true
@@ -582,7 +557,8 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 		for _, c := range peerClocks {
 			scionclk, ok := c.(*ntpReferenceClockSCION)
 			if ok {
-				scionclk.pather = pather
+				// scionclk.pather = pather
+				scionclk.pathManager.Pather = pather
 				if drkeyFetcher != nil {
 					for i := range len(scionclk.ntpcs) {
 						scionclk.ntpcs[i].Auth.Enabled = true
@@ -659,6 +635,49 @@ func runClient(configFile string) {
 	}
 
 	syncCfg := syncConfig(cfg)
+
+	// --------------------------------------
+	cap := 7 // total active paths you want to keep
+	k := 20  // total candidate paths to consider
+
+	launchScheduler := func(clock client.ReferenceClock) {
+		scionClock, ok := clock.(*ntpReferenceClockSCION)
+		if !ok || scionClock.pathManager == nil {
+			return
+		}
+		go func() {
+			ctx := context.Background()
+			for {
+				scionClock.pathManager.RunStaticSelection(ctx, log, cap, k, scionClock.remoteAddr)
+
+				time.Sleep(5 * time.Minute)
+				scionClock.pathManager.RunDynamicSelection(ctx, log)
+
+				dTicker := time.NewTicker(1 * time.Hour)
+				defer dTicker.Stop()
+				reset := time.After(24 * time.Hour)
+
+				for {
+					select {
+					case <-dTicker.C:
+						scionClock.pathManager.RunDynamicSelection(ctx, log)
+					case <-reset:
+						goto NEXT
+					}
+				}
+			NEXT:
+			}
+		}()
+	}
+
+	for _, clk := range refClocks {
+		launchScheduler(clk)
+	}
+	for _, clk := range peerClocks {
+		launchScheduler(clk)
+	}
+
+	// --------------------------------------
 
 	go sync.Run(log, syncCfg, lclk, refClocks, peerClocks)
 

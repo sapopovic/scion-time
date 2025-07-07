@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"example.com/scion-time/core/timebase"
+	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
 	"github.com/google/gopacket"
 	"github.com/scionproto/scion/pkg/addr"
@@ -19,9 +20,86 @@ import (
 	"github.com/scionproto/scion/pkg/snet"
 )
 
-func ChooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
+type PathManager struct {
+	S                        []snet.Path
+	S_Active                 []snet.Path
+	StaticLastSelection      time.Time
+	StaticSelectionInterval  time.Duration
+	DynamicLastSelection     time.Time
+	DynamicSelectionInterval time.Duration
+	WarmupPhase              time.Duration
+	Pather                   *scion.Pather
+}
+
+/*
+func (pM PathManager) GetPaths(ctx context.Context, log *slog.Logger, cap, k int, remoteAddr udp.UDPAddr) []snet.Path {
+	/*if pM.LastSelection.IsZero() || time.Since(pM.LastSelection) >= pM.SelectionInterval {
+		pM.LastSelection = time.Now()
+		file, _ := os.Create("output.txt") // overwrites if file exists
+		defer file.Close()
+
+		log.LogAttrs(ctx, slog.LevelDebug, "STATIC SELECTION",
+			slog.Any("------", "------"))
+		// s := "71-20965" // Geant
+		s := "67-401500" // north america
+		address, _ := addr.ParseIA(s)
+		// log.Debug("Address formating", slog.Any("error", err))
+		ps_temp, _ := pM.Pather.GetPathsToDest(ctx, scion.DC, address)
+		for i, path := range ps_temp {
+			fmt.Fprintf(file, "Path %d: %d\n", i+1, len(path.Metadata().Interfaces))
+		}
+
+		log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
+		ps_temp_selected := chooseNewPaths(ps_temp, k) //[]snet.Path
+		for i, path := range ps_temp_selected {
+			fmt.Fprintf(file, "Path %d: %d\n", i+1, len(path.Metadata().Interfaces))
+		}
+		for i, path := range ps_temp_selected {
+			fmt.Fprintf(file, "Path %d: %s\n", i+1, path.Metadata().Interfaces)
+		}
+		log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
+
+		// find the best cap performing
+		//initPaths := client.PickRandom(ps_temp_selected, cap)!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		for i, path := range initPaths {
+			fmt.Fprintf(file, "Path %d: %s\n", i+1, path.Metadata().Interfaces)
+		}
+	}
+	if pM.StaticLastSelection.IsZero() || time.Since(pM.StaticLastSelection) >= pM.StaticSelectionInterval { // static selection
+		pM.StaticLastSelection = time.Now()
+		ps := pM.Pather.Paths(remoteAddr.IA)
+		S := chooseNewPaths(ps, k)
+		S_active := pickRandom(S, cap)
+		pM.S = S
+		pM.S_Active = S_active
+		return S_active
+	} else if time.Since(pM.StaticLastSelection) >= pM.WarmupPhase || time.Since(pM.DynamicLastSelection) >= pM.DynamicSelectionInterval { // After warmup phase or once an hour, do dynamic selection
+		// do dynamic
+		//
+	}
+
+	return pM.S_Active
+
+}
+*/
+
+func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger, cap, k int, remoteAddr udp.UDPAddr) {
+	ps := pM.Pather.Paths(remoteAddr.IA)
+	S := chooseNewPaths(ps, k)
+	S_active := pickRandom(S, cap)
+	pM.S = S
+	pM.S_Active = S_active
+	log.Info("Static path selection completed", slog.Int("S_total", len(S)), slog.Int("S_active", len(S_active)))
+}
+
+func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
+	// TODO: implement dynamic selection logic here, e.g., based on symmetry, jitter etc
+	log.Info("Dynamic path selection completed (placeholder)")
+}
+
+func chooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
 	ch := make(chan int, 1)
-	timeout, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	timeout, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	var computedPathSet []snet.Path
@@ -233,7 +311,7 @@ func findLongestPath(paths []snet.Path) int {
 	return longestLength
 }
 
-func PickRandom(paths []snet.Path, cap int) []snet.Path {
+func pickRandom(paths []snet.Path, cap int) []snet.Path {
 	if cap >= len(paths) {
 		return paths
 	}

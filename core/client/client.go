@@ -107,6 +107,60 @@ loop:
 	return j
 }
 
+func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
+	ntpcs []*SCIONClient, sps []snet.Path, localAddr, remoteAddr udp.UDPAddr) (time.Time, time.Duration, error) {
+	mtrcs := scionMetrics.Load()
+
+	ms := make([]measurements.Measurement, len(ntpcs))
+	msc := make(chan measurements.Measurement)
+	for i := range len(ntpcs) {
+		go func(ctx context.Context, log *slog.Logger, mtrcs *scionClientMetrics, ntpc *SCIONClient, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
+			var err error
+			var ts time.Time
+			var off time.Duration
+			var nerr, n int
+			log.LogAttrs(ctx, slog.LevelDebug, "measuring clock offset",
+				slog.Any("to", remoteAddr),
+				slog.Any("via", snet.Fingerprint(p).String()),
+				slog.Any("path", p),
+			)
+			if ntpc.InterleavedMode {
+				n = 3
+			} else {
+				n = 1
+			}
+			for j := range n {
+				t, o, e := ntpc.measureClockOffsetSCION(ctx, mtrcs, localAddr, remoteAddr, p)
+				if e == nil {
+					ts, off, err = t, o, e
+					if ntpc.InInterleavedMode() {
+						break
+					}
+				} else {
+					if nerr == j {
+						err = e
+					}
+					nerr++
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to measure clock offset",
+						slog.Any("to", remoteAddr),
+						slog.Any("via", snet.Fingerprint(p).String()),
+						slog.Any("error", e),
+					)
+				}
+			}
+			msc <- measurements.Measurement{
+				Timestamp: ts,
+				Offset:    off,
+				Error:     err,
+			}
+		}(ctx, log, mtrcs, ntpcs[i], localAddr, remoteAddr, sps[i])
+	}
+	collectMeasurements(ctx, ms, msc)
+	// log.LogAttrs(ctx, slog.LevelInfo, "Merge offsets with the following", slog.Any("selection method", selectionMethod))
+	m := measurements.SelectMethod(ms, "midpoint")
+	return m.Timestamp, m.Offset, m.Error
+}
+
 func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 	ntpcs []*SCIONClient, localAddr, remoteAddr udp.UDPAddr, ps []snet.Path, chosenPaths []string, selectionMethod string) (
 	time.Time, time.Duration, error) {
