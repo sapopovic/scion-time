@@ -15,7 +15,7 @@ import (
 	"example.com/scion-time/net/udp"
 )
 
-func writeNTSKEErrorMsgQUIC(ctx context.Context, log *slog.Logger, stream quic.Stream, code int) {
+func writeNTSKEErrorMsgQUIC(ctx context.Context, log *slog.Logger, stream *quic.Stream, code int) {
 	var msg ntske.ExchangeMsg
 	msg.AddRecord(ntske.Error{
 		Code: uint16(code),
@@ -35,7 +35,7 @@ func writeNTSKEErrorMsgQUIC(ctx context.Context, log *slog.Logger, stream quic.S
 }
 
 func handleKeyExchangeQUIC(ctx context.Context, log *slog.Logger,
-	conn quic.Connection, localPort int, provider *ntske.Provider) error {
+	conn *quic.Conn, localPort int, provider *ntske.Provider) error {
 	stream, err := conn.AcceptStream(context.Background())
 	if err != nil {
 		return err

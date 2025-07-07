@@ -25,7 +25,7 @@ In Proceedings of the Symposium on Reliable Distributed Systems (SRDS) 2022.
 
 ## Running a simple IP-based server
 
-Reference platform: Ubuntu 22.04 LTS, Go 1.24.3; see [below](https://github.com/marcfrei/scion-time/edit/main/README.md#installing-prerequisites-for-a-scion-test-environment).
+Reference platform: Ubuntu 24.04 LTS, Go 1.24.4; see [below](https://github.com/marcfrei/scion-time/edit/main/README.md#installing-prerequisites-for-a-scion-test-environment).
 
 ```
 cd ~
@@ -55,7 +55,7 @@ In an additional session:
 
 ## Installing prerequisites for a SCION test environment
 
-Reference platform: Ubuntu 24.04 LTS, Go 1.24.3
+Reference platform: Ubuntu 24.04 LTS, Go 1.24.4
 
 ```
 sudo apt-get update
@@ -66,10 +66,10 @@ On x86-64:
 
 ```
 sudo rm -rf /usr/local/go
-curl -LO https://golang.org/dl/go1.24.3.linux-amd64.tar.gz
-echo "3333f6ea53afa971e9078895eaa4ac7204a8c6b5c68c10e6bc9a33e8e391bdd8 go1.24.3.linux-amd64.tar.gz" | sha256sum -c
-sudo tar -C /usr/local -xzf go1.24.3.linux-amd64.tar.gz
-rm go1.24.3.linux-amd64.tar.gz
+curl -LO https://golang.org/dl/go1.24.4.linux-amd64.tar.gz
+echo "77e5da33bb72aeaef1ba4418b6fe511bc4d041873cbf82e5aa6318740df98717 go1.24.4.linux-amd64.tar.gz" | sha256sum -c
+sudo tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz
+rm go1.24.4.linux-amd64.tar.gz
 echo >> .bash_profile
 echo 'export PATH=$PATH:/usr/local/go/bin' >> .bash_profile
 source ~/.bash_profile
@@ -80,10 +80,10 @@ On ARM64:
 
 ```
 sudo rm -rf /usr/local/go
-curl -LO https://golang.org/dl/go1.24.3.linux-arm64.tar.gz
-echo "a463cb59382bd7ae7d8f4c68846e73c4d589f223c589ac76871b66811ded7836 go1.24.3.linux-arm64.tar.gz" | sha256sum -c
-sudo tar -C /usr/local -xzf go1.24.3.linux-arm64.tar.gz
-rm go1.24.3.linux-arm64.tar.gz
+curl -LO https://golang.org/dl/go1.24.4.linux-arm64.tar.gz
+echo "d5501ee5aca0f258d5fe9bfaed401958445014495dc115f202d43d5210b45241 go1.24.4.linux-arm64.tar.gz" | sha256sum -c
+sudo tar -C /usr/local -xzf go1.24.4.linux-arm64.tar.gz
+rm go1.24.4.linux-arm64.tar.gz
 echo >> .bash_profile
 echo 'export PATH=$PATH:/usr/local/go/bin' >> .bash_profile
 source ~/.bash_profile

@@ -153,6 +153,72 @@ func runSCIONServer(ctx context.Context, log *slog.Logger, mtrcs *scionServerMet
 		}
 
 		if decoded[len(decoded)-1] == slayers.LayerTypeSCMP {
+			if scmpLayer.TypeCode.Type() == slayers.SCMPTypeEchoReply {
+				var scmpEcho slayers.SCMPEcho
+				err = scmpEcho.DecodeFromBytes(scmpLayer.Payload, gopacket.NilDecodeFeedback)
+				if err != nil {
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to decode packet", slog.Any("error", err))
+					continue
+				}
+				if localConnPort != scion.EndhostPort || scmpEcho.Identifier == scion.EndhostPort {
+					log.LogAttrs(ctx, slog.LevelInfo, "failed to forward packet",
+						slog.String("cause", "unexpected underlay or L4 destination port"),
+						slog.Int("underlay_dst_port", localConnPort),
+						slog.Int("l4_dst_port", int(scmpEcho.Identifier)))
+					continue
+				}
+				dstAddr, ok := netip.AddrFromSlice(scionLayer.RawDstAddr)
+				if !ok {
+					panic("unexpected IP address byte slice")
+				}
+				dstAddrPort := netip.AddrPortFrom(dstAddr, scmpEcho.Identifier)
+				err = buffer.Clear()
+				if err != nil {
+					panic(err)
+				}
+				payload := gopacket.Payload(scmpLayer.Payload)
+				err = payload.SerializeTo(buffer, options)
+				if err != nil {
+					panic(err)
+				}
+				buffer.PushLayer(payload.LayerType())
+				err = scmpLayer.SerializeTo(buffer, options)
+				if err != nil {
+					panic(err)
+				}
+				buffer.PushLayer(udpLayer.LayerType())
+				if scionLayer.NextHdr == slayers.End2EndClass {
+					err = e2eLayer.SerializeTo(buffer, options)
+					if err != nil {
+						panic(err)
+					}
+					buffer.PushLayer(e2eLayer.LayerType())
+				}
+				err = scionLayer.SerializeTo(buffer, options)
+				if err != nil {
+					panic(err)
+				}
+				buffer.PushLayer(scionLayer.LayerType())
+				m, err := conn.WriteToUDPAddrPort(buffer.Bytes(), dstAddrPort)
+				if err != nil || m != len(buffer.Bytes()) {
+					log.LogAttrs(ctx, slog.LevelError, "failed to write packet", slog.Any("error", err))
+					continue
+				}
+				_, id, err := udp.ReadTXTimestamp(conn)
+				if err != nil {
+					log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+						slog.Any("error", err))
+				} else if id != txid {
+					log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp",
+						slog.Uint64("id", uint64(id)), slog.Uint64("expected", uint64(txid)))
+					txid = id + 1
+				} else {
+					txid++
+				}
+				mtrcs.pktsForwarded.Inc()
+				continue
+			}
+
 			var payload gopacket.Payload
 			switch scmpLayer.TypeCode.Type() {
 			case slayers.SCMPTypeEchoRequest:

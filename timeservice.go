@@ -746,6 +746,55 @@ func runToolSCION(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet
 	}
 }
 
+func runPing(daemonAddr, dispatcherMode string, localAddr, remoteAddr *snet.UDPAddr) {
+	var err error
+	ctx := context.Background()
+	log := slog.Default()
+
+	lclk := clocks.NewSystemClock(log, clocks.UnknownDrift)
+	timebase.RegisterClock(lclk)
+
+	if !remoteAddr.IA.IsZero() {
+		if dispatcherMode == dispatcherModeInternal {
+			server.StartSCIONDispatcher(ctx, log, snet.CopyUDPAddr(localAddr.Host))
+		}
+
+		dc := scion.NewDaemonConnector(ctx, daemonAddr)
+
+		var ps []snet.Path
+		if remoteAddr.IA == localAddr.IA {
+			ps = []snet.Path{path.Path{
+				Src:           localAddr.IA,
+				Dst:           remoteAddr.IA,
+				DataplanePath: path.Empty{},
+				NextHop:       remoteAddr.Host,
+			}}
+		} else {
+			ps, err = dc.Paths(ctx, remoteAddr.IA, localAddr.IA, daemon.PathReqFlags{Refresh: true})
+			if err != nil {
+				logbase.Fatal(slog.Default(), "failed to lookup paths", slog.Any("remote", remoteAddr), slog.Any("error", err))
+			}
+			if len(ps) == 0 {
+				logbase.Fatal(slog.Default(), "no paths available", slog.Any("remote", remoteAddr))
+			}
+		}
+
+		laddr := udp.UDPAddrFromSnet(localAddr)
+		raddr := udp.UDPAddrFromSnet(remoteAddr)
+
+		rtt, err := scion.SendPing(ctx, laddr, raddr, ps[0])
+		if err != nil {
+			logbase.Fatal(slog.Default(), "failed to send ping",
+				slog.Any("remote", remoteAddr),
+				slog.Any("error", err))
+		}
+
+		fmt.Printf("PING %s: rtt=%v\n", remoteAddr, rtt)
+	} else {
+		logbase.Fatal(slog.Default(), "ping subcommand only supports SCION addresses")
+	}
+}
+
 func runBenchmark(configFile string) {
 	cfg := loadConfig(configFile)
 	log := slog.Default()
@@ -863,6 +912,7 @@ func main() {
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	clientFlags := flag.NewFlagSet("client", flag.ExitOnError)
 	toolFlags := flag.NewFlagSet("tool", flag.ExitOnError)
+	pingFlags := flag.NewFlagSet("ping", flag.ExitOnError)
 	benchmarkFlags := flag.NewFlagSet("benchmark", flag.ExitOnError)
 	drkeyFlags := flag.NewFlagSet("drkey", flag.ExitOnError)
 
@@ -881,6 +931,12 @@ func main() {
 	toolFlags.StringVar(&authModesStr, "auth", "", "Authentication modes")
 	toolFlags.BoolVar(&ntskeInsecureSkipVerify, "ntske-insecure-skip-verify", false, "Skip NTSKE verification")
 	toolFlags.BoolVar(&periodic, "periodic", false, "Perform periodic offset measurements")
+
+	pingFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
+	pingFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
+	pingFlags.StringVar(&dispatcherMode, "dispatcher", "", "Dispatcher mode")
+	pingFlags.Var(&localAddr, "local", "Local address")
+	pingFlags.StringVar(&remoteAddrStr, "remote", "", "Remote address")
 
 	benchmarkFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	benchmarkFlags.StringVar(&configFile, "config", "", "Config file")
@@ -962,6 +1018,26 @@ func main() {
 			runToolIP(&localAddr, &remoteAddr, uint8(dscp),
 				authModes, ntskeServer, ntskeInsecureSkipVerify, periodic)
 		}
+	case pingFlags.Name():
+		err := pingFlags.Parse(os.Args[2:])
+		if err != nil || pingFlags.NArg() != 0 {
+			exitWithUsage()
+		}
+		var remoteAddr snet.UDPAddr
+		err = remoteAddr.Set(remoteAddrStr)
+		if err != nil {
+			exitWithUsage()
+		}
+		if !remoteAddr.IA.IsZero() {
+			if dispatcherMode == "" {
+				dispatcherMode = dispatcherModeExternal
+			} else if dispatcherMode != dispatcherModeExternal &&
+				dispatcherMode != dispatcherModeInternal {
+				exitWithUsage()
+			}
+		}
+		initLogger(verbose)
+		runPing(daemonAddr, dispatcherMode, &localAddr, &remoteAddr)
 	case benchmarkFlags.Name():
 		err := benchmarkFlags.Parse(os.Args[2:])
 		if err != nil || benchmarkFlags.NArg() != 0 {
