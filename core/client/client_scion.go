@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/subtle"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/netip"
@@ -46,11 +47,11 @@ type SCIONClient struct {
 		mac          []byte
 		NTSKEFetcher ntske.Fetcher
 	}
-	Filter          measurements.Filter
-	PreFilter       measurements.PreFilter
-	Histogram       *hdrhistogram.Histogram
-	SelectionMethod string
-	prev            struct {
+	Filter measurements.Filter
+	// PreFilter measurements.PreFilter
+	Histogram *hdrhistogram.Histogram
+	// SelectionMethod string
+	prev struct {
 		reference   string
 		path        string
 		interleaved bool
@@ -142,7 +143,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 
 	laddr, ok := netip.AddrFromSlice(localAddr.Host.IP)
 	if !ok {
-		return time.Time{}, 0, err
+		panic(errUnexpectedAddrType)
 	}
 	var lc net.ListenConfig
 	pconn, err := lc.ListenPacket(ctx, "udp", netip.AddrPortFrom(laddr, 0).String())
@@ -328,9 +329,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 	}
 	buffer.PushLayer(scionLayer.LayerType())
 
-	m, err := conn.WriteToUDPAddrPort(buffer.Bytes(), nextHop)
-	n := m
-
+	n, err := conn.WriteToUDPAddrPort(buffer.Bytes(), nextHop)
 	if err != nil {
 		return time.Time{}, 0, err
 	}
@@ -346,6 +345,9 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 	if interleavedReq {
 		mtrcs.reqsSentInterleaved.Inc()
 	}
+	c.Log.LogAttrs(ctx, slog.LevelInfo, "@@@ TX",
+		slog.String("c", fmt.Sprintf("%p", c)),
+		slog.Int("n", n))
 
 	const maxNumRetries = 1
 	numRetries := 0
@@ -354,8 +356,6 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
 		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
-		len_temp := len(path.Metadata().Interfaces)
-		c.Log.LogAttrs(ctx, slog.LevelDebug, "Final Packet Size", slog.Any("OUTGOING #bytes", m), slog.Any("INCOMING #bytes", n), slog.Any("#hops", len_temp), slog.Any("via", snet.Fingerprint(path).String()))
 		if err != nil {
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet", slog.Any("error", err))
@@ -381,6 +381,9 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		}
 		buf = buf[:n]
 		mtrcs.pktsReceived.Inc()
+		c.Log.LogAttrs(ctx, slog.LevelInfo, "@@@ RX",
+			slog.String("c", fmt.Sprintf("%p", c)),
+			slog.Int("n", n))
 
 		var (
 			hbhLayer  slayers.HopByHopExtnSkipper
@@ -610,11 +613,18 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		}
 
 		timestamp = cRxTime
-
-		if c.PreFilter != nil {
-			isOutlier := c.PreFilter.Do(t0, t1, t2, t3)
-			if isOutlier {
-				return time.Time{}, 0, err // it is an outlier, so we dont process it further.
+		/*
+			if c.PreFilter != nil {
+				isOutlier := c.PreFilter.Do(t0, t1, t2, t3)
+				if isOutlier {
+					return time.Time{}, 0, err // it is an outlier, so we dont process it further.
+				} else {
+					if c.Filter == nil {
+						offset = off
+					} else {
+						offset = c.Filter.Do(t0, t1, t2, t3)
+					}
+				}
 			} else {
 				if c.Filter == nil {
 					offset = off
@@ -622,12 +632,20 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 					offset = c.Filter.Do(t0, t1, t2, t3)
 				}
 			}
-		} else {
-			if c.Filter == nil {
-				offset = off
-			} else {
-				offset = c.Filter.Do(t0, t1, t2, t3)
+
+			if c.Histogram != nil {
+				err := c.Histogram.RecordValue(rtd.Microseconds())
+				if err != nil {
+					return time.Time{}, 0, err
+				}
 			}
+
+		*/
+
+		if c.Filter == nil {
+			offset = off
+		} else {
+			offset = c.Filter.Do(t0, t1, t2, t3)
 		}
 
 		if c.Histogram != nil {

@@ -292,10 +292,10 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			c.ntpcs[i].Filter = client.NewNtimedFilter(log)
 		}
 
-		switch cfg.PreFilterType {
-		case "avg":
-			c.ntpcs[i].PreFilter = client.NewAvgPreFilter(log)
-		}
+		//switch cfg.PreFilterType {
+		//case "avg":
+		//	c.ntpcs[i].PreFilter = client.NewAvgPreFilter(log)
+		//}
 
 		if slices.Contains(cfg.AuthModes, authModeNTS) {
 			configureSCIONClientNTS(c.ntpcs[i], ntskeServer, cfg.NTSKEInsecureSkipVerify, cfg.SCIONDaemonAddr, localAddr, remoteAddr, log)
