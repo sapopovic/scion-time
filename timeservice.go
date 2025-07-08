@@ -264,10 +264,8 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig) *ntpReferenceClockSCION {
 	pM := &client.PathManager{
 		StaticSelectionInterval:  24 * time.Hour,
-		StaticLastSelection:      time.Time{},
 		DynamicSelectionInterval: time.Hour,
-		DynamicLastSelection:     time.Time{},
-		WarmupPhase:              5 * time.Minute,
+		Refresh:                  true,
 	}
 	c := &ntpReferenceClockSCION{
 		log:         log,

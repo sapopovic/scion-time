@@ -23,12 +23,10 @@ import (
 type PathManager struct {
 	S                        []snet.Path
 	S_Active                 []snet.Path
-	StaticLastSelection      time.Time
 	StaticSelectionInterval  time.Duration
-	DynamicLastSelection     time.Time
 	DynamicSelectionInterval time.Duration
-	WarmupPhase              time.Duration
 	Pather                   *scion.Pather
+	Refresh                  bool // not sure yet
 }
 
 /*

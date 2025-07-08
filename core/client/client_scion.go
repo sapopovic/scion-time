@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"crypto/subtle"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/netip"
@@ -345,9 +344,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 	if interleavedReq {
 		mtrcs.reqsSentInterleaved.Inc()
 	}
-	c.Log.LogAttrs(ctx, slog.LevelInfo, "@@@ TX",
-		slog.String("c", fmt.Sprintf("%p", c)),
-		slog.Int("n", n))
+	//c.Log.LogAttrs(ctx, slog.LevelInfo, "@@@ TX", slog.String("c", fmt.Sprintf("%p", c)), slog.Int("n", n))
 
 	const maxNumRetries = 1
 	numRetries := 0
@@ -381,9 +378,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		}
 		buf = buf[:n]
 		mtrcs.pktsReceived.Inc()
-		c.Log.LogAttrs(ctx, slog.LevelInfo, "@@@ RX",
-			slog.String("c", fmt.Sprintf("%p", c)),
-			slog.Int("n", n))
+		//c.Log.LogAttrs(ctx, slog.LevelInfo, "@@@ RX", slog.String("c", fmt.Sprintf("%p", c)), slog.Int("n", n))
 
 		var (
 			hbhLayer  slayers.HopByHopExtnSkipper

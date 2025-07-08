@@ -111,10 +111,61 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 	ntpcs []*SCIONClient, sps []snet.Path, localAddr, remoteAddr udp.UDPAddr) (time.Time, time.Duration, error) {
 	mtrcs := scionMetrics.Load()
 
+	// IDEA: if after static selection or dynamic selection some paths remain the same, then wen don't want to throw away the filter.
+
+	// file, err := os.OpenFile("output.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	return time.Time{}, 0, fmt.Errorf("failed to open file: %w", err)
+	// }
+	// var wg sync.WaitGroup
+	// var mu sync.Mutex
+
+	fpToClient := make(map[string]*SCIONClient) // Get all fingerprints from SCIONClients
+
+	// Step 1: Extract fingerprint from SCIONClient
+	for _, client := range ntpcs {
+		fp := client.InterleavedModePath()
+		if fp != "" {
+			fpToClient[fp] = client
+		}
+	}
+
+	assigned := make(map[*SCIONClient]bool)
+	reorderedNTPCs := make([]*SCIONClient, len(sps)) // Map SCIONClient to path in sps (same indices)
+
+	// Step 2: First pass -> match paths to known clients
+	for i, path := range sps {
+		fp := snet.Fingerprint(path).String()
+		if client, ok := fpToClient[fp]; ok && !assigned[client] { // We found a SCIONClient that has the fingerprint
+			reorderedNTPCs[i] = client // Assign SCIONClient to path i of sps
+			assigned[client] = true
+		} // if no match, then reorderedNTPCs[i] = nil automatically
+	}
+
+	// Step 3: Second pass -> assign unmatched paths to any free clients
+	for i, client := range reorderedNTPCs { // Example [c3 nil c4 c1 c2 nil ...]
+		if client != nil {
+			continue
+		}
+		for _, c := range ntpcs { // Pick a free SCIONClient
+			if !assigned[c] {
+				reorderedNTPCs[i] = c
+				assigned[c] = true
+				c.ResetInterleavedMode()
+				if c.Filter != nil {
+					c.Filter.Reset()
+				} // New fingerprint is set in client_scion.go upon first NTP measurement
+				break
+			}
+		}
+	}
+
 	ms := make([]measurements.Measurement, len(ntpcs))
 	msc := make(chan measurements.Measurement)
-	for i := range len(ntpcs) {
+	for i := range len(sps) {
+		// wg.Add(1)
 		go func(ctx context.Context, log *slog.Logger, mtrcs *scionClientMetrics, ntpc *SCIONClient, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {
+			// defer wg.Done()
 			var err error
 			var ts time.Time
 			var off time.Duration
@@ -124,6 +175,13 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 				slog.Any("via", snet.Fingerprint(p).String()),
 				slog.Any("path", p),
 			)
+			//mu.Lock()
+			//if i == len(ntpcs)-1 {
+			//	fmt.Fprintf(file, "Time: %s | Path: %s\n\n", time.Now().Format(time.RFC3339), snet.Fingerprint(p).String())
+			//} else {
+			//	fmt.Fprintf(file, "Time: %s | Path: %s\n", time.Now().Format(time.RFC3339), snet.Fingerprint(p).String())
+			//}
+			// mu.Unlock()
 			if ntpc.InterleavedMode {
 				n = 3
 			} else {
@@ -155,9 +213,16 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 			}
 		}(ctx, log, mtrcs, ntpcs[i], localAddr, remoteAddr, sps[i])
 	}
+	// wg.Wait()
+
 	collectMeasurements(ctx, ms, msc)
 	// log.LogAttrs(ctx, slog.LevelInfo, "Merge offsets with the following", slog.Any("selection method", selectionMethod))
 	m := measurements.SelectMethod(ms, "midpoint")
+	// err = file.Close()
+	// if err != nil {
+	// 	log.Error("failed to close file", slog.Any("error", err))
+	// }
+
 	return m.Timestamp, m.Offset, m.Error
 }
 
