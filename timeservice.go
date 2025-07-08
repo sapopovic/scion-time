@@ -265,7 +265,16 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 	pM := &client.PathManager{
 		StaticSelectionInterval:  24 * time.Hour,
 		DynamicSelectionInterval: time.Hour,
-		Refresh:                  true,
+		Cap:                      7, // to be determined
+		K:                        20,
+		RemoteAddr:               remoteAddr,
+		LocalAddr:                localAddr,
+	}
+	for i := range len(pM.Probers) {
+		pM.Probers[i] = &client.SCIONClient{
+			Log:             log,
+			InterleavedMode: false,
+		}
 	}
 	c := &ntpReferenceClockSCION{
 		log:         log,
@@ -635,8 +644,6 @@ func runClient(configFile string) {
 	syncCfg := syncConfig(cfg)
 
 	// --------------------------------------
-	cap := 7 // total active paths you want to keep
-	k := 20  // total candidate paths to consider
 
 	launchScheduler := func(clock client.ReferenceClock) {
 		scionClock, ok := clock.(*ntpReferenceClockSCION)
@@ -646,14 +653,18 @@ func runClient(configFile string) {
 		go func() {
 			ctx := context.Background()
 			for {
-				scionClock.pathManager.RunStaticSelection(ctx, log, cap, k, scionClock.remoteAddr)
+				scionClock.pathManager.RunStaticSelection(ctx, log)
 
-				time.Sleep(5 * time.Minute) // 10 * time.Second for testing
+				//Warm up phase
+				time.Sleep(8 * time.Second) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
 				scionClock.pathManager.RunDynamicSelection(ctx, log)
 
-				dTicker := time.NewTicker(1 * time.Hour)
+				// Dynamic Selection
+				dTicker := time.NewTicker(10 * time.Second)
 				defer dTicker.Stop()
-				reset := time.After(24 * time.Hour)
+
+				// Static Selection Reset
+				reset := time.After(60 * time.Second) // reset := time.After(24 * time.Hour)
 
 				for {
 					select {

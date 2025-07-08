@@ -7,26 +7,25 @@ import (
 	"log/slog"
 	"math"
 	"math/big"
-	"net"
-	"net/netip"
 	"time"
 
-	"example.com/scion-time/core/timebase"
 	"example.com/scion-time/net/scion"
 	"example.com/scion-time/net/udp"
-	"github.com/google/gopacket"
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/snet"
 )
 
 type PathManager struct {
+	RemoteAddr               udp.UDPAddr
+	LocalAddr                udp.UDPAddr
 	S                        []snet.Path
 	S_Active                 []snet.Path
 	StaticSelectionInterval  time.Duration
 	DynamicSelectionInterval time.Duration
 	Pather                   *scion.Pather
-	Refresh                  bool // not sure yet
+	Cap                      int              // total active paths you want to keep
+	K                        int              // total candidate paths to consider
+	Probers                  [20]*SCIONClient // handle path assessment (symmetry, jitter), LENGTH TO BE DEFINED SOMEWHERE ELSE
 }
 
 /*
@@ -81,19 +80,92 @@ func (pM PathManager) GetPaths(ctx context.Context, log *slog.Logger, cap, k int
 }
 */
 
-func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger, cap, k int, remoteAddr udp.UDPAddr) {
-	ps := pM.Pather.Paths(remoteAddr.IA)
-	S := chooseNewPaths(ps, k)
-	S_active := pickRandom(S, cap)
+func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
+	ps := pM.Pather.Paths(pM.RemoteAddr.IA)
+	S := chooseNewPaths(ps, pM.K)
+	S_active := pickRandom(S, pM.Cap)
 	pM.S = S
 	pM.S_Active = S_active
+	pM.assignProbers()
 	log.Info("Static path selection completed", slog.Int("S_total", len(S)), slog.Int("S_active", len(S_active)))
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
 	// TODO: implement dynamic selection logic here, e.g., based on symmetry, jitter etc
+	pM.probePaths(ctx)
 	log.Info("Dynamic path selection completed (placeholder)")
 }
+
+// -------------------dynamic----------------------------
+
+func (pM *PathManager) probePaths(ctx context.Context) {
+	pathMap := make(map[string]snet.Path)
+	for _, path := range pM.S {
+		fp := snet.Fingerprint(path).String()
+		pathMap[fp] = path
+	}
+
+	mtrcs := scionMetrics.Load()
+	perProberTimestamps := make([][]TimeStamps, len(pM.Probers))
+
+	for i, prober := range pM.Probers {
+
+		if prober.InterleavedModePath() != "" && pathMap[prober.prev.path] != nil { // TODO: CHECK IT OUT
+
+			go func(i int, ctx context.Context, log *slog.Logger, mtrcs *scionClientMetrics, prober *SCIONClient, p snet.Path) {
+				var results []TimeStamps
+
+				for j := 0; j < 20; j++ {
+					_, _, e, timestamps := prober.getTimestamps(ctx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
+					if e != nil {
+						log.LogAttrs(ctx, slog.LevelInfo, "failed to measure clock offset",
+							slog.Any("to", pM.RemoteAddr),
+							slog.Any("via", snet.Fingerprint(p).String()),
+							slog.Any("error", e),
+						)
+						continue
+					}
+					results = append(results, timestamps)
+					time.Sleep(1 * time.Second)
+				}
+				perProberTimestamps[i] = results
+			}(i, ctx, prober.Log, mtrcs, prober, pathMap[prober.prev.path])
+		}
+	}
+
+	for i, tsList := range perProberTimestamps {
+		if tsList != nil {
+			log := pM.Probers[i].Log
+			log.LogAttrs(ctx, slog.LevelInfo, "finished probing path",
+				slog.String("path", pM.Probers[i].InterleavedModePath()),
+				slog.Int("samples", len(tsList)),
+			)
+		}
+	}
+}
+
+// Each SCIONClient holds a path and we can probe the path with the help of this SCIONClient
+// It is important to set SCIONClient c.InterleavedMode to false (default value), then the server will treat it as basic mode, not xleave mode
+// The function below assigns each path of S to a SCIONClient. During probing, the SCIONClient has one path assigned which it will probe.
+func (pM *PathManager) assignProbers() {
+	sIndex := 0
+	for _, prober := range pM.Probers {
+		if prober == nil {
+			continue
+		}
+		prober.ResetInterleavedMode() // Always reset
+
+		if sIndex < len(pM.S) {
+			selectedPath := pM.S[sIndex]
+			prober.prev.path = snet.Fingerprint(selectedPath).String()
+			sIndex++
+		} else {
+			prober.prev.path = "" // No path left to assign
+		}
+	}
+}
+
+// -------------------static----------------------------
 
 func chooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
 	ch := make(chan int, 1)
@@ -329,177 +401,6 @@ func pickRandom(paths []snet.Path, cap int) []snet.Path {
 
 	return selected
 
-}
-
-// -------------------network----------------------------
-
-func Ping(ctx context.Context, localAddr, remoteAddr udp.UDPAddr, path snet.Path) (rtt time.Duration, err error) {
-
-	// --------------------sending-----------------------
-	log := slog.Default()
-	laddr, ok := netip.AddrFromSlice(localAddr.Host.IP)
-	if !ok {
-		return 0, nil
-	}
-	var lc net.ListenConfig
-	pconn, err := lc.ListenPacket(ctx, "udp", netip.AddrPortFrom(laddr, 0).String())
-	if err != nil {
-		return 0, nil
-	}
-	conn := pconn.(*net.UDPConn)
-	defer func() { _ = conn.Close() }()
-	deadline, deadlineIsSet := ctx.Deadline()
-	if deadlineIsSet {
-		err = conn.SetDeadline(deadline)
-		if err != nil {
-			return 0, err
-		}
-	}
-	err = udp.EnableTimestamping(conn, localAddr.Host.Zone)
-	if err != nil {
-		log.LogAttrs(ctx, slog.LevelError, "failed to enable timestamping", slog.Any("error", err))
-	}
-	// err = udp.SetDSCP(conn, c.DSCP)
-	// if err != nil {
-	// 	c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to set DSCP", slog.Any("error", err))
-	// }
-
-	localPort := conn.LocalAddr().(*net.UDPAddr).Port
-
-	ip4 := remoteAddr.Host.IP.To4()
-	if ip4 != nil {
-		remoteAddr.Host.IP = ip4
-	}
-
-	nextHop := path.UnderlayNextHop().AddrPort()
-	nextHopAddr := nextHop.Addr()
-	if nextHopAddr.Is4In6() {
-		nextHop = netip.AddrPortFrom(
-			netip.AddrFrom4(nextHopAddr.As4()),
-			nextHop.Port())
-	}
-
-	buf := gopacket.Payload([]byte("ping"))
-
-	var scionLayer slayers.SCION
-	//scionLayer.TrafficClass = c.DSCP << 2
-	scionLayer.SrcIA = localAddr.IA
-	srcAddrIP, ok := netip.AddrFromSlice(localAddr.Host.IP)
-	if !ok {
-		panic(errUnexpectedAddrType)
-	}
-	err = scionLayer.SetSrcAddr(addr.HostIP(srcAddrIP.Unmap()))
-	if err != nil {
-		panic(err)
-	}
-	scionLayer.DstIA = remoteAddr.IA
-	dstAddrIP, ok := netip.AddrFromSlice(remoteAddr.Host.IP)
-	if !ok {
-		panic(errUnexpectedAddrType)
-	}
-	err = scionLayer.SetDstAddr(addr.HostIP(dstAddrIP.Unmap()))
-	if err != nil {
-		panic(err)
-	}
-	err = path.Dataplane().SetPath(&scionLayer)
-	if err != nil {
-		panic(err)
-	}
-	scionLayer.NextHdr = slayers.L4UDP
-
-	var udpLayer slayers.UDP
-	udpLayer.SrcPort = uint16(localPort)
-	udpLayer.DstPort = uint16(remoteAddr.Host.Port)
-	udpLayer.SetNetworkLayerForChecksum(&scionLayer)
-
-	payload := gopacket.Payload(buf)
-
-	buffer := gopacket.NewSerializeBuffer()
-	options := gopacket.SerializeOptions{
-		ComputeChecksums: true,
-		FixLengths:       true,
-	}
-
-	err = payload.SerializeTo(buffer, options)
-	if err != nil {
-		panic(err)
-	}
-	buffer.PushLayer(payload.LayerType())
-
-	err = udpLayer.SerializeTo(buffer, options)
-	if err != nil {
-		panic(err)
-	}
-	buffer.PushLayer(udpLayer.LayerType())
-
-	err = scionLayer.SerializeTo(buffer, options)
-	if err != nil {
-		panic(err)
-	}
-	buffer.PushLayer(scionLayer.LayerType())
-
-	n, err := conn.WriteToUDPAddrPort(buffer.Bytes(), nextHop)
-	if err != nil {
-		return 0, err
-	}
-	if n != len(buffer.Bytes()) {
-		return 0, errWrite
-	}
-	cTxTime1, id, err := udp.ReadTXTimestamp(conn)
-	if err != nil || id != 0 {
-		cTxTime1 = timebase.Now()
-		log.LogAttrs(ctx, slog.LevelError, "failed to read packet tx timestamp", slog.Any("error", err))
-	}
-
-	// --------------------receiving-----------------------
-
-	oob := make([]byte, udp.TimestampLen())
-	buf = buf[:cap(buf)]
-
-	n, oobn, flags, _, err := conn.ReadMsgUDPAddrPort(buf, oob) // _ = from
-	if err != nil {
-		return 0, err
-	}
-	if flags != 0 {
-		return 0, errUnexpectedPacketFlags
-	}
-
-	oob = oob[:oobn]
-	cRxTime, err := udp.TimestampFromOOBData(oob)
-	if err != nil {
-		cRxTime = timebase.Now()
-		log.LogAttrs(ctx, slog.LevelError, "failed to read RX timestamp", slog.Any("error", err))
-	}
-	buf = buf[:n]
-
-	var (
-		hbhLayer    slayers.HopByHopExtnSkipper
-		e2eLayer    slayers.EndToEndExtn
-		scionLayer2 slayers.SCION
-		udpLayer2   slayers.UDP
-	)
-
-	parser := gopacket.NewDecodingLayerParser(
-		slayers.LayerTypeSCION, &scionLayer2, &hbhLayer, &e2eLayer, &udpLayer2,
-	)
-	parser.IgnoreUnsupported = true
-	decoded := make([]gopacket.LayerType, 4)
-
-	if err := parser.DecodeLayers(buf, &decoded); err != nil {
-		return 0, err
-	}
-
-	validSrc := scionLayer.SrcIA == remoteAddr.IA &&
-		compareIPs(scionLayer.RawSrcAddr, remoteAddr.Host.IP) == 0
-	validDst := scionLayer.DstIA == localAddr.IA &&
-		compareIPs(scionLayer.RawDstAddr, localAddr.Host.IP) == 0
-
-	if !validSrc || !validDst {
-		return 0, errUnexpectedPacket
-	}
-
-	rtt = cRxTime.Sub(cTxTime1)
-	return rtt, nil
 }
 
 // -------------------not scalable-----------------------
