@@ -170,17 +170,14 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 			var ts time.Time
 			var off time.Duration
 			var nerr, n int
-			log.LogAttrs(ctx, slog.LevelDebug, "measuring clock offset",
-				slog.Any("to", remoteAddr),
-				slog.Any("via", snet.Fingerprint(p).String()),
-				slog.Any("path", p),
-			)
-			//mu.Lock()
-			//if i == len(ntpcs)-1 {
-			//	fmt.Fprintf(file, "Time: %s | Path: %s\n\n", time.Now().Format(time.RFC3339), snet.Fingerprint(p).String())
-			//} else {
-			//	fmt.Fprintf(file, "Time: %s | Path: %s\n", time.Now().Format(time.RFC3339), snet.Fingerprint(p).String())
-			//}
+			// log.LogAttrs(ctx, slog.LevelDebug, "measuring clock offset",
+			// 	slog.Any("to", remoteAddr),
+			// 	slog.Any("via", snet.Fingerprint(p).String()),
+			// 	slog.Any("path", p),
+			// )
+			log.LogAttrs(ctx, slog.LevelDebug, "SCIONClient <-> SPS", slog.Any("ntpcs", ntpc.InterleavedModePath()), slog.Any("sps", snet.Fingerprint(p).String()))
+			// mu.Lock()
+			// fmt.Fprintf(file, "Time: %s | Path: %s | SCIONClient: %s\n", time.Now().Format(time.RFC3339), snet.Fingerprint(p).String(), ntpc.InterleavedModePath())
 			// mu.Unlock()
 			if ntpc.InterleavedMode {
 				n = 3
@@ -222,7 +219,7 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 	// if err != nil {
 	// 	log.Error("failed to close file", slog.Any("error", err))
 	// }
-
+	// log.LogAttrs(ctx, slog.LevelDebug, "Return Value", slog.Any("m.Timestamp", m.Timestamp), slog.Any("m.Offset", m.Offset), slog.Any("m.Error", m.Error), slog.Any("#measurements", len(ms)))
 	return m.Timestamp, m.Offset, m.Error
 }
 

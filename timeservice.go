@@ -648,7 +648,7 @@ func runClient(configFile string) {
 			for {
 				scionClock.pathManager.RunStaticSelection(ctx, log, cap, k, scionClock.remoteAddr)
 
-				time.Sleep(5 * time.Minute)
+				time.Sleep(5 * time.Minute) // 10 * time.Second for testing
 				scionClock.pathManager.RunDynamicSelection(ctx, log)
 
 				dTicker := time.NewTicker(1 * time.Hour)
