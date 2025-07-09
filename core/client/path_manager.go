@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"math/big"
+	"sort"
 	"time"
 
 	"example.com/scion-time/net/scion"
@@ -34,6 +35,16 @@ type ProbeResult struct {
 	Timestamps     []TimeStamps
 	SuccessCount   int
 	AttemptedCount int
+}
+
+type PathScore struct {
+	Index       int
+	Path        string
+	Q           float64
+	Symmetry    float64
+	MinRTT      float64
+	Jitter      float64
+	SuccessRate float64
 }
 
 /*
@@ -107,14 +118,17 @@ func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger
 	// TODO: implement dynamic selection logic here, e.g., based on symmetry, jitter etc
 
 	probings := pM.probePaths(ctx, log) // [][]TimeStamps
-	analyzeProbes(ctx, probings, log)
+	pM.analyzeProbes(ctx, probings, log)
 
 	log.Info("Dynamic path selection completed (placeholder)")
 }
 
 // -------------------dynamic----------------------------
 
-func analyzeProbes(ctx context.Context, results []ProbeResult, log *slog.Logger) {
+func (pM PathManager) analyzeProbes(ctx context.Context, results []ProbeResult, log *slog.Logger) {
+
+	var pathScores []PathScore
+
 	for i, res := range results {
 		tsList := res.Timestamps
 		if tsList == nil || len(tsList) == 0 {
@@ -135,6 +149,7 @@ func analyzeProbes(ctx context.Context, results []ProbeResult, log *slog.Logger)
 
 		var symmetryVals []float64
 		var rttVals []float64
+		minRTT := math.MaxFloat64
 
 		for _, ts := range tsList {
 			if ts.t0.IsZero() || ts.t1.IsZero() || ts.t2.IsZero() || ts.t3.IsZero() || ts.t3.Before(ts.t2) || ts.t2.Before(ts.t1) || ts.t1.Before(ts.t0) {
@@ -148,17 +163,111 @@ func analyzeProbes(ctx context.Context, results []ProbeResult, log *slog.Logger)
 
 			symmetryVals = append(symmetryVals, symmetry)
 			rttVals = append(rttVals, rtt)
+
+			if rtt < minRTT {
+				minRTT = rtt
+			}
 		}
 
 		avgSym := avg(symmetryVals)
 		jitter := stddev(rttVals)
+		successRate := float64(res.SuccessCount) / float64(res.AttemptedCount)
 
-		log.LogAttrs(ctx, slog.LevelInfo, "Prober metrics",
-			slog.Int("prober", i),
-			slog.Float64("avg_symmetry_sec", avgSym),
-			slog.Float64("jitter_sec", jitter),
+		// small coefficients in norm are too aggressive
+		symNorm := normalize(avgSym, 0.02)                  // 20ms scale
+		minRTTNorm := normalize(minRTT, 0.05)               // 50ms baseline
+		jitterNorm := normalize(jitter, 0.03)               // 30ms jitter scale
+		lossNorm := 1 - successRate                         // higher = worse
+		combinedRTTScore := 0.6*minRTTNorm + 0.4*jitterNorm // jitter higher because of accuracy NTP!
+
+		// Emphasize on symmetry, then stability (jitter), then baseline latency, then availability
+		Q := 0.5*symNorm + 0.4*combinedRTTScore + 0.1*lossNorm
+
+		path := ""
+		if i < len(pM.Probers) && pM.Probers[i] != nil {
+			path = pM.Probers[i].prev.path
+		}
+		pathScores = append(pathScores, PathScore{
+			Index:       i,
+			Path:        path,
+			Q:           Q,
+			Symmetry:    avgSym,
+			MinRTT:      minRTT,
+			Jitter:      jitter,
+			SuccessRate: successRate,
+		})
+
+		// log.LogAttrs(ctx, slog.LevelInfo, "Dynamic path scoring",
+		// 	slog.Int("prober", i),
+		// 	slog.Float64("symmetry_sec", avgSym),
+		// 	slog.Float64("min_rtt_sec", minRTT),
+		// 	slog.Float64("jitter_sec", jitter),
+		// 	slog.Float64("success_rate", successRate),
+		// 	slog.Float64("Final path score", Q),
+		// )
+
+		// Q = w_sym * norm(symmetry) + w_rtt * combinedRTTScore + w_loss * (1 - successRate) | combinedRTTScore = combination minRTT & jitter
+	}
+
+	sort.Slice(pathScores, func(i, j int) bool {
+		return pathScores[i].Q < pathScores[j].Q
+	})
+	log.Info("Sorted paths by Q (lower is better):")
+	for _, ps := range pathScores {
+		// log.LogAttrs(ctx, slog.LevelInfo, "Path score",
+		// 	slog.Int("prober", ps.Index),
+		// 	slog.String("path", ps.Path),
+		// 	slog.Float64("Q", ps.Q),
+		// 	slog.Float64("symmetry", ps.Symmetry),
+		// 	slog.Float64("min_rtt", ps.MinRTT),
+		// 	slog.Float64("jitter", ps.Jitter),
+		// 	slog.Float64("success_rate", ps.SuccessRate),
+		// )
+		log.LogAttrs(ctx, slog.LevelInfo, "Path score",
+			slog.Int("prober", ps.Index),
+			slog.Float64("Q", ps.Q),
 		)
 	}
+	/*
+			msg="Path score" prober=3 Q=0.0855374286791711
+		msg="Path score" prober=7 Q=0.09315019299953131
+		msg="Path score" prober=4 Q=0.09754099591778204
+		msg="Path score" prober=6 Q=0.09861475155529316
+		msg="Path score" prober=0 Q=0.09993770143037381
+		msg="Path score" prober=2 Q=0.10839013078913079
+		msg="Path score" prober=1 Q=0.11690818638622333
+		msg="Path score" prober=5 Q=0.11794636737701675
+
+		msg="Path score" prober=7 Q=0.08348873587584839
+		msg="Path score" prober=3 Q=0.084013390948727
+		msg="Path score" prober=6 Q=0.09752677032537
+		msg="Path score" prober=2 Q=0.0992015187570147
+		msg="Path score" prober=0 Q=0.1005571072194047
+		msg="Path score" prober=4 Q=0.10275510095261187
+		msg="Path score" prober=1 Q=0.11182432652143082
+		msg="Path score" prober=5 Q=0.11198912239390575
+
+		msg="Path score" prober=7 Q=0.08234252957174248
+		msg="Path score" prober=3 Q=0.08483578202682206
+		msg="Path score" prober=4 Q=0.09731762414381094
+		msg="Path score" prober=6 Q=0.09867296447466167
+		msg="Path score" prober=5 Q=0.11437106751714547
+		msg="Path score" prober=0 Q=0.27115612980370285
+		msg="Path score" prober=2 Q=0.27172923162742213
+		msg="Path score" prober=1 Q=0.2837177377769954
+
+		msg="Path score" prober=3 Q=0.0860658671498165
+		msg="Path score" prober=7 Q=0.09033093918701494
+		msg="Path score" prober=2 Q=0.09783032062689567
+		msg="Path score" prober=0 Q=0.09952048218160983
+		msg="Path score" prober=4 Q=0.1090348933182238
+		msg="Path score" prober=1 Q=0.1127228133401549
+		msg="Path score" prober=5 Q=0.11417712709244915
+		msg="Path score" prober=6 Q=0.1170212105765307*/
+}
+
+func normalize(x, scale float64) float64 {
+	return x / (x + scale) // if scale is big, then graph is grow very slowly. if the scale is small, the slope is steep.
 }
 
 func avg(xs []float64) float64 {

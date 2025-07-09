@@ -269,7 +269,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 		K:                        20,
 		RemoteAddr:               remoteAddr,
 		LocalAddr:                localAddr,
-		PingDuration:             20,
+		PingDuration:             60,
 	}
 	for i := range len(pM.Probers) {
 		pM.Probers[i] = &client.SCIONClient{
@@ -657,15 +657,15 @@ func runClient(configFile string) {
 				scionClock.pathManager.RunStaticSelection(ctx, log)
 
 				//Warm up phase
-				time.Sleep(8 * time.Second) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
+				time.Sleep(1 * time.Minute) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
 				scionClock.pathManager.RunDynamicSelection(ctx, log)
 
 				// Dynamic Selection
-				dTicker := time.NewTicker(40 * time.Second)
+				dTicker := time.NewTicker(3 * time.Minute)
 				defer dTicker.Stop()
 
 				// Static Selection Reset
-				reset := time.After(120 * time.Second) // reset := time.After(24 * time.Hour)
+				reset := time.After(20 * time.Minute) // reset := time.After(24 * time.Hour)
 
 				for {
 					select {
