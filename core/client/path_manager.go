@@ -103,13 +103,75 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
 	// TODO: implement dynamic selection logic here, e.g., based on symmetry, jitter etc
-	pM.probePaths(ctx, log)
+
+	probings := pM.probePaths(ctx, log) // [][]TimeStamps
+	analyzeProbes(ctx, probings, log)
+
 	log.Info("Dynamic path selection completed (placeholder)")
 }
 
 // -------------------dynamic----------------------------
 
-func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
+func analyzeProbes(ctx context.Context, timestamps [][]TimeStamps, log *slog.Logger) {
+	for i, tsList := range timestamps {
+		if tsList == nil || len(tsList) == 0 {
+			log.LogAttrs(context.Background(), slog.LevelInfo, "No data for prober", slog.Int("prober", i))
+			continue
+		}
+
+		var symmetryVals []float64
+		var rttVals []float64
+
+		for _, ts := range tsList {
+			if ts.t0.IsZero() || ts.t1.IsZero() || ts.t2.IsZero() || ts.t3.IsZero() || ts.t3.Before(ts.t2) || ts.t2.Before(ts.t1) || ts.t1.Before(ts.t0) {
+				continue // skip invalid timestamps
+			}
+
+			d1 := ts.t1.Sub(ts.t0).Seconds()
+			d2 := ts.t3.Sub(ts.t2).Seconds()
+			symmetry := math.Abs(d1 - d2)
+			rtt := d1 + d2
+
+			symmetryVals = append(symmetryVals, symmetry)
+			rttVals = append(rttVals, rtt)
+		}
+
+		avgSym := avg(symmetryVals)
+		jitter := stddev(rttVals)
+
+		log.LogAttrs(ctx, slog.LevelInfo, "Prober metrics",
+			slog.Int("prober", i),
+			slog.Float64("avg_symmetry_sec", avgSym),
+			slog.Float64("jitter_sec", jitter),
+		)
+	}
+}
+
+func avg(xs []float64) float64 {
+	if len(xs) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, x := range xs {
+		sum += x
+	}
+	return sum / float64(len(xs))
+}
+
+func stddev(xs []float64) float64 {
+	if len(xs) == 0 {
+		return 0
+	}
+	mean := avg(xs)
+	variance := 0.0
+	for _, x := range xs {
+		d := x - mean
+		variance += d * d
+	}
+	return math.Sqrt(variance / float64(len(xs)))
+}
+
+func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) [][]TimeStamps {
 	pathMap := make(map[string]snet.Path)
 	for _, path := range pM.S {
 		fp := snet.Fingerprint(path).String()
@@ -155,24 +217,25 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
 			perProberTimestamps[res.Index] = res.Timestamps
 			collected++
 		case <-ctx.Done():
-			return
+			return perProberTimestamps // We return what we have collected so far
 		}
 	}
 
-	for i, tsList := range perProberTimestamps {
-		if tsList != nil {
-			pM.Probers[i].Log.LogAttrs(ctx, slog.LevelInfo, "Finished probing path",
-				slog.String("path", pM.Probers[i].InterleavedModePath()),
-			)
-			for j, ts := range tsList {
-				pM.Probers[i].Log.LogAttrs(ctx, slog.LevelDebug, "Timestamp sample",
-					slog.Int("prober", i),
-					slog.Int("sample", j),
-					slog.String("ts", ts.String()),
-				)
-			}
-		}
-	}
+	// for i, tsList := range perProberTimestamps {
+	// 	if tsList != nil {
+	// 		pM.Probers[i].Log.LogAttrs(ctx, slog.LevelInfo, "Finished probing path",
+	// 			slog.String("path", pM.Probers[i].InterleavedModePath()),
+	// 		)
+	// 		for j, ts := range tsList {
+	// 			pM.Probers[i].Log.LogAttrs(ctx, slog.LevelDebug, "Timestamp sample",
+	// 				slog.Int("prober", i),
+	// 				slog.Int("sample", j),
+	// 				slog.String("ts", ts.String()),
+	// 			)
+	// 		}
+	// 	}
+	// }
+	return perProberTimestamps // if prober with index x has no path assigned, then there is no value for prober with index x in perProberTimestamps
 }
 
 func (ts TimeStamps) String() string {

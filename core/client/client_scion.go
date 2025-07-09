@@ -663,7 +663,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetrics,
 	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
 	timestamp time.Time, offset time.Duration, err error, timestamps TimeStamps) {
-	c.Log.LogAttrs(ctx, slog.LevelDebug, "GET TIMESTAMPS")
+
 	timestamps = TimeStamps{}
 	if c.Auth.Enabled && c.Auth.opt == nil {
 		c.Auth.opt = &slayers.EndToEndOption{}
@@ -885,7 +885,7 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 	for {
 		buf = buf[:cap(buf)]
 		oob = oob[:cap(oob)]
-		n, oobn, flags, lastHop, err := conn.ReadMsgUDPAddrPort(buf, oob)
+		n, oobn, flags, _, err := conn.ReadMsgUDPAddrPort(buf, oob)
 		if err != nil {
 			if numRetries != maxNumRetries && deadlineIsSet && timebase.Now().Before(deadline) {
 				c.Log.LogAttrs(ctx, slog.LevelInfo, "failed to read packet", slog.Any("error", err))
@@ -1082,17 +1082,17 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 			return time.Time{}, 0, err, timestamps
 		}
 
-		dscp := scionLayer.TrafficClass >> 2
+		// dscp := scionLayer.TrafficClass >> 2
 
-		c.Log.LogAttrs(ctx, slog.LevelDebug, "DYNAMIC:received response",
-			slog.Time("at", cRxTime),
-			slog.String("from", reference),
-			slog.Any("via", lastHop),
-			slog.Uint64("DSCP", uint64(dscp)),
-			slog.Bool("auth", authenticated),
-			slog.Bool("ntsauth", ntsAuthenticated),
-			slog.Any("data", ntp.PacketLogValuer{Pkt: &ntpresp}),
-		)
+		//c.Log.LogAttrs(ctx, slog.LevelDebug, "DYNAMIC:received response",
+		//	slog.Time("at", cRxTime),
+		//	slog.String("from", reference),
+		//	slog.Any("via", lastHop),
+		//	slog.Uint64("DSCP", uint64(dscp)),
+		//	slog.Bool("auth", authenticated),
+		//	slog.Bool("ntsauth", ntsAuthenticated),
+		//	slog.Any("data", ntp.PacketLogValuer{Pkt: &ntpresp}),
+		//)
 
 		sRxTime := ntp.TimeFromTime64(ntpresp.ReceiveTime, cTxTime0)
 		sTxTime := ntp.TimeFromTime64(ntpresp.TransmitTime, cTxTime0)
@@ -1115,30 +1115,39 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 			return time.Time{}, 0, err, timestamps
 		}
 
-		off := ntp.ClockOffset(t0, t1, t2, t3)
+		// off := ntp.ClockOffset(t0, t1, t2, t3)
 		rtd := ntp.RoundTripDelay(t0, t1, t2, t3)
 
 		mtrcs.respsAccepted.Inc()
 		if interleavedResp {
 			mtrcs.respsAcceptedInterleaved.Inc()
 		}
-		c.Log.LogAttrs(ctx, slog.LevelDebug, "DYNAMIC:evaluated response",
+		// c.Log.LogAttrs(ctx, slog.LevelDebug, "DYNAMIC:evaluated response",
+		// 	slog.Time("at", cRxTime),
+		// 	slog.String("from", reference),
+		// 	slog.String("via", snet.Fingerprint(path).String()),
+		// 	slog.Bool("interleaved", interleavedResp),
+		// 	slog.Duration("clock offset", off),
+		// 	slog.Duration("round trip delay", rtd),
+		// )
+
+		c.Log.LogAttrs(ctx, slog.LevelDebug, "PROBING: Response from server",
 			slog.Time("at", cRxTime),
 			slog.String("from", reference),
 			slog.String("via", snet.Fingerprint(path).String()),
 			slog.Bool("interleaved", interleavedResp),
-			slog.Duration("clock offset", off),
 			slog.Duration("round trip delay", rtd),
+			slog.Bool("ntsauth", ntsAuthenticated),
 		)
 
-		if c.InterleavedMode {
-			c.prev.reference = reference
-			c.prev.path = snet.Fingerprint(path).String()
-			c.prev.interleaved = interleavedResp
-			c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
-			c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
-			c.prev.sRxTime = ntpresp.ReceiveTime
-		}
+		// if c.InterleavedMode {
+		// 	c.prev.reference = reference
+		// 	c.prev.path = snet.Fingerprint(path).String()
+		// 	c.prev.interleaved = interleavedResp
+		// 	c.prev.cTxTime = ntp.Time64FromTime(cTxTime1)
+		// 	c.prev.cRxTime = ntp.Time64FromTime(cRxTime)
+		// 	c.prev.sRxTime = ntpresp.ReceiveTime
+		// }
 
 		timestamp = cRxTime
 
