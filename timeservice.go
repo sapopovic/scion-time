@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
@@ -105,15 +107,16 @@ type ntpReferenceClockIP struct {
 }
 
 type ntpReferenceClockSCION struct {
-	log               *slog.Logger
-	ntpcs             [scionRefClockNumClient]*client.SCIONClient
-	localAddr         udp.UDPAddr
-	remoteAddr        udp.UDPAddr
-	pather            *scion.Pather
-	chosenPaths       []string
-	selectionMethod   string
-	lastSelection     time.Time
-	selectionInterval time.Duration
+	log                 *slog.Logger
+	ntpcs               [scionRefClockNumClient]*client.SCIONClient
+	localAddr           udp.UDPAddr
+	remoteAddr          udp.UDPAddr
+	pather              *scion.Pather
+	chosenPaths         []string
+	selectionMethod     string
+	lastSelection       time.Time
+	selectionInterval   time.Duration
+	benchmarkInProgress atomic.Bool
 }
 
 type tlsCertCache struct {
@@ -263,10 +266,9 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 
 func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig) *ntpReferenceClockSCION {
 	c := &ntpReferenceClockSCION{
-		log:               log,
-		localAddr:         localAddr,
-		remoteAddr:        remoteAddr,
-		selectionInterval: time.Hour,
+		log:        log,
+		localAddr:  localAddr,
+		remoteAddr: remoteAddr,
 	}
 
 	log.Info("----Configuration Details----")
@@ -319,7 +321,6 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 	time.Time, time.Duration, error) {
 	var ps []snet.Path
-	log := slog.Default()
 	if c.remoteAddr.IA == c.localAddr.IA {
 		ps = []snet.Path{path.Path{
 			Src:           c.localAddr.IA,
@@ -328,22 +329,155 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 			NextHop:       c.remoteAddr.Host,
 		}}
 	} else {
-		if c.lastSelection.IsZero() || time.Since(c.lastSelection) >= c.selectionInterval {
-			c.lastSelection = time.Now()
 
-			// s := "71-20965" // Geant
-			s := "67-401500" // north america
-			address, _ := addr.ParseIA(s)
-			// log.Debug("Address formating", slog.Any("error", err))
-			// ps_temp := c.pather.Paths(address)
-			ps_temp, _ := c.pather.GetPathsToDest(ctx, scion.DC, address)
-			// ps_temp = ps_temp[:10]
-			//log.Debug("printing paths", slog.Any("paths", ps_temp))
-			log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
-			ps_temp_selected := client.ChooseNewPaths(ps_temp, 25) //[]snet.Path
-			//log.Debug("printing selected paths", slog.Any("paths", ps_temp_selected))
-			log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
+		if !c.benchmarkInProgress.Load() {
+			c.benchmarkInProgress.Store(true)
+
+			go func() {
+				defer c.benchmarkInProgress.Store(false)
+
+				// Choose AS
+				log := slog.Default()
+				targetIA := "67-401500"
+				dst, err := addr.ParseIA(targetIA)
+				if err != nil {
+					log.Error("Failed to parse IA", slog.Any("error", err))
+					return
+				}
+
+				// Get all paths to AS. Done once so potential changes in topology won't change anything
+				psAll, err := c.pather.GetPathsToDest(context.Background(), scion.DC, dst)
+				if err != nil {
+					log.Error("Path lookup failed", slog.Any("error", err))
+					return
+				}
+				log.Info("Fetched paths", slog.Int("total_paths", len(psAll)))
+
+				// Define path set sizes and set S sizes (set S contains active and backup paths)
+				sizes := []int{10, 20}       // sizes := []int{10, 20, 50, 100, 200, 300, 400, 500}
+				numPathsList := []int{5, 10} // numPathsList := []int{5, 10, 20, 40}
+				trials := 5
+				maxAvailable := len(psAll)
+
+				// For each path set size
+				for _, size := range sizes {
+					if size > maxAvailable {
+						log.Info("Stopping benchmark loop early",
+							slog.Int("max_paths_available", maxAvailable),
+							slog.Int("skipped_from_size", size))
+						break
+					}
+
+					// For each set size S
+					for _, numPaths := range numPathsList {
+						if numPaths > size {
+							continue // skip invalid combinations
+						}
+
+						var times []time.Duration
+						var peaks []uint64
+
+						// Do 5 repetitions (take the avg and further)
+						for trial := 0; trial < trials; trial++ {
+							// take numpaths random paths
+							psSample := slices.Clone(psAll)
+							rand.Shuffle(len(psSample), func(i, j int) {
+								psSample[i], psSample[j] = psSample[j], psSample[i]
+							})
+							psSample = psSample[:size]
+
+							// Measure memory consumption
+							runtime.GC()
+							var m runtime.MemStats
+							var peakAlloc uint64
+							done := make(chan struct{})
+
+							go func() {
+								for {
+									select {
+									case <-done:
+										return
+									default:
+										runtime.ReadMemStats(&m)
+										if m.Alloc > peakAlloc {
+											peakAlloc = m.Alloc
+										}
+										time.Sleep(1 * time.Millisecond)
+									}
+								}
+							}()
+
+							type result struct {
+								elapsed time.Duration
+								peakMem uint64
+							}
+							trialResult := make(chan result, 1)
+
+							go func() {
+								start := time.Now()
+								_ = client.ChooseNewPaths(psSample, numPaths)
+								trialResult <- result{
+									elapsed: time.Since(start),
+									peakMem: peakAlloc,
+								}
+							}()
+
+							select {
+							case r := <-trialResult:
+								times = append(times, r.elapsed)
+								peaks = append(peaks, r.peakMem) // Get MAX PEAK for this trial!
+							case <-time.After(3 * time.Hour): // Maximum three hours!
+								log.Error("Timeout",
+									slog.Int("input_size", size),
+									slog.Int("numPaths", numPaths))
+								times = append(times, 3*time.Hour)
+								peaks = append(peaks, 0)
+							}
+							close(done)
+						}
+
+						// Compute statistics for the current (input_size, numPaths) configuration
+						var totalTime time.Duration
+						var totalMem, minMem, maxMem = peaks[0], peaks[0], peaks[0]
+						var minTime, maxTime = times[0], times[0]
+
+						for i := 0; i < trials; i++ {
+							totalTime += times[i]
+							if times[i] < minTime {
+								minTime = times[i]
+							}
+							if times[i] > maxTime {
+								maxTime = times[i]
+							}
+							if peaks[i] < minMem {
+								minMem = peaks[i]
+							}
+							if peaks[i] > maxMem {
+								maxMem = peaks[i]
+							}
+							totalMem += peaks[i]
+						}
+
+						avgTime := totalTime / time.Duration(trials)
+						avgMem := totalMem / uint64(trials)
+
+						log.Info("Hercules benchmark summary",
+							slog.Int("input_size", size),
+							slog.Int("numPaths", numPaths),
+							slog.Int("trials", trials),
+							slog.Duration("avg_time", avgTime),
+							slog.Duration("min_time", minTime),
+							slog.Duration("max_time", maxTime),
+							slog.Float64("avg_mem_MB", float64(avgMem)/1024.0/1024.0),
+							slog.Float64("min_mem_MB", float64(minMem)/1024.0/1024.0),
+							slog.Float64("max_mem_MB", float64(maxMem)/1024.0/1024.0),
+						)
+					}
+				}
+			}()
 		}
+
+		//----------------NTP------------------
 
 		ps = c.pather.Paths(c.remoteAddr.IA)
 	}

@@ -251,7 +251,7 @@ func ChooseNewPaths(availablePaths []snet.Path, numPaths int) []snet.Path {
 	// (tens of seconds), we run it with a timeout and fall back to using the
 	// first few paths if it takes too long.
 	ch := make(chan int, 1)
-	timeout, cancel := context.WithTimeout(context.Background(), 55*time.Minute)
+	timeout, cancel := context.WithTimeout(context.Background(), 55*time.Hour) // set to large number for benchmarking
 	defer cancel()
 
 	var computedPathSet []snet.Path
