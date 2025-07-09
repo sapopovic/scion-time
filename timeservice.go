@@ -269,7 +269,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 		K:                        20,
 		RemoteAddr:               remoteAddr,
 		LocalAddr:                localAddr,
-		PingDuration:             2,
+		PingDuration:             20,
 	}
 	for i := range len(pM.Probers) {
 		pM.Probers[i] = &client.SCIONClient{

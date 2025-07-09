@@ -30,8 +30,10 @@ type PathManager struct {
 }
 
 type ProbeResult struct {
-	Index      int
-	Timestamps []TimeStamps
+	Index          int
+	Timestamps     []TimeStamps
+	SuccessCount   int
+	AttemptedCount int
 }
 
 /*
@@ -112,12 +114,24 @@ func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger
 
 // -------------------dynamic----------------------------
 
-func analyzeProbes(ctx context.Context, timestamps [][]TimeStamps, log *slog.Logger) {
-	for i, tsList := range timestamps {
+func analyzeProbes(ctx context.Context, results []ProbeResult, log *slog.Logger) {
+	for i, res := range results {
+		tsList := res.Timestamps
 		if tsList == nil || len(tsList) == 0 {
-			log.LogAttrs(context.Background(), slog.LevelInfo, "No data for prober", slog.Int("prober", i))
+			log.LogAttrs(ctx, slog.LevelInfo, "No responses for prober",
+				slog.Int("prober", i),
+				slog.Int("attempted", res.AttemptedCount),
+				slog.Int("successful", res.SuccessCount),
+			)
 			continue
 		}
+
+		log.LogAttrs(ctx, slog.LevelInfo, "Probe response summary",
+			slog.Int("prober", i),
+			slog.Int("attempted", res.AttemptedCount),
+			slog.Int("successful", res.SuccessCount),
+			slog.Float64("success_rate", float64(res.SuccessCount)/float64(res.AttemptedCount)),
+		)
 
 		var symmetryVals []float64
 		var rttVals []float64
@@ -171,7 +185,7 @@ func stddev(xs []float64) float64 {
 	return math.Sqrt(variance / float64(len(xs)))
 }
 
-func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) [][]TimeStamps {
+func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) []ProbeResult {
 	pathMap := make(map[string]snet.Path)
 	for _, path := range pM.S {
 		fp := snet.Fingerprint(path).String()
@@ -180,7 +194,8 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) [][]Tim
 
 	mtrcs := scionMetrics.Load()
 
-	perProberTimestamps := make([][]TimeStamps, len(pM.Probers))
+	// perProberTimestamps := make([][]TimeStamps, len(pM.Probers))
+	perProberResults := make([]ProbeResult, len(pM.Probers))
 	resultCh := make(chan ProbeResult, len(pM.Probers))
 
 	nProbers := 0
@@ -191,20 +206,29 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) [][]Tim
 				nProbers++
 				go func(i int, prober *SCIONClient, p snet.Path) {
 					var results []TimeStamps
+					success := 0
 					for j := 0; j < pM.PingDuration; j++ {
-						_, _, e, timestamps := prober.getTimestamps(ctx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
+						pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+						_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
+						cancel()
 						if e != nil {
-							prober.Log.LogAttrs(ctx, slog.LevelInfo, "Failed to ping path",
+							prober.Log.LogAttrs(ctx, slog.LevelInfo, "Timeout or error during probing",
 								slog.Any("to", pM.RemoteAddr),
 								slog.Any("via", snet.Fingerprint(p).String()),
 								slog.Any("error", e),
 							)
 							continue
 						}
+						success++
 						results = append(results, timestamps)
 						time.Sleep(1 * time.Second)
 					}
-					resultCh <- ProbeResult{Index: i, Timestamps: results}
+					resultCh <- ProbeResult{
+						Index:          i,
+						Timestamps:     results,
+						SuccessCount:   success,
+						AttemptedCount: pM.PingDuration,
+					}
 				}(i, prober, path)
 			}
 		}
@@ -214,10 +238,11 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) [][]Tim
 	for collected < nProbers {
 		select {
 		case res := <-resultCh: // res is the ProbeResult in the go routine
-			perProberTimestamps[res.Index] = res.Timestamps
+			// perProberTimestamps[res.Index] = res.Timestamps
+			perProberResults[res.Index] = res
 			collected++
 		case <-ctx.Done():
-			return perProberTimestamps // We return what we have collected so far
+			return perProberResults // We return what we have collected so far
 		}
 	}
 
@@ -235,7 +260,8 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) [][]Tim
 	// 		}
 	// 	}
 	// }
-	return perProberTimestamps // if prober with index x has no path assigned, then there is no value for prober with index x in perProberTimestamps
+	// return perProberTimestamps // if prober with index x has no path assigned, then there is no value for prober with index x in perProberTimestamps
+	return perProberResults
 }
 
 func (ts TimeStamps) String() string {
