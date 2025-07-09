@@ -26,6 +26,12 @@ type PathManager struct {
 	Cap                      int              // total active paths you want to keep
 	K                        int              // total candidate paths to consider
 	Probers                  [20]*SCIONClient // handle path assessment (symmetry, jitter), LENGTH TO BE DEFINED SOMEWHERE ELSE
+	PingDuration             int
+}
+
+type ProbeResult struct {
+	Index      int
+	Timestamps []TimeStamps
 }
 
 /*
@@ -87,18 +93,23 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 	pM.S = S
 	pM.S_Active = S_active
 	pM.assignProbers()
+
+	// for _, prober := range pM.Probers {
+	// 	log.LogAttrs(ctx, slog.LevelInfo, "HIIII", slog.Any("xleave?", prober.InterleavedMode), slog.Any("prev struct", prober.prev))
+	// }
+
 	log.Info("Static path selection completed", slog.Int("S_total", len(S)), slog.Int("S_active", len(S_active)))
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
 	// TODO: implement dynamic selection logic here, e.g., based on symmetry, jitter etc
-	pM.probePaths(ctx)
+	pM.probePaths(ctx, log)
 	log.Info("Dynamic path selection completed (placeholder)")
 }
 
 // -------------------dynamic----------------------------
 
-func (pM *PathManager) probePaths(ctx context.Context) {
+func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
 	pathMap := make(map[string]snet.Path)
 	for _, path := range pM.S {
 		fp := snet.Fingerprint(path).String()
@@ -106,42 +117,71 @@ func (pM *PathManager) probePaths(ctx context.Context) {
 	}
 
 	mtrcs := scionMetrics.Load()
+
 	perProberTimestamps := make([][]TimeStamps, len(pM.Probers))
+	resultCh := make(chan ProbeResult, len(pM.Probers))
+
+	nProbers := 0
 
 	for i, prober := range pM.Probers {
-
-		if prober.InterleavedModePath() != "" && pathMap[prober.prev.path] != nil { // TODO: CHECK IT OUT
-
-			go func(i int, ctx context.Context, log *slog.Logger, mtrcs *scionClientMetrics, prober *SCIONClient, p snet.Path) {
-				var results []TimeStamps
-
-				for j := 0; j < 20; j++ {
-					_, _, e, timestamps := prober.getTimestamps(ctx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
-					if e != nil {
-						log.LogAttrs(ctx, slog.LevelInfo, "failed to measure clock offset",
-							slog.Any("to", pM.RemoteAddr),
-							slog.Any("via", snet.Fingerprint(p).String()),
-							slog.Any("error", e),
-						)
-						continue
+		if prober.prev.path != "" {
+			if path, ok := pathMap[prober.prev.path]; ok {
+				nProbers++
+				go func(i int, prober *SCIONClient, p snet.Path) {
+					var results []TimeStamps
+					for j := 0; j < pM.PingDuration; j++ {
+						_, _, e, timestamps := prober.getTimestamps(ctx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
+						if e != nil {
+							prober.Log.LogAttrs(ctx, slog.LevelInfo, "Failed to ping path",
+								slog.Any("to", pM.RemoteAddr),
+								slog.Any("via", snet.Fingerprint(p).String()),
+								slog.Any("error", e),
+							)
+							continue
+						}
+						results = append(results, timestamps)
+						time.Sleep(1 * time.Second)
 					}
-					results = append(results, timestamps)
-					time.Sleep(1 * time.Second)
-				}
-				perProberTimestamps[i] = results
-			}(i, ctx, prober.Log, mtrcs, prober, pathMap[prober.prev.path])
+					resultCh <- ProbeResult{Index: i, Timestamps: results}
+				}(i, prober, path)
+			}
+		}
+	}
+
+	collected := 0
+	for collected < nProbers {
+		select {
+		case res := <-resultCh: // res is the ProbeResult in the go routine
+			perProberTimestamps[res.Index] = res.Timestamps
+			collected++
+		case <-ctx.Done():
+			return
 		}
 	}
 
 	for i, tsList := range perProberTimestamps {
 		if tsList != nil {
-			log := pM.Probers[i].Log
-			log.LogAttrs(ctx, slog.LevelInfo, "finished probing path",
+			pM.Probers[i].Log.LogAttrs(ctx, slog.LevelInfo, "Finished probing path",
 				slog.String("path", pM.Probers[i].InterleavedModePath()),
-				slog.Int("samples", len(tsList)),
 			)
+			for j, ts := range tsList {
+				pM.Probers[i].Log.LogAttrs(ctx, slog.LevelDebug, "Timestamp sample",
+					slog.Int("prober", i),
+					slog.Int("sample", j),
+					slog.String("ts", ts.String()),
+				)
+			}
 		}
 	}
+}
+
+func (ts TimeStamps) String() string {
+	return fmt.Sprintf("t0=%s, t1=%s, t2=%s, t3=%s",
+		ts.t0.Format(time.RFC3339Nano),
+		ts.t1.Format(time.RFC3339Nano),
+		ts.t2.Format(time.RFC3339Nano),
+		ts.t3.Format(time.RFC3339Nano),
+	)
 }
 
 // Each SCIONClient holds a path and we can probe the path with the help of this SCIONClient
@@ -153,7 +193,6 @@ func (pM *PathManager) assignProbers() {
 		if prober == nil {
 			continue
 		}
-		prober.ResetInterleavedMode() // Always reset
 
 		if sIndex < len(pM.S) {
 			selectedPath := pM.S[sIndex]

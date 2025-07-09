@@ -663,7 +663,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetrics,
 	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
 	timestamp time.Time, offset time.Duration, err error, timestamps TimeStamps) {
-
+	c.Log.LogAttrs(ctx, slog.LevelDebug, "GET TIMESTAMPS")
 	timestamps = TimeStamps{}
 	if c.Auth.Enabled && c.Auth.opt == nil {
 		c.Auth.opt = &slayers.EndToEndOption{}
@@ -1084,7 +1084,7 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 
 		dscp := scionLayer.TrafficClass >> 2
 
-		c.Log.LogAttrs(ctx, slog.LevelDebug, "received response",
+		c.Log.LogAttrs(ctx, slog.LevelDebug, "DYNAMIC:received response",
 			slog.Time("at", cRxTime),
 			slog.String("from", reference),
 			slog.Any("via", lastHop),
@@ -1122,7 +1122,7 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 		if interleavedResp {
 			mtrcs.respsAcceptedInterleaved.Inc()
 		}
-		c.Log.LogAttrs(ctx, slog.LevelDebug, "evaluated response",
+		c.Log.LogAttrs(ctx, slog.LevelDebug, "DYNAMIC:evaluated response",
 			slog.Time("at", cRxTime),
 			slog.String("from", reference),
 			slog.String("via", snet.Fingerprint(path).String()),
@@ -1141,6 +1141,13 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 		}
 
 		timestamp = cRxTime
+
+		timestamps = TimeStamps{
+			t0: t0,
+			t1: t1,
+			t2: t2,
+			t3: t3,
+		}
 
 		break
 	}
