@@ -338,7 +338,8 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 
 				// Choose AS
 				log := slog.Default()
-				targetIA := "67-401500"
+				// targetIA := "67-401500"
+				targetIA := "64-64580"
 				dst, err := addr.ParseIA(targetIA)
 				if err != nil {
 					log.Error("Failed to parse IA", slog.Any("error", err))
@@ -354,9 +355,9 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 				log.Info("Fetched paths", slog.Int("total_paths", len(psAll)))
 
 				// Define path set sizes and set S sizes (set S contains active and backup paths)
-				sizes := []int{10, 20}       // sizes := []int{10, 20, 50, 100, 200, 300, 400, 500}
-				numPathsList := []int{5, 10} // numPathsList := []int{5, 10, 20, 40}
-				trials := 5
+				sizes := []int{10, 20, 50, 100, 200}
+				numPathsList := []int{5, 10, 20, 40}
+				trials := 3
 				maxAvailable := len(psAll)
 
 				// For each path set size
@@ -370,7 +371,8 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 
 					// For each set size S
 					for _, numPaths := range numPathsList {
-						if numPaths > size {
+						// If the size is the same as numpaths, then this should take 0 seconds because we take all without checking. This is a programmatic enhancement.
+						if numPaths >= size {
 							continue // skip invalid combinations
 						}
 
@@ -426,11 +428,11 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 							case r := <-trialResult:
 								times = append(times, r.elapsed)
 								peaks = append(peaks, r.peakMem) // Get MAX PEAK for this trial!
-							case <-time.After(3 * time.Hour): // Maximum three hours!
+							case <-time.After(2 * time.Hour): // Maximum TWO hours!
 								log.Error("Timeout",
 									slog.Int("input_size", size),
 									slog.Int("numPaths", numPaths))
-								times = append(times, 3*time.Hour)
+								times = append(times, 2*time.Hour)
 								peaks = append(peaks, 0)
 							}
 							close(done)
