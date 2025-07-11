@@ -1,0 +1,12 @@
+Jul 09 21:24:10 ts3 timeservice[2013668]: time=2025-07-09T21:24:10.965Z level=INFO source=timeservice.go:355 msg="Fetched paths" total_paths=570
+Jul 09 21:24:11 ts3 timeservice[2013668]: time=2025-07-09T21:24:11.657Z level=INFO source=timeservice.go:466 msg="Hercules benchmark summary" input_size=10 numPaths=5 trials=3 avg_time=219.919066ms min_time=208.220917ms max_time=231.418727ms avg_mem_MB=52.90032958984375 min_mem_MB=39.41993713378906 max_mem_MB=39.93316650390625
+Jul 09 21:24:52 ts3 timeservice[2013668]: time=2025-07-09T21:24:52.051Z level=INFO source=timeservice.go:466 msg="Hercules benchmark summary" input_size=20 numPaths=5 trials=3 avg_time=13.458362077s min_time=12.907446895s max_time=13.839805616s avg_mem_MB=56.42190742492676 min_mem_MB=42.17090606689453 max_mem_MB=42.42121887207031
+Jul 10 03:24:52 ts3 timeservice[2013668]: time=2025-07-10T03:24:52.084Z level=INFO source=timeservice.go:466 msg="Hercules benchmark summary" input_size=20 numPaths=10 trials=3 avg_time=2h0m0s min_time=2h0m0s max_time=2h0m0s avg_mem_MB=0 min_mem_MB=0 max_mem_MB=0
+Jul 10 06:11:36 ts3 timeservice[2013668]: time=2025-07-10T06:11:36.272Z level=INFO source=timeservice.go:466 msg="Hercules benchmark summary" input_size=50 numPaths=5 trials=3 avg_time=55m34.721242716s min_time=55m16.334562275s max_time=55m52.39978298s avg_mem_MB=86.97214221954346 min_mem_MB=61.45210266113281 max_mem_MB=67.06208038330078
+Jul 10 12:11:36 ts3 timeservice[2013668]: time=2025-07-10T12:11:36.310Z level=INFO source=timeservice.go:466 msg="Hercules benchmark summary" input_size=50 numPaths=10 trials=3 avg_time=2h0m0s min_time=2h0m0s max_time=2h0m0s avg_mem_MB=0 min_mem_MB=0 max_mem_MB=0
+Jul 10 18:11:36 ts3 timeservice[2013668]: time=2025-07-10T18:11:36.356Z level=INFO source=timeservice.go:466 msg="Hercules benchmark summary" input_size=50 numPaths=20 trials=3 avg_time=2h0m0s min_time=2h0m0s max_time=2h0m0s avg_mem_MB=0 min_mem_MB=0 max_mem_MB=0
+Jul 11 00:11:36 ts3 timeservice[2013668]: time=2025-07-11T00:11:36.409Z level=INFO source=timeservice.go:466 msg="Hercules benchmark summary" input_size=50 numPaths=40 trials=3 avg_time=2h0m0s min_time=2h0m0s max_time=2h0m0s avg_mem_MB=0 min_mem_MB=0 max_mem_MB=0
+Jul 11 06:11:36 ts3 timeservice[2013668]: time=2025-07-11T06:11:36.464Z level=INFO source=timeservice.go:466 msg="Hercules benchmark summary" input_size=100 numPaths=5 trials=3 avg_time=2h0m0s min_time=2h0m0s max_time=2h0m0s avg_mem_MB=0 min_mem_MB=0 max_mem_MB=0
+
+
+// stopped earlier because for input_size=100 and min(numPaths)=5 -> more than 2h
