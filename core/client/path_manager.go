@@ -28,7 +28,7 @@ type PathManager struct {
 	K                        int              // total candidate paths to consider
 	Probers                  [20]*SCIONClient // handle path assessment (symmetry, jitter), LENGTH TO BE DEFINED SOMEWHERE ELSE
 	PingDuration             int
-	SmoothedQ                map[int]float64
+	MetricsPerProber         map[int]*PathMetrics
 }
 
 type ProbeResult struct {
@@ -46,6 +46,20 @@ type PathScore struct {
 	MinRTT      float64
 	Jitter      float64
 	SuccessRate float64
+}
+
+type MetricEMA struct {
+	Value   float64
+	HasPrev bool
+}
+
+type PathMetrics struct {
+	MinRTT      float64
+	JitterEMA   MetricEMA
+	AsymEMA     MetricEMA
+	QScoreEMA   MetricEMA
+	SampleCount int
+	LossCount   int
 }
 
 /*
@@ -102,6 +116,7 @@ func (pM PathManager) GetPaths(ctx context.Context, log *slog.Logger, cap, k int
 
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
 	ps := pM.Pather.Paths(pM.RemoteAddr.IA)
+	pM.MetricsPerProber = make(map[int]*PathMetrics)
 	S := chooseNewPaths(ps, pM.K)
 	S_active := pickRandom(S, pM.Cap)
 	pM.S = S
@@ -116,14 +131,13 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
-	probings := pM.probePaths(ctx, log) // [][]TimeStamps
-	pM.analyzeProbes(ctx, probings, log)
-
-	log.Info("Dynamic path selection completed (placeholder)")
+	pM.probePaths(ctx, log) // Updates PathMetrics for each path with EVERY NEW MEASUREMENT. These are performance results.
+	pM.PrintSortedPathsByQ(log)
 }
 
 // -------------------dynamic----------------------------
 
+/*
 func (pM PathManager) analyzeProbes(ctx context.Context, results []ProbeResult, log *slog.Logger) {
 
 	var pathScores []PathScore
@@ -218,42 +232,40 @@ func (pM PathManager) analyzeProbes(ctx context.Context, results []ProbeResult, 
 			slog.Float64("Q", ps.Q),
 		)
 	}
-	/*
-			msg="Path score" prober=3 Q=0.0855374286791711
-		msg="Path score" prober=7 Q=0.09315019299953131
-		msg="Path score" prober=4 Q=0.09754099591778204
-		msg="Path score" prober=6 Q=0.09861475155529316
-		msg="Path score" prober=0 Q=0.09993770143037381
-		msg="Path score" prober=2 Q=0.10839013078913079
-		msg="Path score" prober=1 Q=0.11690818638622333
-		msg="Path score" prober=5 Q=0.11794636737701675
+}*/
 
-		msg="Path score" prober=7 Q=0.08348873587584839
-		msg="Path score" prober=3 Q=0.084013390948727
-		msg="Path score" prober=6 Q=0.09752677032537
-		msg="Path score" prober=2 Q=0.0992015187570147
-		msg="Path score" prober=0 Q=0.1005571072194047
-		msg="Path score" prober=4 Q=0.10275510095261187
-		msg="Path score" prober=1 Q=0.11182432652143082
-		msg="Path score" prober=5 Q=0.11198912239390575
+func (pM *PathManager) PrintSortedPathsByQ(log *slog.Logger) {
+	type ranked struct {
+		Index   int
+		Metrics *PathMetrics
+	}
 
-		msg="Path score" prober=7 Q=0.08234252957174248
-		msg="Path score" prober=3 Q=0.08483578202682206
-		msg="Path score" prober=4 Q=0.09731762414381094
-		msg="Path score" prober=6 Q=0.09867296447466167
-		msg="Path score" prober=5 Q=0.11437106751714547
-		msg="Path score" prober=0 Q=0.27115612980370285
-		msg="Path score" prober=2 Q=0.27172923162742213
-		msg="Path score" prober=1 Q=0.2837177377769954
+	var list []ranked
+	for index, metrics := range pM.MetricsPerProber {
+		if metrics.SampleCount == 0 {
+			continue // Skip uninitialized paths
+		}
+		list = append(list, ranked{Index: index, Metrics: metrics})
+	}
 
-		msg="Path score" prober=3 Q=0.0860658671498165
-		msg="Path score" prober=7 Q=0.09033093918701494
-		msg="Path score" prober=2 Q=0.09783032062689567
-		msg="Path score" prober=0 Q=0.09952048218160983
-		msg="Path score" prober=4 Q=0.1090348933182238
-		msg="Path score" prober=1 Q=0.1127228133401549
-		msg="Path score" prober=5 Q=0.11417712709244915
-		msg="Path score" prober=6 Q=0.1170212105765307*/
+	// Sort in ascending order of QScoreEMA.Value
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Metrics.QScoreEMA.Value < list[j].Metrics.QScoreEMA.Value
+	})
+
+	// Print sorted path metrics
+	for _, entry := range list {
+		m := entry.Metrics
+		log.Info("Path score",
+			slog.Int("prober", entry.Index),
+			slog.Float64("Q", m.QScoreEMA.Value),
+			slog.Float64("jitter", m.JitterEMA.Value),
+			slog.Float64("asymmetry", m.AsymEMA.Value),
+			slog.Float64("minRTT", m.MinRTT),
+			slog.Int("samples", m.SampleCount),
+			slog.Int("losses", m.LossCount),
+		)
+	}
 }
 
 func normalize(x, scale float64) float64 {
@@ -284,7 +296,19 @@ func stddev(xs []float64) float64 {
 	return math.Sqrt(variance / float64(len(xs)))
 }
 
-func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) []ProbeResult {
+func updateEMA(metric *MetricEMA, newVal, baseAlpha, maxAlpha, frac float64) {
+	if !metric.HasPrev {
+		metric.Value = newVal
+		metric.HasPrev = true
+		return
+	}
+	delta := math.Abs(newVal - metric.Value)
+	scale := 1.0 / (frac * metric.Value)
+	alpha := baseAlpha + math.Min(delta*scale, maxAlpha-baseAlpha)
+	metric.Value = alpha*newVal + (1-alpha)*metric.Value
+}
+
+func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
 	pathMap := make(map[string]snet.Path)
 	for _, path := range pM.S {
 		fp := snet.Fingerprint(path).String()
@@ -293,10 +317,6 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) []Probe
 
 	mtrcs := scionMetrics.Load()
 
-	// perProberTimestamps := make([][]TimeStamps, len(pM.Probers))
-	perProberResults := make([]ProbeResult, len(pM.Probers))
-	resultCh := make(chan ProbeResult, len(pM.Probers))
-
 	nProbers := 0
 
 	for i, prober := range pM.Probers {
@@ -304,63 +324,60 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) []Probe
 			if path, ok := pathMap[prober.prev.path]; ok {
 				nProbers++
 				go func(i int, prober *SCIONClient, p snet.Path) {
-					var results []TimeStamps
-					success := 0
+
+					if _, ok := pM.MetricsPerProber[i]; !ok {
+						pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
+					}
+					metrics := pM.MetricsPerProber[i]
+
 					for j := 0; j < pM.PingDuration; j++ {
 						pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 						_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
 						cancel()
+
 						if e != nil {
 							prober.Log.LogAttrs(ctx, slog.LevelInfo, "Timeout or error during probing",
 								slog.Any("to", pM.RemoteAddr),
 								slog.Any("via", snet.Fingerprint(p).String()),
 								slog.Any("error", e),
 							)
+							metrics.LossCount++
 							continue
 						}
-						success++
-						results = append(results, timestamps)
+
+						if timestamps.t0.IsZero() || timestamps.t1.IsZero() || timestamps.t2.IsZero() || timestamps.t3.IsZero() || timestamps.t3.Before(timestamps.t2) || timestamps.t2.Before(timestamps.t1) || timestamps.t1.Before(timestamps.t0) {
+							continue // skip invalid timestamps
+						}
+
+						d1 := timestamps.t1.Sub(timestamps.t0).Seconds()
+						d2 := timestamps.t3.Sub(timestamps.t2).Seconds()
+						rtt := d1 + d2
+
+						asym := math.Abs(d1 - d2)
+
+						if rtt < metrics.MinRTT { // TODO: look at that again
+							metrics.MinRTT = rtt
+						}
+
+						// jitter := math.Abs(rtt - metrics.MinRTT)
+						// updateEMA(&metrics.JitterEMA, jitter, 0.3, 0.8, 0.001) // frac value TO BE CHANGED
+						// updateEMA(&metrics.AsymEMA, asym, 0.3, 0.8, 0.001) // frac value 0.1 TO BE CHANGED
+
+						// jitterNorm := normalize(metrics.JitterEMA.Value, 0.01) // ADD LATER
+						// asymNorm := normalize(metrics.AsymEMA.Value, 0.0005) // asymmetry jumps around 500 microseconds, frac value TO BE CHANGED
+
+						// Q := 0.6*asymNorm + 0.4*jitterNorm // + 0.2*lossNorm
+						Q := asym
+						// updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.1)
+						updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.001)
+
+						metrics.SampleCount++
 						time.Sleep(1 * time.Second)
-					}
-					resultCh <- ProbeResult{
-						Index:          i,
-						Timestamps:     results,
-						SuccessCount:   success,
-						AttemptedCount: pM.PingDuration,
 					}
 				}(i, prober, path)
 			}
 		}
 	}
-
-	collected := 0
-	for collected < nProbers {
-		select {
-		case res := <-resultCh: // res is the ProbeResult in the go routine
-			// perProberTimestamps[res.Index] = res.Timestamps
-			perProberResults[res.Index] = res
-			collected++
-		case <-ctx.Done():
-			return perProberResults // We return what we have collected so far
-		}
-	}
-
-	// for i, tsList := range perProberTimestamps {
-	// 	if tsList != nil {
-	// 		pM.Probers[i].Log.LogAttrs(ctx, slog.LevelInfo, "Finished probing path",
-	// 			slog.String("path", pM.Probers[i].InterleavedModePath()),
-	// 		)
-	// 		for j, ts := range tsList {
-	// 			pM.Probers[i].Log.LogAttrs(ctx, slog.LevelDebug, "Timestamp sample",
-	// 				slog.Int("prober", i),
-	// 				slog.Int("sample", j),
-	// 				slog.String("ts", ts.String()),
-	// 			)
-	// 		}
-	// 	}
-	// }
-	// return perProberTimestamps // if prober with index x has no path assigned, then there is no value for prober with index x in perProberTimestamps
-	return perProberResults
 }
 
 func (ts TimeStamps) String() string {
