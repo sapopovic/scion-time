@@ -28,6 +28,7 @@ type PathManager struct {
 	K                        int              // total candidate paths to consider
 	Probers                  [20]*SCIONClient // handle path assessment (symmetry, jitter), LENGTH TO BE DEFINED SOMEWHERE ELSE
 	PingDuration             int
+	SmoothedQ                map[int]float64
 }
 
 type ProbeResult struct {
@@ -115,8 +116,6 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
-	// TODO: implement dynamic selection logic here, e.g., based on symmetry, jitter etc
-
 	probings := pM.probePaths(ctx, log) // [][]TimeStamps
 	pM.analyzeProbes(ctx, probings, log)
 
@@ -174,14 +173,15 @@ func (pM PathManager) analyzeProbes(ctx context.Context, results []ProbeResult, 
 		successRate := float64(res.SuccessCount) / float64(res.AttemptedCount)
 
 		// small coefficients in norm are too aggressive
-		symNorm := normalize(avgSym, 0.02)                  // 20ms scale
-		minRTTNorm := normalize(minRTT, 0.05)               // 50ms baseline
-		jitterNorm := normalize(jitter, 0.03)               // 30ms jitter scale
-		lossNorm := 1 - successRate                         // higher = worse
-		combinedRTTScore := 0.6*minRTTNorm + 0.4*jitterNorm // jitter higher because of accuracy NTP!
+		// symNorm := normalize(avgSym, 0.02) // 20ms scale
+		// minRTTNorm := normalize(minRTT, 0.05) // 50ms baseline
+		// jitterNorm := normalize(jitter, 0.03) // 30ms jitter scale
+		// lossNorm := 1 - successRate                         // higher = worse
+		// combinedRTTScore := 0.6*minRTTNorm + 0.4*jitterNorm // jitter higher because of accuracy NTP!
 
 		// Emphasize on symmetry, then stability (jitter), then baseline latency, then availability
-		Q := 0.5*symNorm + 0.4*combinedRTTScore + 0.1*lossNorm
+		// Q := 0.5*symNorm + 0.4*combinedRTTScore + 0.1*lossNorm
+		Q := avgSym
 
 		path := ""
 		if i < len(pM.Probers) && pM.Probers[i] != nil {
@@ -196,16 +196,6 @@ func (pM PathManager) analyzeProbes(ctx context.Context, results []ProbeResult, 
 			Jitter:      jitter,
 			SuccessRate: successRate,
 		})
-
-		// log.LogAttrs(ctx, slog.LevelInfo, "Dynamic path scoring",
-		// 	slog.Int("prober", i),
-		// 	slog.Float64("symmetry_sec", avgSym),
-		// 	slog.Float64("min_rtt_sec", minRTT),
-		// 	slog.Float64("jitter_sec", jitter),
-		// 	slog.Float64("success_rate", successRate),
-		// 	slog.Float64("Final path score", Q),
-		// )
-
 		// Q = w_sym * norm(symmetry) + w_rtt * combinedRTTScore + w_loss * (1 - successRate) | combinedRTTScore = combination minRTT & jitter
 	}
 

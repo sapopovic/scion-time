@@ -270,6 +270,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 		RemoteAddr:               remoteAddr,
 		LocalAddr:                localAddr,
 		PingDuration:             60,
+		SmoothedQ:                make(map[int]float64),
 	}
 	for i := range len(pM.Probers) {
 		pM.Probers[i] = &client.SCIONClient{
@@ -646,48 +647,59 @@ func runClient(configFile string) {
 
 	// --------------------------------------
 
-	launchScheduler := func(clock client.ReferenceClock) {
+	launchScheduler := func(i int, clock client.ReferenceClock, ready chan struct{}) {
 		scionClock, ok := clock.(*ntpReferenceClockSCION)
 		if !ok || scionClock.pathManager == nil {
+			close(ready)
 			return
 		}
 		go func() {
-			// ctx := context.Background()
 			for {
 				scionClock.pathManager.RunStaticSelection(ctx, log)
-
-				//Warm up phase
-				time.Sleep(1 * time.Minute) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
-				scionClock.pathManager.RunDynamicSelection(ctx, log)
-
-				// Dynamic Selection
-				dTicker := time.NewTicker(3 * time.Minute)
-				defer dTicker.Stop()
-
-				// Static Selection Reset
-				reset := time.After(20 * time.Minute) // reset := time.After(24 * time.Hour)
+				close(ready) // once all go routines are done (# of peer and ref clocks), then we start with sync.Run()
 
 				for {
-					select {
-					case <-dTicker.C:
-						scionClock.pathManager.RunDynamicSelection(ctx, log)
-					case <-reset:
-						goto NEXT
+					//Warm up phase
+					time.Sleep(30 * time.Second) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
+					scionClock.pathManager.RunDynamicSelection(ctx, log)
+
+					// Dynamic Selection
+					dTicker := time.NewTicker(1 * time.Minute)
+					defer dTicker.Stop()
+
+					// Static Selection Reset
+					reset := time.After(20 * time.Minute) // reset := time.After(24 * time.Hour)
+
+					for {
+						select {
+						case <-dTicker.C:
+							scionClock.pathManager.RunDynamicSelection(ctx, log)
+						case <-reset:
+							break
+						}
 					}
 				}
-			NEXT:
 			}
 		}()
 	}
 
-	for _, clk := range refClocks {
-		launchScheduler(clk)
+	readyFlags := make([]chan struct{}, len(refClocks)+len(peerClocks))
+	for i := range readyFlags {
+		readyFlags[i] = make(chan struct{})
 	}
-	for _, clk := range peerClocks {
-		launchScheduler(clk)
+
+	for i, clk := range refClocks {
+		launchScheduler(i, clk, readyFlags[i])
+	}
+	for i, clk := range peerClocks {
+		launchScheduler(i, clk, readyFlags[i])
 	}
 
 	// --------------------------------------
+
+	for _, ch := range readyFlags {
+		<-ch // blocks until first static selection is done for all peers and ref clocks!
+	}
 
 	go sync.Run(log, syncCfg, lclk, refClocks, peerClocks)
 
