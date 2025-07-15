@@ -175,7 +175,7 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 			// 	slog.Any("via", snet.Fingerprint(p).String()),
 			// 	slog.Any("path", p),
 			// )
-			log.LogAttrs(ctx, slog.LevelDebug, "SCIONClient <-> SPS", slog.Any("ntpcs", ntpc.InterleavedModePath()), slog.Any("sps", snet.Fingerprint(p).String()))
+			log.LogAttrs(ctx, slog.LevelDebug, "SCIONClient <-> SPS", slog.Any("ntpcs", ntpc.InterleavedModePath()), slog.Any("sps", snet.Fingerprint(p).String()), slog.Any("path", p))
 			// mu.Lock()
 			// fmt.Fprintf(file, "Time: %s | Path: %s | SCIONClient: %s\n", time.Now().Format(time.RFC3339), snet.Fingerprint(p).String(), ntpc.InterleavedModePath())
 			// mu.Unlock()

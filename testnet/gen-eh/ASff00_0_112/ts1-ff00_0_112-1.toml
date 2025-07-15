@@ -1,14 +1,18 @@
 local_address = "1-ff00:0:112,10.1.1.12"
 scion_daemon_address = "10.1.1.12:30255"
 
-mbg_reference_clocks = ["/dev/mbgclock0"]
-shm_reference_clocks = ["ntpshm"]
-ntp_reference_clocks = ["0-0,time.apple.com:123", "0-0,time.facebook.com:123", "0-0,time.google.com:123", "0-0,time.windows.com:123"]
-scion_peer_clocks = ["1-ff00:0:111,10.1.1.11:10123"]
-auth_modes = ["spao"]
+# mbg_reference_clocks = ["/dev/mbgclock0"]
+# shm_reference_clocks = ["ntpshm"]
+# ntp_reference_clocks = ["0-0,time.apple.com:123", "0-0,time.facebook.com:123", "0-0,time.google.com:123", "0-0,time.windows.com:123"]
+# scion_peer_clocks = ["1-ff00:0:111,10.1.1.11:10123"]
+ntp_reference_clocks = ["1-ff00:0:111,10.1.1.11:10123"]
+# auth_modes = ["spao"]
 
 ntske_cert_file = "testnet/gen/tls.crt"
 ntske_key_file = "testnet/gen/tls.key"
 ntske_server_name = "localhost"
 
 dscp = 63
+
+filter_type = "ntimed"
+pi_values=[0.2, 0.05]
