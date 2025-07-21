@@ -64,35 +64,36 @@ func NewSimulator(configFile string, ctx context.Context) *Simulator {
 
 func (s Simulator) generateTimeStamps() TimeStamps {
 
-	// Step 1: Fetch artificial GNSS receive time and offset
-	t3, off, err := s.SHM.MeasureClockOffset(s.ctx)
+	// Step 1: Fetch current GNSS time and client offset
+	t2, off, err := s.SHM.MeasureClockOffset(s.ctx)
 	if err != nil {
 		panic(fmt.Sprintf("error fetching clock offset: %v", err))
 	}
+	t1 := t2 // zero processing delay
 
 	// Step 2: Sample RTT
-	rtt := SecureRandomInt(s.rttMin, s.rttMax)
+	rtt := time.Duration(SecureRandomInt(s.rttMin, s.rttMax))
 
-	// Step 3: Define and sample asymmetry range
-	asymMin := -rtt - int64(2*off)
-	asymMax := rtt - int64(2*off)
+	// Step 3: Sample asymmetry independently from RTT range
+	asymMin := -int64(rtt)
+	asymMax := int64(rtt)
 	asym := time.Duration(SecureRandomInt(int(asymMin), int(asymMax)))
 
-	// Step 4: Compute delays
-	d0 := time.Duration(rtt)/time.Duration(2) + off + asym/time.Duration(2)
-	d1 := time.Duration(rtt)/time.Duration(2) - off - asym/time.Duration(2)
+	// Step 4: Compute one-way delays (in GNSS time)
+	d0 := (rtt + asym) / 2
+	d1 := (rtt - asym) / 2
 
 	// Step 5: Reconstruct timestamps
-	t2 := t3.Add(-d1)
-	t1 := t2
-	t0 := t1.Add(-d0)
+	t0 := t1.Add(-d0).Add(off) // client clock: request sent
+	t3 := t2.Add(d1).Add(off)  // client clock: response received
 
 	return TimeStamps{
-		t0: t0,
-		t1: t1,
-		t2: t2,
-		t3: t3,
+		t0: t0, // client send (local clock)
+		t1: t1, // server receive (GNSS)
+		t2: t2, // server send (GNSS)
+		t3: t3, // client receive (local clock)
 	}
+
 }
 
 // Returns a secure random int in [min, max)
