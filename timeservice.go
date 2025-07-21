@@ -95,6 +95,7 @@ type svcConfig struct {
 	PreFilterType            string    `toml:"pre_filter_type,omitempty"` // avg
 	ChosenPaths              []string  `toml:"specified_paths,omitempty"`
 	SelectionMethod          string    `toml:"selection_method,omitempty"` // average, midpoint, median
+	SimulatorOn              bool      `toml:"simulation_on,omitempty"`
 }
 
 type ntpReferenceClockIP struct {
@@ -261,7 +262,7 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 	c.Auth.NTSKEFetcher.QUIC.RemoteAddr = remoteAddr
 }
 
-func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig) *ntpReferenceClockSCION {
+func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig, simCfg string) *ntpReferenceClockSCION {
 	pM := &client.PathManager{
 		StaticSelectionInterval:  24 * time.Hour,
 		DynamicSelectionInterval: time.Hour,
@@ -271,12 +272,23 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 		LocalAddr:                localAddr,
 		PingDuration:             60,
 	}
-	for i := range len(pM.Probers) {
-		pM.Probers[i] = &client.SCIONClient{
-			Log:             log,
-			InterleavedMode: false,
+	if cfg.SimulatorOn {
+		for i := range len(pM.Probers) {
+			pM.Probers[i] = &client.SCIONClient{
+				Log:             log,
+				InterleavedMode: false,
+				Simulator:       client.NewSimulator(simCfg),
+			}
+		}
+	} else {
+		for i := range len(pM.Probers) {
+			pM.Probers[i] = &client.SCIONClient{
+				Log:             log,
+				InterleavedMode: false,
+			}
 		}
 	}
+
 	c := &ntpReferenceClockSCION{
 		log:         log,
 		localAddr:   localAddr,
@@ -292,10 +304,19 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 	log.Info("Offset Selection", "selection method", cfg.SelectionMethod)
 
 	for i := range len(c.ntpcs) {
-		c.ntpcs[i] = &client.SCIONClient{
-			Log:             log,
-			DSCP:            dscp,
-			InterleavedMode: true,
+		if cfg.SimulatorOn {
+			c.ntpcs[i] = &client.SCIONClient{
+				Log:             log,
+				DSCP:            dscp,
+				InterleavedMode: true,
+				Simulator:       client.NewSimulator(simCfg),
+			}
+		} else {
+			c.ntpcs[i] = &client.SCIONClient{
+				Log:             log,
+				DSCP:            dscp,
+				InterleavedMode: true,
+			}
 		}
 
 		switch cfg.FilterType {
@@ -461,7 +482,7 @@ func tlsConfig(cfg svcConfig) *tls.Config {
 	}
 }
 
-func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
+func createClocks(cfgSim string, cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 	refClocks, peerClocks []client.ReferenceClock) {
 	dscp := dscp(cfg)
 
@@ -506,6 +527,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 				dscp,
 				ntskeServer,
 				cfg,
+				cfgSim,
 			))
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		} else {
@@ -537,6 +559,7 @@ func createClocks(cfg svcConfig, localAddr *snet.UDPAddr, log *slog.Logger) (
 			dscp,
 			ntskeServer,
 			cfg,
+			cfgSim,
 		))
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
@@ -589,7 +612,7 @@ func runServer(configFile string) {
 	localAddr := localAddress(cfg)
 
 	localAddr.Host.Port = 0
-	refClocks, peerClocks := createClocks(cfg, localAddr, log)
+	refClocks, peerClocks := createClocks("", cfg, localAddr, log)
 
 	lclk := clocks.NewSystemClock(log, clockDrift(cfg))
 	timebase.RegisterClock(lclk)
@@ -613,7 +636,7 @@ func runServer(configFile string) {
 	runMonitor(cfg)
 }
 
-func runClient(configFile string) {
+func runClient(configFile, simCfg string) {
 	ctx := context.Background()
 	log := slog.Default()
 
@@ -621,7 +644,7 @@ func runClient(configFile string) {
 	localAddr := localAddress(cfg)
 
 	localAddr.Host.Port = 0
-	refClocks, peerClocks := createClocks(cfg, localAddr, log)
+	refClocks, peerClocks := createClocks(simCfg, cfg, localAddr, log)
 
 	if len(peerClocks) != 0 {
 		logbase.Fatal(slog.Default(), "unexpected configuration", slog.Int("number of peers", len(peerClocks)))
@@ -952,6 +975,7 @@ func main() {
 	var (
 		verbose                 bool
 		configFile              string
+		simConfigFile           string
 		daemonAddr              string
 		localAddr               snet.UDPAddr
 		remoteAddrStr           string
@@ -978,6 +1002,7 @@ func main() {
 
 	clientFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	clientFlags.StringVar(&configFile, "config", "", "Config file")
+	clientFlags.StringVar(&simConfigFile, "simConfig", "", "Simulator Config file")
 
 	toolFlags.BoolVar(&verbose, "verbose", false, "Verbose logging")
 	toolFlags.StringVar(&daemonAddr, "daemon", "", "Daemon address")
@@ -1034,7 +1059,7 @@ func main() {
 			exitWithUsage()
 		}
 		initLogger(verbose)
-		runClient(configFile)
+		runClient(configFile, simConfigFile)
 	case toolFlags.Name():
 		err := toolFlags.Parse(os.Args[2:])
 		if err != nil || toolFlags.NArg() != 0 {

@@ -35,11 +35,25 @@ type Simulator struct {
 // In config: shm_reference_clock = ["ntpshm"]
 type SimulatorConfig struct {
 	SHMReferenceClock []string `toml:"shm_reference_clock,omitempty"`
+	// define jitter, asymmetry
 }
 
-func NewSimulator(configFile string, ctx context.Context) *Simulator {
+func loadSimConfig(configFile string) SimulatorConfig {
+	raw, err := os.ReadFile(configFile)
+	if err != nil {
+		logbase.Fatal(slog.Default(), "failed to load configuration", slog.Any("error", err))
+	}
+	var cfg SimulatorConfig
+	err = toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&cfg)
+	if err != nil {
+		logbase.Fatal(slog.Default(), "failed to decode configuration", slog.Any("error", err))
+	}
+	return cfg
+}
+
+func NewSimulator(simCfg string) *Simulator {
 	log := slog.Default()
-	cfg := loadConfig(configFile)
+	cfg := loadSimConfig(simCfg)
 	refClock := make([]ReferenceClock, 1)
 
 	for _, s := range cfg.SHMReferenceClock { // we only have one
