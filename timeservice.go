@@ -269,7 +269,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 		K:                        20,
 		RemoteAddr:               remoteAddr,
 		LocalAddr:                localAddr,
-		PingDuration:             60,
+		PingDuration:             150, // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
 	}
 	for i := range len(pM.Probers) {
 		pM.Probers[i] = &client.SCIONClient{
@@ -646,6 +646,43 @@ func runClient(configFile string) {
 
 	// --------------------------------------
 
+	/*
+		launchScheduler := func(i int, clock client.ReferenceClock, ready chan struct{}) {
+			scionClock, ok := clock.(*ntpReferenceClockSCION)
+			if !ok || scionClock.pathManager == nil {
+				close(ready)
+				return
+			}
+			go func() {
+				for {
+					scionClock.pathManager.RunStaticSelection(ctx, log)
+					close(ready) // once all go routines are done (# of peer and ref clocks), then we start with sync.Run()
+
+					for {
+						//Warm up phase
+						time.Sleep(60 * time.Second) // (5 * time.Second) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
+						scionClock.pathManager.RunDynamicSelection(ctx, log)
+
+						// Dynamic Selection
+						dTicker := time.NewTicker(15 * time.Minute) // (70 * time.Second)
+						defer dTicker.Stop()
+
+						// Static Selection Reset
+						reset := time.After(60 * time.Minute) // (20 * time.Minute) // reset := time.After(24 * time.Hour)
+
+						for {
+							select {
+							case <-dTicker.C:
+								scionClock.pathManager.RunDynamicSelection(ctx, log)
+							case <-reset:
+								break
+							}
+						}
+					}
+				}
+			}()
+		}*/
+
 	launchScheduler := func(i int, clock client.ReferenceClock, ready chan struct{}) {
 		scionClock, ok := clock.(*ntpReferenceClockSCION)
 		if !ok || scionClock.pathManager == nil {
@@ -653,31 +690,37 @@ func runClient(configFile string) {
 			return
 		}
 		go func() {
+			first := true
 			for {
+				// 1. Static selection
 				scionClock.pathManager.RunStaticSelection(ctx, log)
-				close(ready) // once all go routines are done (# of peer and ref clocks), then we start with sync.Run()
+				if first {
+					close(ready)
+					first = false
+				}
 
+				// 2. Pause 1 minute
+				time.Sleep(60 * time.Second)
+
+				// 3. Immediate first dynamic selection
+				scionClock.pathManager.RunDynamicSelection(ctx, log)
+
+				// 4. Dynamic selection every 15 minutes
+				reset := time.After(60 * time.Minute)
+				dTicker := time.NewTicker(16 * time.Minute)
+
+			scheduleLoop:
 				for {
-					//Warm up phase
-					time.Sleep(5 * time.Second) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
-					scionClock.pathManager.RunDynamicSelection(ctx, log)
-
-					// Dynamic Selection
-					dTicker := time.NewTicker(70 * time.Second)
-					defer dTicker.Stop()
-
-					// Static Selection Reset
-					reset := time.After(20 * time.Minute) // reset := time.After(24 * time.Hour)
-
-					for {
-						select {
-						case <-dTicker.C:
-							scionClock.pathManager.RunDynamicSelection(ctx, log)
-						case <-reset:
-							break
-						}
+					select {
+					case <-dTicker.C:
+						scionClock.pathManager.RunDynamicSelection(ctx, log)
+					case <-reset:
+						dTicker.Stop()
+						break scheduleLoop
 					}
 				}
+
+				// Back to static selection again
 			}
 		}()
 	}

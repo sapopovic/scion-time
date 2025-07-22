@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"sort"
+	"sync"
 	"time"
 
 	"example.com/scion-time/net/scion"
@@ -36,16 +37,6 @@ type ProbeResult struct {
 	Timestamps     []TimeStamps
 	SuccessCount   int
 	AttemptedCount int
-}
-
-type PathScore struct {
-	Index       int
-	Path        string
-	Q           float64
-	Symmetry    float64
-	MinRTT      float64
-	Jitter      float64
-	SuccessRate float64
 }
 
 type MetricEMA struct {
@@ -115,6 +106,7 @@ func (pM PathManager) GetPaths(ctx context.Context, log *slog.Logger, cap, k int
 */
 
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
+	// ADD RESETTING WHOLE THING
 	ps := pM.Pather.Paths(pM.RemoteAddr.IA)
 	pM.MetricsPerProber = make(map[int]*PathMetrics)
 	S := chooseNewPaths(ps, pM.K)
@@ -123,16 +115,15 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 	pM.S_Active = S_active
 	pM.assignProbers()
 
-	// for _, prober := range pM.Probers {
-	// 	log.LogAttrs(ctx, slog.LevelInfo, "HIIII", slog.Any("xleave?", prober.InterleavedMode), slog.Any("prev struct", prober.prev))
-	// }
-
 	log.Info("Static path selection completed", slog.Int("S_total", len(S)), slog.Int("S_active", len(S_active)))
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
-	pM.probePaths(ctx, log) // Updates PathMetrics for each path with EVERY NEW MEASUREMENT. These are performance results.
-	pM.PrintSortedPathsByQ(log)
+	var wg sync.WaitGroup
+	pM.probePaths(ctx, log, &wg) // Updates PathMetrics for each path with EVERY NEW MEASUREMENT. These are performance results.
+	wg.Wait()
+	// pM.PrintSortedPathsByQ(log)
+	pM.setSactive(log)
 }
 
 // -------------------dynamic----------------------------
@@ -234,6 +225,69 @@ func (pM PathManager) analyzeProbes(ctx context.Context, results []ProbeResult, 
 	}
 }*/
 
+func (pM *PathManager) setSactive(log *slog.Logger) {
+	type ranked struct {
+		Index   int
+		Metrics *PathMetrics
+	}
+
+	var list []ranked
+	for index, metrics := range pM.MetricsPerProber {
+		if metrics.SampleCount == 0 {
+			continue // Skip uninitialized paths
+		}
+		list = append(list, ranked{Index: index, Metrics: metrics})
+	}
+
+	// Sort in ascending order of QScoreEMA.Value
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Metrics.QScoreEMA.Value < list[j].Metrics.QScoreEMA.Value
+	})
+
+	// map: fp -> snet.Path
+	pathMap := make(map[string]snet.Path)
+	for _, path := range pM.S {
+		fp := snet.Fingerprint(path).String()
+		pathMap[fp] = path
+	}
+
+	sortedPaths := make([]snet.Path, 0, pM.Cap)
+	for i, _ := range list {
+		idx := list[i].Index // tells us which prober this is
+		prober := pM.Probers[idx]
+		if path, ok := pathMap[prober.prev.path]; ok { // get snet.Path from string
+			sortedPaths = append(sortedPaths, path)
+		}
+	}
+
+	pM.S_Active = setBest(sortedPaths, pM.Cap) // ASSIGN GOOD NEW PATHS
+
+	// ----------------------Printing new active set--------------------
+	fmt.Println("Redefine S_Active set.")
+
+	for i, _ := range list { // go through sorted paths
+		if i >= pM.Cap { // just print first cap paths
+			break
+		}
+		idx := list[i].Index // tells us which prober this is
+		prober := pM.Probers[idx]
+		if path, ok := pathMap[prober.prev.path]; ok { // get snet.Path from string
+			metrics, ok := pM.MetricsPerProber[idx]
+			if !ok {
+				log.Warn("Missing metrics for prober", slog.Int("index", idx))
+				continue
+			}
+			log.Info("Path score",
+				slog.Int("prober", idx),
+				slog.Any("fp", snet.Fingerprint(path).String()),
+				slog.Float64("Q", metrics.QScoreEMA.Value),
+				slog.Int("samples", metrics.SampleCount),
+				slog.Int("losses", metrics.LossCount),
+			)
+		}
+	}
+}
+
 func (pM *PathManager) PrintSortedPathsByQ(log *slog.Logger) {
 	type ranked struct {
 		Index   int
@@ -318,7 +372,7 @@ func updateEMA(metric *MetricEMA, newVal float64) {
 	metric.Value = alpha*newVal + (1-alpha)*metric.Value
 }
 
-func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
+func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *sync.WaitGroup) {
 	pathMap := make(map[string]snet.Path)
 	for _, path := range pM.S {
 		fp := snet.Fingerprint(path).String()
@@ -341,8 +395,9 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
 				}
 				metrics := pM.MetricsPerProber[i]
 
+				wg.Add(1)
 				go func(i int, prober *SCIONClient, p snet.Path) {
-
+					defer wg.Done()
 					// if _, ok := pM.MetricsPerProber[i]; !ok {
 					// 	pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
 					// }
@@ -396,7 +451,7 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
 						updateEMA(&metrics.QScoreEMA, Q)
 
 						metrics.SampleCount++
-						time.Sleep(1 * time.Second)
+						time.Sleep(6 * time.Second) // 1 * time.Second
 					}
 				}(i, prober, path)
 			}
@@ -431,6 +486,17 @@ func (pM *PathManager) assignProbers() {
 			prober.prev.path = "" // No path left to assign
 		}
 	}
+}
+
+// paths is sorted by score, ascending order
+// return the best cap paths
+func setBest(paths []snet.Path, cap int) []snet.Path {
+	if cap >= len(paths) {
+		return paths
+	}
+
+	return paths[:cap]
+
 }
 
 // -------------------static----------------------------
