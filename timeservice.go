@@ -659,11 +659,11 @@ func runClient(configFile string) {
 
 				for {
 					//Warm up phase
-					time.Sleep(30 * time.Second) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
+					time.Sleep(5 * time.Second) // time.Sleep(5 * time.Minute) // 10 * time.Second for testing
 					scionClock.pathManager.RunDynamicSelection(ctx, log)
 
 					// Dynamic Selection
-					dTicker := time.NewTicker(1 * time.Minute)
+					dTicker := time.NewTicker(70 * time.Second)
 					defer dTicker.Stop()
 
 					// Static Selection Reset

@@ -259,9 +259,9 @@ func (pM *PathManager) PrintSortedPathsByQ(log *slog.Logger) {
 		log.Info("Path score",
 			slog.Int("prober", entry.Index),
 			slog.Float64("Q", m.QScoreEMA.Value),
-			slog.Float64("jitter", m.JitterEMA.Value),
-			slog.Float64("asymmetry", m.AsymEMA.Value),
-			slog.Float64("minRTT", m.MinRTT),
+			// slog.Float64("jitter", m.JitterEMA.Value),
+			// slog.Float64("asymmetry", m.AsymEMA.Value),
+			// slog.Float64("minRTT", m.MinRTT),
 			slog.Int("samples", m.SampleCount),
 			slog.Int("losses", m.LossCount),
 		)
@@ -296,15 +296,25 @@ func stddev(xs []float64) float64 {
 	return math.Sqrt(variance / float64(len(xs)))
 }
 
-func updateEMA(metric *MetricEMA, newVal, baseAlpha, maxAlpha, frac float64) {
+// func updateEMA(metric *MetricEMA, newVal, baseAlpha, maxAlpha, frac float64) {
+// 	if !metric.HasPrev {
+// 		metric.Value = newVal
+// 		metric.HasPrev = true
+// 		return
+// 	}
+// 	delta := math.Abs(newVal - metric.Value)
+// 	scale := 1.0 / (frac * metric.Value)
+// 	alpha := baseAlpha + math.Min(delta*scale, maxAlpha-baseAlpha)
+// 	metric.Value = alpha*newVal + (1-alpha)*metric.Value
+// }
+
+func updateEMA(metric *MetricEMA, newVal float64) {
+	alpha := 0.7
 	if !metric.HasPrev {
 		metric.Value = newVal
 		metric.HasPrev = true
 		return
 	}
-	delta := math.Abs(newVal - metric.Value)
-	scale := 1.0 / (frac * metric.Value)
-	alpha := baseAlpha + math.Min(delta*scale, maxAlpha-baseAlpha)
 	metric.Value = alpha*newVal + (1-alpha)*metric.Value
 }
 
@@ -319,16 +329,24 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
 
 	nProbers := 0
 
+	scoringType := "symmetry"
+
 	for i, prober := range pM.Probers {
 		if prober.prev.path != "" {
 			if path, ok := pathMap[prober.prev.path]; ok {
 				nProbers++
+
+				if _, exists := pM.MetricsPerProber[i]; !exists {
+					pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
+				}
+				metrics := pM.MetricsPerProber[i]
+
 				go func(i int, prober *SCIONClient, p snet.Path) {
 
-					if _, ok := pM.MetricsPerProber[i]; !ok {
-						pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
-					}
-					metrics := pM.MetricsPerProber[i]
+					// if _, ok := pM.MetricsPerProber[i]; !ok {
+					// 	pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
+					// }
+					// metrics := pM.MetricsPerProber[i]
 
 					for j := 0; j < pM.PingDuration; j++ {
 						pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -351,13 +369,13 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
 
 						d1 := timestamps.t1.Sub(timestamps.t0).Seconds()
 						d2 := timestamps.t3.Sub(timestamps.t2).Seconds()
-						rtt := d1 + d2
+						// rtt := d1 + d2
 
 						asym := math.Abs(d1 - d2)
 
-						if rtt < metrics.MinRTT { // TODO: look at that again
-							metrics.MinRTT = rtt
-						}
+						// if rtt < metrics.MinRTT { // TODO: look at that again
+						// 	metrics.MinRTT = rtt
+						// }
 
 						// jitter := math.Abs(rtt - metrics.MinRTT)
 						// updateEMA(&metrics.JitterEMA, jitter, 0.3, 0.8, 0.001) // frac value TO BE CHANGED
@@ -367,9 +385,15 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger) {
 						// asymNorm := normalize(metrics.AsymEMA.Value, 0.0005) // asymmetry jumps around 500 microseconds, frac value TO BE CHANGED
 
 						// Q := 0.6*asymNorm + 0.4*jitterNorm // + 0.2*lossNorm
-						Q := asym
+						var Q float64
+						if scoringType == "symmetry" {
+							Q = asym
+						} else {
+							// Q = jitter_scoring
+						}
 						// updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.1)
-						updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.001)
+						// updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.001)
+						updateEMA(&metrics.QScoreEMA, Q)
 
 						metrics.SampleCount++
 						time.Sleep(1 * time.Second)
