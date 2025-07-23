@@ -24,7 +24,7 @@ Available paths to 1-ff00:0:133
 
 
 
-(Mappings)
+(Mappings from /home/ubuntu/repositories/scion-time/testnet/gen/sciond_addresses.json) 
 {
     "1-ff00:0:110": "10.0.0.69",
     "1-ff00:0:111": "10.0.0.77",
