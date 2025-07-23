@@ -77,35 +77,65 @@ func NewSimulator(simCfg string) *Simulator {
 }
 
 func (s Simulator) generateTimeStamps() TimeStamps {
+	/*
+		// Step 1: Fetch current GNSS time and client offset
+		t2, off, err := s.SHM.MeasureClockOffset(s.ctx) // The function returns the local time! you would need to apply the offset to get the "server" time
+		if err != nil {
+			panic(fmt.Sprintf("error fetching clock offset: %v", err))
+		}
+		t1 := t2 // zero processing delay
 
-	// Step 1: Fetch current GNSS time and client offset
-	t2, off, err := s.SHM.MeasureClockOffset(s.ctx)
+		// Step 2: Sample RTT
+		rtt := time.Duration(SecureRandomInt(s.rttMin, s.rttMax))
+
+		// Step 3: Sample asymmetry independently from RTT range
+		asymMin := -int64(rtt)
+		asymMax := int64(rtt)
+		asym := time.Duration(SecureRandomInt(int(asymMin), int(asymMax)))
+
+		// Step 4: Compute one-way delays (in GNSS time)
+		d0 := (rtt + asym) / 2
+		d1 := (rtt - asym) / 2
+
+		// Step 5: Reconstruct timestamps
+		t0 := t1.Add(-d0).Add(off) // client clock: request sent
+		t3 := t2.Add(d1).Add(off)  // client clock: response received
+
+		return TimeStamps{
+			t0: t0, // client send (local clock)
+			t1: t1, // server receive (GNSS)
+			t2: t2, // server send (GNSS)
+			t3: t3, // client receive (local clock)
+		}*/
+
+	// Step 1: Fetch client receive time (local clock) and offset to GNSS
+	t3, off, err := s.SHM.MeasureClockOffset(s.ctx) // t3 = local clock, offset = GNSS - local
 	if err != nil {
 		panic(fmt.Sprintf("error fetching clock offset: %v", err))
 	}
-	t1 := t2 // zero processing delay
 
 	// Step 2: Sample RTT
 	rtt := time.Duration(SecureRandomInt(s.rttMin, s.rttMax))
 
-	// Step 3: Sample asymmetry independently from RTT range
+	// Step 3: Sample asymmetry (independent of RTT)
 	asymMin := -int64(rtt)
 	asymMax := int64(rtt)
 	asym := time.Duration(SecureRandomInt(int(asymMin), int(asymMax)))
 
-	// Step 4: Compute one-way delays (in GNSS time)
-	d0 := (rtt + asym) / 2
-	d1 := (rtt - asym) / 2
+	// Step 4: Compute one-way delays (true delays, gnss time perspective)
+	d1 := rtt/2 - asym/2 // client <- server
+	d0 := rtt/2 + asym/2 // client -> server
 
-	// Step 5: Reconstruct timestamps
-	t0 := t1.Add(-d0).Add(off) // client clock: request sent
-	t3 := t2.Add(d1).Add(off)  // client clock: response received
+	// Step 5: Reconstruct the rest
+	t2 := t3.Add(-d1).Add(off)  // GNSS time (server send)
+	t1 := t2                    // no processing delay at server
+	t0 := t1.Add(-d0).Add(-off) // local clock (client send)
 
 	return TimeStamps{
-		t0: t0, // client send (local clock)
-		t1: t1, // server receive (GNSS)
+		t0: t0, // client send (local)
+		t1: t1, // server recv (GNSS)
 		t2: t2, // server send (GNSS)
-		t3: t3, // client receive (local clock)
+		t3: t3, // client recv (local)
 	}
 
 }
