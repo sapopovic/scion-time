@@ -1,0 +1,8360 @@
+{
+  "local_isd_as": "2-ff00:0:222",
+  "destination": "1-ff00:0:133",
+  "paths": [
+    {
+      "fingerprint": "4194af709787d034",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c91e925e44aebc0",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "877b3a86f6e88d90",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:14:29Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "108acbc64efbf5a0",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:14:29Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "6c4f86d4c33b5c23",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "a7a0a2901cccd754",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e488d5b91a7b3602",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "3496ccc115ec697f",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c1badde515e0cba",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d169d3fdcf2a7b89",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "5fb945f4d62fb9a9",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:14:29Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "aa170b5d350ffdd2",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:14:29Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "c138518cd3637650",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:14:29Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d8c9132fa9db8017",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e1bf6b79f7219745",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "0e8ebf758be09f95",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "02bf95b27afd4385",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:14:30Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "b1319d5e0f1cc40a",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:14:29Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    }
+  ]
+}
+{
+  "local_isd_as": "2-ff00:0:222",
+  "destination": "1-ff00:0:133",
+  "paths": [
+    {
+      "fingerprint": "4194af709787d034",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c91e925e44aebc0",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "877b3a86f6e88d90",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "108acbc64efbf5a0",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "6c4f86d4c33b5c23",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "a7a0a2901cccd754",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e488d5b91a7b3602",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "3496ccc115ec697f",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c1badde515e0cba",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d169d3fdcf2a7b89",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "5fb945f4d62fb9a9",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "aa170b5d350ffdd2",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "c138518cd3637650",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d8c9132fa9db8017",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e1bf6b79f7219745",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "0e8ebf758be09f95",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "02bf95b27afd4385",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "b1319d5e0f1cc40a",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:38:56Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    }
+  ]
+}
+{
+  "local_isd_as": "2-ff00:0:222",
+  "destination": "1-ff00:0:133",
+  "paths": [
+    {
+      "fingerprint": "4194af709787d034",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c91e925e44aebc0",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "877b3a86f6e88d90",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "108acbc64efbf5a0",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "6c4f86d4c33b5c23",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "a7a0a2901cccd754",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e488d5b91a7b3602",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "3496ccc115ec697f",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c1badde515e0cba",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d169d3fdcf2a7b89",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "5fb945f4d62fb9a9",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "aa170b5d350ffdd2",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "c138518cd3637650",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d8c9132fa9db8017",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e1bf6b79f7219745",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "0e8ebf758be09f95",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "02bf95b27afd4385",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "b1319d5e0f1cc40a",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:38:56Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    }
+  ]
+}
+{
+  "local_isd_as": "2-ff00:0:222",
+  "destination": "1-ff00:0:133",
+  "paths": [
+    {
+      "fingerprint": "4194af709787d034",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c91e925e44aebc0",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "877b3a86f6e88d90",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "108acbc64efbf5a0",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "6c4f86d4c33b5c23",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "a7a0a2901cccd754",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e488d5b91a7b3602",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "3496ccc115ec697f",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c1badde515e0cba",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d169d3fdcf2a7b89",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "5fb945f4d62fb9a9",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "aa170b5d350ffdd2",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "c138518cd3637650",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d8c9132fa9db8017",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e1bf6b79f7219745",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "0e8ebf758be09f95",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "02bf95b27afd4385",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "b1319d5e0f1cc40a",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:38:56Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    }
+  ]
+}
+{
+  "local_isd_as": "2-ff00:0:222",
+  "destination": "1-ff00:0:133",
+  "paths": [
+    {
+      "fingerprint": "4194af709787d034",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c91e925e44aebc0",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "877b3a86f6e88d90",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "108acbc64efbf5a0",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "6c4f86d4c33b5c23",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "a7a0a2901cccd754",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e488d5b91a7b3602",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "3496ccc115ec697f",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "1c1badde515e0cba",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d169d3fdcf2a7b89",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "5fb945f4d62fb9a9",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1350,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "aa170b5d350ffdd2",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1400,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "c138518cd3637650",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "d8c9132fa9db8017",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "e1bf6b79f7219745",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 7,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 451,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,7 2-ff00:0:210#451,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "0e8ebf758be09f95",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 501,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,501 1-ff00:0:120#2,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "02bf95b27afd4385",
+      "hops": [
+        {
+          "interface": 301,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 4,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 8,
+          "isd_as": "2-ff00:0:211"
+        },
+        {
+          "interface": 452,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 502,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 104,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,301 2-ff00:0:211#4,8 2-ff00:0:210#452,450 2-ff00:0:220#503,502 1-ff00:0:120#3,6 1-ff00:0:110#1,2 1-ff00:0:130#104,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.209:31112",
+      "expiry": "2025-07-23T20:39:01Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    },
+    {
+      "fingerprint": "b1319d5e0f1cc40a",
+      "hops": [
+        {
+          "interface": 302,
+          "isd_as": "2-ff00:0:222"
+        },
+        {
+          "interface": 1,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 2,
+          "isd_as": "2-ff00:0:221"
+        },
+        {
+          "interface": 500,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 503,
+          "isd_as": "2-ff00:0:220"
+        },
+        {
+          "interface": 450,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 453,
+          "isd_as": "2-ff00:0:210"
+        },
+        {
+          "interface": 3,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:110"
+        },
+        {
+          "interface": 6,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:120"
+        },
+        {
+          "interface": 105,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 111,
+          "isd_as": "1-ff00:0:130"
+        },
+        {
+          "interface": 479,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 478,
+          "isd_as": "1-ff00:0:131"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 1,
+          "isd_as": "1-ff00:0:132"
+        },
+        {
+          "interface": 2,
+          "isd_as": "1-ff00:0:133"
+        }
+      ],
+      "sequence": "2-ff00:0:222#0,302 2-ff00:0:221#1,2 2-ff00:0:220#500,503 2-ff00:0:210#450,453 1-ff00:0:110#3,1 1-ff00:0:120#6,1 1-ff00:0:130#105,111 1-ff00:0:131#479,478 1-ff00:0:132#2,1 1-ff00:0:133#2,0",
+      "next_hop": "10.0.0.210:31114",
+      "expiry": "2025-07-23T20:38:56Z",
+      "mtu": 1280,
+      "latency": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "status": "alive",
+      "local_ip": "10.0.0.0"
+    }
+  ]
+}
