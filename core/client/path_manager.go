@@ -30,7 +30,6 @@ type PathManager struct {
 	Probers                  [20]*SCIONClient // handle path assessment (symmetry, jitter), LENGTH TO BE DEFINED SOMEWHERE ELSE
 	PingDuration             int
 	MetricsPerProber         map[int]*PathMetrics
-	PathCharacteristics      map[string]PathQuality
 }
 
 type ProbeResult struct {
@@ -54,64 +53,6 @@ type PathMetrics struct {
 	LossCount   int
 }
 
-type PathQuality struct { // Char stands for characteristics
-	rttRange  []float64
-	asymRange []float64 // not sure about that yet
-	seed      int64
-}
-
-/*
-func (pM PathManager) GetPaths(ctx context.Context, log *slog.Logger, cap, k int, remoteAddr udp.UDPAddr) []snet.Path {
-	/*if pM.LastSelection.IsZero() || time.Since(pM.LastSelection) >= pM.SelectionInterval {
-		pM.LastSelection = time.Now()
-		file, _ := os.Create("output.txt") // overwrites if file exists
-		defer file.Close()
-
-		log.LogAttrs(ctx, slog.LevelDebug, "STATIC SELECTION",
-			slog.Any("------", "------"))
-		// s := "71-20965" // Geant
-		s := "67-401500" // north america
-		address, _ := addr.ParseIA(s)
-		// log.Debug("Address formating", slog.Any("error", err))
-		ps_temp, _ := pM.Pather.GetPathsToDest(ctx, scion.DC, address)
-		for i, path := range ps_temp {
-			fmt.Fprintf(file, "Path %d: %d\n", i+1, len(path.Metadata().Interfaces))
-		}
-
-		log.Debug("printing paths", slog.Any("#paths", len(ps_temp)))
-		ps_temp_selected := chooseNewPaths(ps_temp, k) //[]snet.Path
-		for i, path := range ps_temp_selected {
-			fmt.Fprintf(file, "Path %d: %d\n", i+1, len(path.Metadata().Interfaces))
-		}
-		for i, path := range ps_temp_selected {
-			fmt.Fprintf(file, "Path %d: %s\n", i+1, path.Metadata().Interfaces)
-		}
-		log.Debug("printing selected paths", slog.Any("#paths", len(ps_temp_selected)))
-
-		// find the best cap performing
-		//initPaths := client.PickRandom(ps_temp_selected, cap)!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		for i, path := range initPaths {
-			fmt.Fprintf(file, "Path %d: %s\n", i+1, path.Metadata().Interfaces)
-		}
-	}
-	if pM.StaticLastSelection.IsZero() || time.Since(pM.StaticLastSelection) >= pM.StaticSelectionInterval { // static selection
-		pM.StaticLastSelection = time.Now()
-		ps := pM.Pather.Paths(remoteAddr.IA)
-		S := chooseNewPaths(ps, k)
-		S_active := pickRandom(S, cap)
-		pM.S = S
-		pM.S_Active = S_active
-		return S_active
-	} else if time.Since(pM.StaticLastSelection) >= pM.WarmupPhase || time.Since(pM.DynamicLastSelection) >= pM.DynamicSelectionInterval { // After warmup phase or once an hour, do dynamic selection
-		// do dynamic
-		//
-	}
-
-	return pM.S_Active
-
-}
-*/
-
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
 	// ADD RESETTING WHOLE THING
 	ps := pM.Pather.Paths(pM.RemoteAddr.IA)
@@ -121,7 +62,6 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 		fmt.Printf("  Interfaces: %v\n", path.Metadata().Interfaces)
 		fmt.Println()
 	}
-	pM.PathCharacteristics = assignPathQuality(ps)
 	pM.MetricsPerProber = make(map[int]*PathMetrics)
 	S := chooseNewPaths(ps, pM.K)
 	S_active := pickRandom(S, pM.Cap)
@@ -130,24 +70,6 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 	pM.assignProbers()
 
 	log.Info("Static path selection completed", slog.Int("S_total", len(S)), slog.Int("S_active", len(S_active)))
-}
-
-// Give each path a jitter and asymmetry value.
-func assignPathQuality(ps []snet.Path) map[string]PathQuality {
-	pathMap := make(map[string]PathQuality)
-
-	for _, path := range ps {
-		fp := snet.Fingerprint(path).String()
-
-		characteristics := PathQuality{
-			rttRange:  []float64{0, 1}, // placeholder
-			asymRange: []float64{0, 1}, // placeholder
-		}
-
-		pathMap[fp] = characteristics
-	}
-
-	return pathMap
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
