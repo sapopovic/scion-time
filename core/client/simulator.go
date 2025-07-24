@@ -1,20 +1,17 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"fmt"
 	"log/slog"
 	"math/big"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"example.com/scion-time/base/logbase"
 	"example.com/scion-time/driver/shm"
-	"github.com/pelletier/go-toml/v2"
 )
 
 // We have one simulator per path that extracts information about the given path from the config
@@ -26,29 +23,9 @@ type Simulator struct {
 	rttMin     int
 	rttMax     int
 	asymRange  time.Duration
-	cfg        SimulatorConfig
 	log        *slog.Logger
 	SHM        ReferenceClock
 	ctx        context.Context
-}
-
-// In config: shm_reference_clock = ["ntpshm"]
-type SimulatorConfig struct {
-	SHMReferenceClock []string `toml:"shm_reference_clock,omitempty"`
-	// define jitter, asymmetry
-}
-
-func loadSimConfig(configFile string) SimulatorConfig {
-	raw, err := os.ReadFile(configFile)
-	if err != nil {
-		logbase.Fatal(slog.Default(), "failed to load configuration", slog.Any("error", err))
-	}
-	var cfg SimulatorConfig
-	err = toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&cfg)
-	if err != nil {
-		logbase.Fatal(slog.Default(), "failed to decode configuration", slog.Any("error", err))
-	}
-	return cfg
 }
 
 func NewSimulator(simRefClock []string) *Simulator {
@@ -146,17 +123,4 @@ func SecureRandomInt(min, max int) int64 {
 	rtt := n.Int64() + int64(min)
 
 	return rtt
-}
-
-func loadConfig(configFile string) SimulatorConfig {
-	raw, err := os.ReadFile(configFile)
-	if err != nil {
-		logbase.Fatal(slog.Default(), "failed to load configuration", slog.Any("error", err))
-	}
-	var cfg SimulatorConfig
-	err = toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&cfg)
-	if err != nil {
-		logbase.Fatal(slog.Default(), "failed to decode configuration", slog.Any("error", err))
-	}
-	return cfg
 }
