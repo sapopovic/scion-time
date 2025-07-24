@@ -57,6 +57,7 @@ type PathMetrics struct {
 type PathQuality struct { // Char stands for characteristics
 	rttRange  []float64
 	asymRange []float64 // not sure about that yet
+	seed      int64
 }
 
 /*
