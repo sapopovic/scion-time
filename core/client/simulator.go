@@ -36,7 +36,7 @@ type PathQuality struct { // Char stands for characteristics
 
 func NewSimulator(simRefClock []string) *Simulator {
 	log := slog.Default()
-	refClock := make([]ReferenceClock, 1)
+	refClock := make([]ReferenceClock, 0)
 
 	for _, s := range simRefClock { // we only have one but we still iterate through a list (|list|=1) so that we preserve structure (to be safe)
 		t := strings.Split(s, ":")
