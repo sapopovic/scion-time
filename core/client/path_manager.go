@@ -486,7 +486,7 @@ func greedyDisjointPathSelection(paths []snet.Path, nbOfPaths int, k int) []snet
 	usedInterfaces := map[snet.PathInterface]int{}
 
 	// Step 1: Pick initial path
-	shortestLength := len(paths[0].Metadata().Interfaces)
+	/*shortestLength := len(paths[0].Metadata().Interfaces)
 	for _, p := range paths[1:] {
 		if len(p.Metadata().Interfaces) < shortestLength {
 			shortestLength = len(p.Metadata().Interfaces)
@@ -498,7 +498,15 @@ func greedyDisjointPathSelection(paths []snet.Path, nbOfPaths int, k int) []snet
 			shortestPaths = append(shortestPaths, p)
 		}
 	}
-	best := shortestPaths[secureRandomIndex(len(shortestPaths))]
+	best := shortestPaths[secureRandomIndex(len(shortestPaths))]*/
+	// For simulation: always pick the same shortest path! In the topology, we have 4 shortest paths. We are mainly testing dynamic selection
+	var best snet.Path
+	for _, p := range paths {
+		if snet.Fingerprint(p).String() == "1c91e925e44aebc06938ee1f41ad22d0c2c3691a877eaf57eb974088bcbd2e4e" {
+			best = p
+			break
+		}
+	}
 	selected = append(selected, best)
 	for _, iface := range best.Metadata().Interfaces {
 		usedInterfaces[iface]++
