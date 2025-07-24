@@ -30,6 +30,7 @@ type PathManager struct {
 	Probers                  [20]*SCIONClient // handle path assessment (symmetry, jitter), LENGTH TO BE DEFINED SOMEWHERE ELSE
 	PingDuration             int
 	MetricsPerProber         map[int]*PathMetrics
+	PathCharacteristics      map[string]PathQuality
 }
 
 type ProbeResult struct {
@@ -51,6 +52,11 @@ type PathMetrics struct {
 	QScoreEMA   MetricEMA
 	SampleCount int
 	LossCount   int
+}
+
+type PathQuality struct { // Char stands for characteristics
+	rttRange  []float64
+	asymRange []float64 // not sure about that yet
 }
 
 /*
@@ -108,6 +114,13 @@ func (pM PathManager) GetPaths(ctx context.Context, log *slog.Logger, cap, k int
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
 	// ADD RESETTING WHOLE THING
 	ps := pM.Pather.Paths(pM.RemoteAddr.IA)
+	for i, path := range ps {
+		fmt.Printf("Path %d:\n", i+1)
+		fmt.Printf("  FP: %v\n", snet.Fingerprint(path).String())
+		fmt.Printf("  Interfaces: %v\n", path.Metadata().Interfaces)
+		fmt.Println()
+	}
+	pM.PathCharacteristics = assignPathQuality(ps)
 	pM.MetricsPerProber = make(map[int]*PathMetrics)
 	S := chooseNewPaths(ps, pM.K)
 	S_active := pickRandom(S, pM.Cap)
@@ -116,6 +129,24 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 	pM.assignProbers()
 
 	log.Info("Static path selection completed", slog.Int("S_total", len(S)), slog.Int("S_active", len(S_active)))
+}
+
+// Give each path a jitter and asymmetry value.
+func assignPathQuality(ps []snet.Path) map[string]PathQuality {
+	pathMap := make(map[string]PathQuality)
+
+	for _, path := range ps {
+		fp := snet.Fingerprint(path).String()
+
+		characteristics := PathQuality{
+			rttRange:  []float64{0, 1}, // placeholder
+			asymRange: []float64{0, 1}, // placeholder
+		}
+
+		pathMap[fp] = characteristics
+	}
+
+	return pathMap
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
