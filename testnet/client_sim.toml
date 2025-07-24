@@ -3,6 +3,8 @@ scion_daemon_address = "10.0.0.212:30255"
 
 ntp_reference_clocks = ["1-ff00:0:133,10.0.0.149:10123"]
 
+# simulation_on = true
+# sim_shm_reference_clocks = [] This is for the simulator to fetch current time from MBG
 
 filter_type = "ntimed"
 pi_values=[0.2, 0.05]

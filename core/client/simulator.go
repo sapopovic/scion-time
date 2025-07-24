@@ -51,12 +51,11 @@ func loadSimConfig(configFile string) SimulatorConfig {
 	return cfg
 }
 
-func NewSimulator(simCfg string) *Simulator {
+func NewSimulator(simRefClock []string) *Simulator {
 	log := slog.Default()
-	cfg := loadSimConfig(simCfg)
 	refClock := make([]ReferenceClock, 1)
 
-	for _, s := range cfg.SHMReferenceClock { // we only have one
+	for _, s := range simRefClock { // we only have one but we still iterate through a list (|list|=1) so that we preserve structure (to be safe)
 		t := strings.Split(s, ":")
 		if len(t) > 2 || t[0] != shm.ReferenceClockType {
 			logbase.Fatal(slog.Default(), "unexpected SHM reference clock id", slog.String("id", s))
@@ -73,7 +72,7 @@ func NewSimulator(simCfg string) *Simulator {
 		refClock = append(refClock, shm.NewReferenceClock(log, u)) // we only have 1 element
 	}
 
-	return &Simulator{log: log, cfg: cfg, SHM: refClock[0]}
+	return &Simulator{log: log, SHM: refClock[0]}
 }
 
 func (s Simulator) generateTimeStamps() TimeStamps {

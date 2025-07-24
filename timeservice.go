@@ -96,6 +96,7 @@ type svcConfig struct {
 	ChosenPaths              []string  `toml:"specified_paths,omitempty"`
 	SelectionMethod          string    `toml:"selection_method,omitempty"` // average, midpoint, median
 	SimulatorOn              bool      `toml:"simulation_on,omitempty"`
+	SimulatorSHMRefClk       []string  `toml:"sim_shm_reference_clocks,omitempty"`
 }
 
 type ntpReferenceClockIP struct {
@@ -262,7 +263,7 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 	c.Auth.NTSKEFetcher.QUIC.RemoteAddr = remoteAddr
 }
 
-func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig, simCfg string) *ntpReferenceClockSCION {
+func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig) *ntpReferenceClockSCION {
 	pM := &client.PathManager{
 		StaticSelectionInterval:  24 * time.Hour,
 		DynamicSelectionInterval: time.Hour,
@@ -277,7 +278,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			pM.Probers[i] = &client.SCIONClient{
 				Log:             log,
 				InterleavedMode: false,
-				Simulator:       client.NewSimulator(simCfg),
+				Simulator:       client.NewSimulator(cfg.SimulatorSHMRefClk),
 			}
 		}
 	} else {
@@ -305,11 +306,12 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 
 	for i := range len(c.ntpcs) {
 		if cfg.SimulatorOn {
+
 			c.ntpcs[i] = &client.SCIONClient{
 				Log:             log,
 				DSCP:            dscp,
 				InterleavedMode: true,
-				Simulator:       client.NewSimulator(simCfg),
+				Simulator:       client.NewSimulator(cfg.SimulatorSHMRefClk),
 			}
 		} else {
 			c.ntpcs[i] = &client.SCIONClient{
@@ -527,7 +529,6 @@ func createClocks(cfgSim string, cfg svcConfig, localAddr *snet.UDPAddr, log *sl
 				dscp,
 				ntskeServer,
 				cfg,
-				cfgSim,
 			))
 			dstIAs = append(dstIAs, remoteAddr.IA)
 		} else {
@@ -559,7 +560,6 @@ func createClocks(cfgSim string, cfg svcConfig, localAddr *snet.UDPAddr, log *sl
 			dscp,
 			ntskeServer,
 			cfg,
-			cfgSim,
 		))
 		dstIAs = append(dstIAs, remoteAddr.IA)
 	}
