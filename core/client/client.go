@@ -164,20 +164,49 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 	ms := make([]measurements.Measurement, len(ntpcs))
 	msc := make(chan measurements.Measurement)
 
-	if simulatorOn {
-		// Fetch t3 and local offset from shm
-		t3, off, err := ntpcs[0].Simulator.SHM.MeasureClockOffset(ctx)
-		if err != nil {
-			fmt.Println("FAILED CLOCK")
-			return time.Time{}, 0, fmt.Errorf("failed to fetch time from shared memory: %w", err)
-		}
+	//if simulatorOn {
+	//	// Fetch t3 and local offset from shm
+	//	t3, off, err := ntpcs[0].Simulator.SHM.MeasureClockOffset(ctx)
+	//	if err != nil {
+	//		fmt.Println("FAILED CLOCK")
+	//		return time.Time{}, 0, fmt.Errorf("failed to fetch time from shared memory: %w", err)
+	//	}
+	//
+	//	// Assign t3 to all SCIONClient.Simulator
+	//	for _, client := range ntpcs {
+	//		if client.Simulator != nil {
+	//			client.Simulator.t3 = t3
+	//			client.Simulator.off = off
+	//		}
+	//	}
+	//}
 
-		// Assign t3 to all SCIONClient.Simulator
-		for _, client := range ntpcs {
-			if client.Simulator != nil {
-				client.Simulator.t3 = t3
-				client.Simulator.off = off
+	const maxNumRetries = 3
+	numRetries := 0
+	deadline, deadlineIsSet := ctx.Deadline()
+	if simulatorOn {
+		for {
+			// Fetch t3 and local offset from shm
+			t3, off, err := ntpcs[0].Simulator.SHM.MeasureClockOffset(ctx)
+			if err != nil {
+				// Retry on temporary SHM failure
+				if numRetries < maxNumRetries && (!deadlineIsSet || time.Now().Before(deadline)) {
+					numRetries++
+					time.Sleep(50 * time.Millisecond)
+					continue
+				}
+				// Final fallback: panic for critical unrecoverable state
+				panic(fmt.Sprintf("PANIC: Failed to fetch time from SHM after %d retries: %v. STOPPED RUN", numRetries, err))
 			}
+
+			// Assign t3 and off to all simulators
+			for _, client := range ntpcs {
+				if client.Simulator != nil {
+					client.Simulator.t3 = t3
+					client.Simulator.off = off
+				}
+			}
+			break
 		}
 	}
 
