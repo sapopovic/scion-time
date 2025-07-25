@@ -1,0 +1,457 @@
+time=2025-07-25T09:19:10.810Z level=INFO source=timeservice.go:303 msg="----Configuration Details----"
+time=2025-07-25T09:19:10.810Z level=INFO source=timeservice.go:304 msg="Filter Selection" filter=ntimed
+time=2025-07-25T09:19:10.810Z level=INFO source=timeservice.go:305 msg="Pre Filter Selection" prefilter=""
+time=2025-07-25T09:19:10.810Z level=INFO source=timeservice.go:306 msg="Path Selection" paths=[]
+time=2025-07-25T09:19:10.810Z level=INFO source=timeservice.go:307 msg="Offset Selection" "selection method"=""
+time=2025-07-25T09:19:10.810Z level=INFO source=core/client/filter_ntimed.go:27 msg="Ntimed Filter activated"
+time=2025-07-25T09:19:10.810Z level=INFO source=core/client/filter_ntimed.go:27 msg="Ntimed Filter activated"
+time=2025-07-25T09:19:10.811Z level=INFO source=core/client/filter_ntimed.go:27 msg="Ntimed Filter activated"
+time=2025-07-25T09:19:10.811Z level=INFO source=core/client/filter_ntimed.go:27 msg="Ntimed Filter activated"
+time=2025-07-25T09:19:10.811Z level=INFO source=core/client/filter_ntimed.go:27 msg="Ntimed Filter activated"
+time=2025-07-25T09:19:10.812Z level=INFO source=core/client/filter_ntimed.go:27 msg="Ntimed Filter activated"
+time=2025-07-25T09:19:10.812Z level=INFO source=core/client/filter_ntimed.go:27 msg="Ntimed Filter activated"
+time=2025-07-25T09:19:10.907Z level=INFO source=core/server/server_scion.go:668 msg="dispatcher listening via SCION" "local host"=10.0.0.213:0
+Path 1:
+  FP: 1c91e925e44aebc06938ee1f41ad22d0c2c3691a877eaf57eb974088bcbd2e4e
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#8 2-ff00:0:210#452 2-ff00:0:210#453 1-ff00:0:110#3 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 2:
+  FP: 4194af709787d03483b2c8f298a1e12fba6abb384a62ded807cb4cb7ee197fd7
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#7 2-ff00:0:210#451 2-ff00:0:210#453 1-ff00:0:110#3 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 3:
+  FP: 877b3a86f6e88d9034423fde74939b9362cbc8ac368cec0be7eab8e5a9663c6e
+  Interfaces: [2-ff00:0:222#302 2-ff00:0:221#1 2-ff00:0:221#2 2-ff00:0:220#500 2-ff00:0:220#501 1-ff00:0:120#2 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 4:
+  FP: 108acbc64efbf5a04652c15db371381c37fba6646fcc000bde7b7877cc8db557
+  Interfaces: [2-ff00:0:222#302 2-ff00:0:221#1 2-ff00:0:221#2 2-ff00:0:220#500 2-ff00:0:220#502 1-ff00:0:120#3 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 5:
+  FP: 3496ccc115ec697f3e2027c1f2b70a364bc08cf49ecb6fcb335c3989fca26b02
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#8 2-ff00:0:210#452 2-ff00:0:210#450 2-ff00:0:220#503 2-ff00:0:220#501 1-ff00:0:120#2 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 6:
+  FP: d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#8 2-ff00:0:210#452 2-ff00:0:210#453 1-ff00:0:110#3 1-ff00:0:110#1 1-ff00:0:120#6 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 7:
+  FP: 1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#8 2-ff00:0:210#452 2-ff00:0:210#450 2-ff00:0:220#503 2-ff00:0:220#502 1-ff00:0:120#3 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 8:
+  FP: 6c4f86d4c33b5c2371494582f3224b1a3c0611709168c4f411f66c9fa27d744b
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#7 2-ff00:0:210#451 2-ff00:0:210#450 2-ff00:0:220#503 2-ff00:0:220#501 1-ff00:0:120#2 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 9:
+  FP: e488d5b91a7b360294f19bad4ddf644c41d7e47c82cb68256bbedc3eed9a6447
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#7 2-ff00:0:210#451 2-ff00:0:210#453 1-ff00:0:110#3 1-ff00:0:110#1 1-ff00:0:120#6 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 10:
+  FP: a7a0a2901cccd754534d65374136b9829a7f81518309af79d87f0a560a14690c
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#7 2-ff00:0:210#451 2-ff00:0:210#450 2-ff00:0:220#503 2-ff00:0:220#502 1-ff00:0:120#3 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 11:
+  FP: aa170b5d350ffdd234572466a5b9e557c6930d2d8669a3f12a813c9410a0c0c7
+  Interfaces: [2-ff00:0:222#302 2-ff00:0:221#1 2-ff00:0:221#2 2-ff00:0:220#500 2-ff00:0:220#502 1-ff00:0:120#3 1-ff00:0:120#6 1-ff00:0:110#1 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 12:
+  FP: c138518cd3637650efb49977186c920375cc6b36f75923be55d04f8f9303e188
+  Interfaces: [2-ff00:0:222#302 2-ff00:0:221#1 2-ff00:0:221#2 2-ff00:0:220#500 2-ff00:0:220#503 2-ff00:0:210#450 2-ff00:0:210#453 1-ff00:0:110#3 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 13:
+  FP: 5fb945f4d62fb9a9877489f10006d8f9c5a94f16656121e5eb78a0394a4f466e
+  Interfaces: [2-ff00:0:222#302 2-ff00:0:221#1 2-ff00:0:221#2 2-ff00:0:220#500 2-ff00:0:220#501 1-ff00:0:120#2 1-ff00:0:120#6 1-ff00:0:110#1 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 14:
+  FP: 02bf95b27afd43858f75306b7a77c5d548ab4618a12cb155775ead71345028f9
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#8 2-ff00:0:210#452 2-ff00:0:210#450 2-ff00:0:220#503 2-ff00:0:220#502 1-ff00:0:120#3 1-ff00:0:120#6 1-ff00:0:110#1 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 15:
+  FP: 0e8ebf758be09f95eb8f9f5df6eadad00cece2207a4ced88eac43dfafc68597f
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#8 2-ff00:0:210#452 2-ff00:0:210#450 2-ff00:0:220#503 2-ff00:0:220#501 1-ff00:0:120#2 1-ff00:0:120#6 1-ff00:0:110#1 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 16:
+  FP: e1bf6b79f7219745133909e2a6fba731b92d001007cf81235cec08f3491bf196
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#7 2-ff00:0:210#451 2-ff00:0:210#450 2-ff00:0:220#503 2-ff00:0:220#502 1-ff00:0:120#3 1-ff00:0:120#6 1-ff00:0:110#1 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 17:
+  FP: d8c9132fa9db80172bcd51547b87137986ee0533e49483ce4fcba9c277c26e4a
+  Interfaces: [2-ff00:0:222#301 2-ff00:0:211#4 2-ff00:0:211#7 2-ff00:0:210#451 2-ff00:0:210#450 2-ff00:0:220#503 2-ff00:0:220#501 1-ff00:0:120#2 1-ff00:0:120#6 1-ff00:0:110#1 1-ff00:0:110#2 1-ff00:0:130#104 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+Path 18:
+  FP: b1319d5e0f1cc40a0d227ef38e03ee6d58bd352393cb48f6fbeea0d29032b036
+  Interfaces: [2-ff00:0:222#302 2-ff00:0:221#1 2-ff00:0:221#2 2-ff00:0:220#500 2-ff00:0:220#503 2-ff00:0:210#450 2-ff00:0:210#453 1-ff00:0:110#3 1-ff00:0:110#1 1-ff00:0:120#6 1-ff00:0:120#1 1-ff00:0:130#105 1-ff00:0:130#111 1-ff00:0:131#479 1-ff00:0:131#478 1-ff00:0:132#2 1-ff00:0:132#1 1-ff00:0:133#2]
+
+time=2025-07-25T09:19:10.908Z level=INFO source=core/client/path_manager.go:72 msg="Static path selection completed" S_total=18 S_active=7
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/sync/sync.go:93 msg="Clock Settings" "PI Type"="Activated PI_LINUX" "P value"=0.2 "I value"=0.05
+time=2025-07-25T09:19:10.908Z level=DEBUG source=driver/shm/refclk.go:82 msg="SHM clock sample" receiveTime=2025-07-25T09:19:10.358Z clockTime=2025-07-25T09:19:10.314Z offset=-44.07544ms
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 453>3 1-ff00:0:110 1>6 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=6c4f86d4c33b5c2371494582f3224b1a3c0611709168c4f411f66c9fa27d744b path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 501>2 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:10.358976, t1=09:19:10.314911, t2=09:19:10.314911, t3=09:19:10.358997 | delays: d0=10.636µs, d1=10.636µs
+Generated timestamps: t0=09:19:10.358983, t1=09:19:10.314915, t2=09:19:10.314915, t3=09:19:10.358997 | delays: d0=7.047µs, d1=7.047µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044064804 "mid [s]"=0.04407544 "hi [s]"=0.044086076 "loLim [s]"=0 "amid [s]"=0.04407544 "hiLim [s]"=0 "offset [s]"=0.04407544 weight=94020.30938661152
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=e1bf6b79f7219745133909e2a6fba731b92d001007cf81235cec08f3491bf196 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 6>1 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044068393 "mid [s]"=0.044075439999999994 "hi [s]"=0.044082487 "loLim [s]"=0 "amid [s]"=0.044075439999999994 "hiLim [s]"=0 "offset [s]"=0.044075439 weight=141904.35746374342
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:10.358974, t1=09:19:10.314910, t2=09:19:10.314910, t3=09:19:10.358997 | delays: d0=11.468µs, d1=11.468µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=a7a0a2901cccd754534d65374136b9829a7f81518309af79d87f0a560a14690c path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:10.358971, t1=09:19:10.314908, t2=09:19:10.314908, t3=09:19:10.358997 | delays: d0=13.23µs, d1=13.23µs
+Generated timestamps: t0=09:19:10.358979, t1=09:19:10.314913, t2=09:19:10.314913, t3=09:19:10.358997 | delays: d0=8.838µs, d1=8.838µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044063972 "mid [s]"=0.04407544 "hi [s]"=0.044086908 "loLim [s]"=0 "amid [s]"=0.04407544 "hiLim [s]"=0 "offset [s]"=0.04407544 weight=87199.16388803629
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=4194af709787d03483b2c8f298a1e12fba6abb384a62ded807cb4cb7ee197fd7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:10.358987, t1=09:19:10.314917, t2=09:19:10.314917, t3=09:19:10.358997 | delays: d0=4.908µs, d1=4.908µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.04406221 "mid [s]"=0.04407544 "hi [s]"=0.04408867 "loLim [s]"=0.044064804 "amid [s]"=0.04407544 "hiLim [s]"=0.044086076 "offset [s]"=0.04407544 weight=75585.79087150416
+Generated timestamps: t0=09:19:10.358974, t1=09:19:10.314910, t2=09:19:10.314910, t3=09:19:10.358997 | delays: d0=11.666µs, d1=11.666µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.044066602 "mid [s]"=0.04407544 "hi [s]"=0.044084278 "loLim [s]"=0.044068393 "amid [s]"=0.044075439999999994 "hiLim [s]"=0.044082487 "offset [s]"=0.04407544 weight=113147.77198891151
+Generated timestamps: t0=09:19:10.358973, t1=09:19:10.314909, t2=09:19:10.314909, t3=09:19:10.358997 | delays: d0=12.178µs, d1=12.178µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.044063774 "mid [s]"=0.04407544 "hi [s]"=0.044087106 "loLim [s]"=0.044063972 "amid [s]"=0.04407544 "hiLim [s]"=0.044086908 "offset [s]"=0.04407544 weight=85719.18495336876
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044070532 "mid [s]"=0.04407544 "hi [s]"=0.044080348 "loLim [s]"=0 "amid [s]"=0.04407544 "hiLim [s]"=0 "offset [s]"=0.04407544 weight=203748.9822550937
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044063262 "mid [s]"=0.04407544 "hi [s]"=0.044087618 "loLim [s]"=0 "amid [s]"=0.04407544 "hiLim [s]"=0 "offset [s]"=0.04407544 weight=82115.29086697324
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:10.358975, t1=09:19:10.314911, t2=09:19:10.314911, t3=09:19:10.358997 | delays: d0=10.845µs, d1=10.845µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044064595 "mid [s]"=0.04407544 "hi [s]"=0.044086285 "loLim [s]"=0.04405961600043269 "amid [s]"=0.04407544 "hiLim [s]"=0.04409126400031965 "offset [s]"=0.04407544 weight=92208.39196357768
+Generated timestamps: t0=09:19:10.358974, t1=09:19:10.314910, t2=09:19:10.314910, t3=09:19:10.358997 | delays: d0=11.578µs, d1=11.578µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:10.358988, t1=09:19:10.314917, t2=09:19:10.314917, t3=09:19:10.358997 | delays: d0=4.585µs, d1=4.585µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=c138518cd3637650efb49977186c920375cc6b36f75923be55d04f8f9303e188 path="Hops: [2-ff00:0:222 302>1 2-ff00:0:221 2>500 2-ff00:0:220 503>450 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.210:31114"
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044063862 "mid [s]"=0.04407544 "hi [s]"=0.044087018 "loLim [s]"=0.04406357600701345 "amid [s]"=0.04407544 "hiLim [s]"=0.04408730400612842 "offset [s]"=0.04407544 weight=86370.70405752289
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044070855 "mid [s]"=0.04407544 "hi [s]"=0.044080025 "loLim [s]"=0.044070532 "amid [s]"=0.04407544 "hiLim [s]"=0.044080348 "offset [s]"=0.04407544 weight=218102.50917884405
+Generated timestamps: t0=09:19:10.358979, t1=09:19:10.314912, t2=09:19:10.314912, t3=09:19:10.358997 | delays: d0=9.258µs, d1=9.258µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044066182 "mid [s]"=0.04407544 "hi [s]"=0.044084698 "loLim [s]"=0.044063262 "amid [s]"=0.04407544 "hiLim [s]"=0.044087618 "offset [s]"=0.04407544 weight=108014.6909978397
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:10.358984, t1=09:19:10.314915, t2=09:19:10.314915, t3=09:19:10.358997 | delays: d0=6.569µs, d1=6.569µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.044068871 "mid [s]"=0.04407544 "hi [s]"=0.044082009 "loLim [s]"=0.04407020900029738 "amid [s]"=0.04407544 "hiLim [s]"=0.04408067099970262 "offset [s]"=0.04407544 weight=152230.17302009437
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:10.358972, t1=09:19:10.314909, t2=09:19:10.314909, t3=09:19:10.358997 | delays: d0=12.437µs, d1=12.437µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044063003 "mid [s]"=0.04407544 "hi [s]"=0.044087877 "loLim [s]"=0.04406034199998148 "amid [s]"=0.04407544 "hiLim [s]"=0.0440905380002413 "offset [s]"=0.04407544 weight=80405.2434218059
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:10.358974, t1=09:19:10.314910, t2=09:19:10.314910, t3=09:19:10.358997 | delays: d0=11.555µs, d1=11.555µs
+Generated timestamps: t0=09:19:10.358983, t1=09:19:10.314915, t2=09:19:10.314915, t3=09:19:10.358997 | delays: d0=6.844µs, d1=6.844µs
+Generated timestamps: t0=09:19:10.358983, t1=09:19:10.314915, t2=09:19:10.314915, t3=09:19:10.358997 | delays: d0=6.819µs, d1=6.819µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044063885 "mid [s]"=0.044075439999999994 "hi [s]"=0.044086995 "loLim [s]"=0 "amid [s]"=0.044075439999999994 "hiLim [s]"=0 "offset [s]"=0.044075439 weight=86542.62324145391
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044068621 "mid [s]"=0.04407544 "hi [s]"=0.044082259 "loLim [s]"=0 "amid [s]"=0.04407544 "hiLim [s]"=0 "offset [s]"=0.04407544 weight=146649.06977841325
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044068596 "mid [s]"=0.04407544 "hi [s]"=0.044082284 "loLim [s]"=0.044064810999783814 "amid [s]"=0.044075439999999994 "hiLim [s]"=0.04408606899985296 "offset [s]"=0.04407544 weight=146113.3849859731
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:10.358984, t1=09:19:10.314915, t2=09:19:10.314915, t3=09:19:10.358997 | delays: d0=6.418µs, d1=6.418µs
+Generated timestamps: t0=09:19:10.358973, t1=09:19:10.314910, t2=09:19:10.314910, t3=09:19:10.358997 | delays: d0=11.883µs, d1=11.883µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044069022 "mid [s]"=0.04407544 "hi [s]"=0.044081858 "loLim [s]"=0.044068621 "amid [s]"=0.04407544 "hiLim [s]"=0.044082259 "offset [s]"=0.04407544 weight=155811.7803705204
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.044063557 "mid [s]"=0.04407544 "hi [s]"=0.044087323 "loLim [s]"=0.044063885 "amid [s]"=0.044075439999999994 "hiLim [s]"=0.044086995 "offset [s]"=0.04407544 weight=84153.83420710258
+Generated timestamps: t0=09:19:10.358988, t1=09:19:10.314917, t2=09:19:10.314917, t3=09:19:10.358997 | delays: d0=4.757µs, d1=4.757µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044070683 "mid [s]"=0.04407544 "hi [s]"=0.044080197 "loLim [s]"=0.04406822000151009 "amid [s]"=0.04407544 "hiLim [s]"=0.04408265999848991 "offset [s]"=0.04407544 weight=210216.52401870926
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:10.358975, t1=09:19:10.314910, t2=09:19:10.314910, t3=09:19:10.358997 | delays: d0=11.166µs, d1=11.166µs
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044064274 "mid [s]"=0.04407544 "hi [s]"=0.044086606 "loLim [s]"=0.04406322899981585 "amid [s]"=0.044075439999999994 "hiLim [s]"=0.04408765099820085 "offset [s]"=0.04407544 weight=89557.58652749419
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/sync/sync.go:155 msg="correcting clock" corr=-0.04407544 refClkOk=true refClkOff=-0.04407544 refClkCorr=-0.04407544 refClkMaxCorr=1.152921504606847e+10 peerClkOk=false peerClkOff=0 peerClkCorr=0 peerClkMaxCorr=2.305843009213694e+10
+time=2025-07-25T09:19:10.908Z level=DEBUG source=core/sync/adjustments/pi_linux.go:113 msg="adjusting clock frequency" frequency=-0.0085456445032959
+time=2025-07-25T09:19:10.908Z level=DEBUG source=driver/clocks/sysclk_linux.go:173 msg=sleeping duration=1s
+time=2025-07-25T09:19:11.909Z level=DEBUG source=driver/shm/refclk.go:82 msg="SHM clock sample" receiveTime=2025-07-25T09:19:11.359Z clockTime=2025-07-25T09:19:11.315Z offset=-44.01299ms
+time=2025-07-25T09:19:11.909Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 453>3 1-ff00:0:110 1>6 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:11.359097, t1=09:19:11.315095, t2=09:19:11.315095, t3=09:19:11.359120 | delays: d0=11.474µs, d1=11.474µs
+time=2025-07-25T09:19:11.909Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=6c4f86d4c33b5c2371494582f3224b1a3c0611709168c4f411f66c9fa27d744b path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 501>2 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:11.359103, t1=09:19:11.315099, t2=09:19:11.315099, t3=09:19:11.359120 | delays: d0=8.239µs, d1=8.239µs
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044004751 "mid [s]"=0.04401299 "hi [s]"=0.044021229 "loLim [s]"=0 "amid [s]"=0.04401299 "hiLim [s]"=0 "offset [s]"=0.04401299 weight=121373.95414965409
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=c138518cd3637650efb49977186c920375cc6b36f75923be55d04f8f9303e188 path="Hops: [2-ff00:0:222 302>1 2-ff00:0:221 2>500 2-ff00:0:220 503>450 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.210:31114"
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:11.359095, t1=09:19:11.315094, t2=09:19:11.315094, t3=09:19:11.359120 | delays: d0=12.572µs, d1=12.572µs
+Generated timestamps: t0=09:19:11.359106, t1=09:19:11.315100, t2=09:19:11.315100, t3=09:19:11.359120 | delays: d0=6.863µs, d1=6.863µs
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044000418 "mid [s]"=0.04401299 "hi [s]"=0.044025562 "loLim [s]"=0 "amid [s]"=0.04401299 "hiLim [s]"=0 "offset [s]"=0.04401299 weight=79541.84000731786
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=e1bf6b79f7219745133909e2a6fba731b92d001007cf81235cec08f3491bf196 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 6>1 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044006127 "mid [s]"=0.04401299 "hi [s]"=0.044019853 "loLim [s]"=0.044004751 "amid [s]"=0.04401299 "hiLim [s]"=0.044021229 "offset [s]"=0.04401299 weight=145708.8746704065
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:11.359105, t1=09:19:11.315099, t2=09:19:11.315099, t3=09:19:11.359120 | delays: d0=7.647µs, d1=7.647µs
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:11.359092, t1=09:19:11.315093, t2=09:19:11.315093, t3=09:19:11.359120 | delays: d0=13.726µs, d1=13.726µs
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044005343 "mid [s]"=0.04401299 "hi [s]"=0.044020637 "loLim [s]"=0 "amid [s]"=0.04401299 "hiLim [s]"=0 "offset [s]"=0.04401299 weight=130770.23769412842
+Generated timestamps: t0=09:19:11.359102, t1=09:19:11.315098, t2=09:19:11.315098, t3=09:19:11.359120 | delays: d0=8.943µs, d1=8.943µs
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043999264 "mid [s]"=0.04401299 "hi [s]"=0.044026716 "loLim [s]"=0.044000418 "amid [s]"=0.04401299 "hiLim [s]"=0.044025562 "offset [s]"=0.04401299 weight=72854.43783520327
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044004047 "mid [s]"=0.04401299 "hi [s]"=0.044021933 "loLim [s]"=0.044003374999955894 "amid [s]"=0.04401299 "hiLim [s]"=0.044022605000516864 "offset [s]"=0.04401299 weight=111819.30101118193
+Generated timestamps: t0=09:19:11.359099, t1=09:19:11.315097, t2=09:19:11.315097, t3=09:19:11.359120 | delays: d0=10.276µs, d1=10.276µs
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.910Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044001516 "mid [s]"=0.04401299 "hi [s]"=0.044024464 "loLim [s]"=0 "amid [s]"=0.04401299 "hiLim [s]"=0 "offset [s]"=0.04401299 weight=87153.56558079136
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:11.359090, t1=09:19:11.315092, t2=09:19:11.315092, t3=09:19:11.359120 | delays: d0=14.747µs, d1=14.747µs
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043998243 "mid [s]"=0.04401299 "hi [s]"=0.044027737 "loLim [s]"=0.044001516 "amid [s]"=0.04401299 "hiLim [s]"=0.044024464 "offset [s]"=0.04401299 weight=67810.40311568454
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=4194af709787d03483b2c8f298a1e12fba6abb384a62ded807cb4cb7ee197fd7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:11.359096, t1=09:19:11.315095, t2=09:19:11.315095, t3=09:19:11.359120 | delays: d0=11.997µs, d1=11.997µs
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044000993 "mid [s]"=0.04401299 "hi [s]"=0.044024987 "loLim [s]"=0 "amid [s]"=0.04401299 "hiLim [s]"=0 "offset [s]"=0.04401299 weight=83354.17287630241
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:11.359102, t1=09:19:11.315098, t2=09:19:11.315098, t3=09:19:11.359120 | delays: d0=8.749µs, d1=8.749µs
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044004241 "mid [s]"=0.04401299 "hi [s]"=0.044021739 "loLim [s]"=0.044000993 "amid [s]"=0.04401299 "hiLim [s]"=0.044024987 "offset [s]"=0.04401299 weight=114298.77800308606
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=a7a0a2901cccd754534d65374136b9829a7f81518309af79d87f0a560a14690c path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:11.359100, t1=09:19:11.315097, t2=09:19:11.315097, t3=09:19:11.359120 | delays: d0=9.832µs, d1=9.832µs
+Generated timestamps: t0=09:19:11.359107, t1=09:19:11.315101, t2=09:19:11.315101, t3=09:19:11.359120 | delays: d0=6.292µs, d1=6.292µs
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044003158 "mid [s]"=0.04401299 "hi [s]"=0.044022822 "loLim [s]"=0.04399774500000492 "amid [s]"=0.04401299 "hiLim [s]"=0.04402823500019536 "offset [s]"=0.04401299 weight=101708.70726525631
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044006698 "mid [s]"=0.04401299 "hi [s]"=0.044019282 "loLim [s]"=0 "amid [s]"=0.04401299 "hiLim [s]"=0 "offset [s]"=0.04401299 weight=158931.97811379528
+Generated timestamps: t0=09:19:11.359096, t1=09:19:11.315095, t2=09:19:11.315095, t3=09:19:11.359120 | delays: d0=12.157µs, d1=12.157µs
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044000833 "mid [s]"=0.04401299 "hi [s]"=0.044025147 "loLim [s]"=0.043998109998880715 "amid [s]"=0.04401299 "hiLim [s]"=0.044027869999991864 "offset [s]"=0.04401299 weight=82257.13680653121
+Generated timestamps: t0=09:19:11.359110, t1=09:19:11.315102, t2=09:19:11.315102, t3=09:19:11.359120 | delays: d0=5.106µs, d1=5.106µs
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044007884 "mid [s]"=0.04401299 "hi [s]"=0.044018096 "loLim [s]"=0.044006698 "amid [s]"=0.04401299 "hiLim [s]"=0.044019282 "offset [s]"=0.04401299 weight=195848.02293497845
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:11.359107, t1=09:19:11.315100, t2=09:19:11.315100, t3=09:19:11.359120 | delays: d0=6.455µs, d1=6.455µs
+time=2025-07-25T09:19:11.909Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044006535 "mid [s]"=0.04401299 "hi [s]"=0.044019445 "loLim [s]"=0.04400551199987751 "amid [s]"=0.04401299 "hiLim [s]"=0.044020468000122485 "offset [s]"=0.04401299 weight=154918.66869945778
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:11.359106, t1=09:19:11.315100, t2=09:19:11.315100, t3=09:19:11.359120 | delays: d0=7.001µs, d1=7.001µs
+Generated timestamps: t0=09:19:11.359099, t1=09:19:11.315096, t2=09:19:11.315096, t3=09:19:11.359120 | delays: d0=10.39µs, d1=10.39µs
+time=2025-07-25T09:19:11.912Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044005989 "mid [s]"=0.04401299 "hi [s]"=0.044019991 "loLim [s]"=0 "amid [s]"=0.04401299 "hiLim [s]"=0 "offset [s]"=0.04401299 weight=142836.738608913
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.0440026 "mid [s]"=0.04401299 "hi [s]"=0.04402338 "loLim [s]"=0.04399497000020925 "amid [s]"=0.04401299 "hiLim [s]"=0.0440310099999895 "offset [s]"=0.04401299 weight=96246.39176034648
+time=2025-07-25T09:19:11.911Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.044002714 "mid [s]"=0.04401299 "hi [s]"=0.044023266 "loLim [s]"=0.044005343 "amid [s]"=0.04401299 "hiLim [s]"=0.044020637 "offset [s]"=0.04401299 weight=97314.1310116777
+Generated timestamps: t0=09:19:11.359105, t1=09:19:11.315100, t2=09:19:11.315100, t3=09:19:11.359120 | delays: d0=7.34µs, d1=7.34µs
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.04400565 "mid [s]"=0.04401299 "hi [s]"=0.04402033 "loLim [s]"=0.044005989 "amid [s]"=0.04401299 "hiLim [s]"=0.044019991 "offset [s]"=0.04401299 weight=136239.78301634875
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:11.359095, t1=09:19:11.315095, t2=09:19:11.315095, t3=09:19:11.359120 | delays: d0=12.336µs, d1=12.336µs
+Generated timestamps: t0=09:19:11.359106, t1=09:19:11.315100, t2=09:19:11.315100, t3=09:19:11.359120 | delays: d0=6.895µs, d1=6.895µs
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044000654 "mid [s]"=0.04401299 "hi [s]"=0.044025326 "loLim [s]"=0.04400008499988643 "amid [s]"=0.04401299 "hiLim [s]"=0.04402589499961869 "offset [s]"=0.04401299 weight=81063.55482619975
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.044006095 "mid [s]"=0.04401299 "hi [s]"=0.044019885 "loLim [s]"=0.0440053109997932 "amid [s]"=0.04401299 "hiLim [s]"=0.044020669000206805 "offset [s]"=0.04401299 weight=145032.633342277
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/sync/sync.go:155 msg="correcting clock" corr=-0.04401299 refClkOk=true refClkOff=-0.04401299 refClkCorr=-0.04401299 refClkMaxCorr=1.152921504606847e+10 peerClkOk=false peerClkOff=0 peerClkCorr=0 peerClkMaxCorr=2.305843009213694e+10
+time=2025-07-25T09:19:11.913Z level=DEBUG source=core/sync/adjustments/pi_linux.go:113 msg="adjusting clock frequency" frequency=-0.0009282644
+time=2025-07-25T09:19:11.913Z level=DEBUG source=driver/clocks/sysclk_linux.go:173 msg=sleeping duration=1s
+time=2025-07-25T09:19:12.914Z level=DEBUG source=driver/shm/refclk.go:82 msg="SHM clock sample" receiveTime=2025-07-25T09:19:12.359Z clockTime=2025-07-25T09:19:12.315Z offset=-43.527656ms
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 453>3 1-ff00:0:110 1>6 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=c138518cd3637650efb49977186c920375cc6b36f75923be55d04f8f9303e188 path="Hops: [2-ff00:0:222 302>1 2-ff00:0:221 2>500 2-ff00:0:220 503>450 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.210:31114"
+Generated timestamps: t0=09:19:12.359226, t1=09:19:12.315712, t2=09:19:12.315712, t3=09:19:12.359253 | delays: d0=13.284µs, d1=13.284µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=e1bf6b79f7219745133909e2a6fba731b92d001007cf81235cec08f3491bf196 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 6>1 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=a7a0a2901cccd754534d65374136b9829a7f81518309af79d87f0a560a14690c path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:12.359226, t1=09:19:12.315712, t2=09:19:12.315712, t3=09:19:12.359253 | delays: d0=13.381µs, d1=13.381µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=6c4f86d4c33b5c2371494582f3224b1a3c0611709168c4f411f66c9fa27d744b path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 501>2 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:12.359243, t1=09:19:12.315720, t2=09:19:12.315720, t3=09:19:12.359253 | delays: d0=4.713µs, d1=4.713µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043514372 "mid [s]"=0.043527656 "hi [s]"=0.04354094 "loLim [s]"=0 "amid [s]"=0.043527656 "hiLim [s]"=0 "offset [s]"=0.043527656 weight=75278.53156308341
+Generated timestamps: t0=09:19:12.359238, t1=09:19:12.315718, t2=09:19:12.315718, t3=09:19:12.359253 | delays: d0=7.282µs, d1=7.282µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043520374 "mid [s]"=0.043527656 "hi [s]"=0.043534938 "loLim [s]"=0 "amid [s]"=0.043527656 "hiLim [s]"=0 "offset [s]"=0.043527656 weight=137324.911738808
+Generated timestamps: t0=09:19:12.359238, t1=09:19:12.315718, t2=09:19:12.315718, t3=09:19:12.359253 | delays: d0=7.149µs, d1=7.149µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:12.359232, t1=09:19:12.315715, t2=09:19:12.315715, t3=09:19:12.359253 | delays: d0=10.378µs, d1=10.378µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043522943 "mid [s]"=0.043527656 "hi [s]"=0.043532369 "loLim [s]"=0 "amid [s]"=0.043527656 "hiLim [s]"=0 "offset [s]"=0.043527656 weight=212179.08014279653
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043514275 "mid [s]"=0.043527656 "hi [s]"=0.043541037 "loLim [s]"=0 "amid [s]"=0.043527656 "hiLim [s]"=0 "offset [s]"=0.043527656 weight=74732.83113227712
+Generated timestamps: t0=09:19:12.359240, t1=09:19:12.315719, t2=09:19:12.315719, t3=09:19:12.359253 | delays: d0=6.401µs, d1=6.401µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043520507 "mid [s]"=0.043527656 "hi [s]"=0.043534805 "loLim [s]"=0 "amid [s]"=0.043527656 "hiLim [s]"=0 "offset [s]"=0.043527656 weight=139879.70445502867
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043517278 "mid [s]"=0.043527656 "hi [s]"=0.043538034 "loLim [s]"=0.043514372 "amid [s]"=0.043527656 "hiLim [s]"=0.04354094 "offset [s]"=0.043527656 weight=96357.68070707266
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043521255 "mid [s]"=0.043527656 "hi [s]"=0.043534057 "loLim [s]"=0.043520374 "amid [s]"=0.043527656 "hiLim [s]"=0.043534938 "offset [s]"=0.043527656 weight=156225.5907516013
+Generated timestamps: t0=09:19:12.359228, t1=09:19:12.315712, t2=09:19:12.315712, t3=09:19:12.359253 | delays: d0=12.601µs, d1=12.601µs
+Generated timestamps: t0=09:19:12.359243, t1=09:19:12.315720, t2=09:19:12.315720, t3=09:19:12.359253 | delays: d0=5.067µs, d1=5.067µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043515055 "mid [s]"=0.043527656 "hi [s]"=0.043540257 "loLim [s]"=0 "amid [s]"=0.043527656 "hiLim [s]"=0 "offset [s]"=0.043527656 weight=79358.78204912308
+Generated timestamps: t0=09:19:12.359235, t1=09:19:12.315716, t2=09:19:12.315716, t3=09:19:12.359253 | delays: d0=8.626µs, d1=8.626µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043522589 "mid [s]"=0.043527656 "hi [s]"=0.043532723 "loLim [s]"=0.043522943 "amid [s]"=0.043527656 "hiLim [s]"=0.043532369 "offset [s]"=0.043527656 weight=197355.43814229325
+Generated timestamps: t0=09:19:12.359239, t1=09:19:12.315718, t2=09:19:12.315718, t3=09:19:12.359253 | delays: d0=7µs, d1=7µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:12.359224, t1=09:19:12.315711, t2=09:19:12.315711, t3=09:19:12.359253 | delays: d0=14.488µs, d1=14.488µs
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043520656 "mid [s]"=0.043527656 "hi [s]"=0.043534656 "loLim [s]"=0.04351949300126113 "amid [s]"=0.043527656 "hiLim [s]"=0.04353581899873888 "offset [s]"=0.043527656 weight=142857.14385714286
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:12.359240, t1=09:19:12.315718, t2=09:19:12.315718, t3=09:19:12.359253 | delays: d0=6.6µs, d1=6.6µs
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043513168 "mid [s]"=0.043527656 "hi [s]"=0.043542144 "loLim [s]"=0.043514275 "amid [s]"=0.043527656 "hiLim [s]"=0.043541037 "offset [s]"=0.043527656 weight=69022.64042573165
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043521056 "mid [s]"=0.043527656 "hi [s]"=0.043534256 "loLim [s]"=0.043522235002777174 "amid [s]"=0.043527656 "hiLim [s]"=0.043533076995385195 "offset [s]"=0.043527656 weight=151515.1525151515
+Generated timestamps: t0=09:19:12.359227, t1=09:19:12.315712, t2=09:19:12.315712, t3=09:19:12.359253 | delays: d0=13.079µs, d1=13.079µs
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:12.359233, t1=09:19:12.315715, t2=09:19:12.315715, t3=09:19:12.359253 | delays: d0=9.631µs, d1=9.631µs
+Generated timestamps: t0=09:19:12.359237, t1=09:19:12.315717, t2=09:19:12.315717, t3=09:19:12.359253 | delays: d0=8.104µs, d1=8.104µs
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043514577 "mid [s]"=0.043527656 "hi [s]"=0.043540735 "loLim [s]"=0.043511466000006105 "amid [s]"=0.043527656 "hiLim [s]"=0.04354384600021775 "offset [s]"=0.043527656 weight=76458.44583523205
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043518025 "mid [s]"=0.043527656 "hi [s]"=0.043537287 "loLim [s]"=0.0435120610002967 "amid [s]"=0.043527656 "hiLim [s]"=0.0435432509997033 "offset [s]"=0.043527656 weight=103831.37884238397
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043519552 "mid [s]"=0.043527656 "hi [s]"=0.04353576 "loLim [s]"=0.043515055 "amid [s]"=0.043527656 "hiLim [s]"=0.043540257 "offset [s]"=0.043527656 weight=123395.85489930898
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.04351903 "mid [s]"=0.043527656 "hi [s]"=0.043536282 "loLim [s]"=0.043520507 "amid [s]"=0.043527656 "hiLim [s]"=0.043534805 "offset [s]"=0.043527656 weight=115928.58898979829
+time=2025-07-25T09:19:12.914Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=4194af709787d03483b2c8f298a1e12fba6abb384a62ded807cb4cb7ee197fd7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:12.359234, t1=09:19:12.315716, t2=09:19:12.315716, t3=09:19:12.359253 | delays: d0=9.449µs, d1=9.449µs
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043518207 "mid [s]"=0.043527656 "hi [s]"=0.043537105 "loLim [s]"=0 "amid [s]"=0.043527656 "hiLim [s]"=0 "offset [s]"=0.043527656 weight=105831.30589998941
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:12.359229, t1=09:19:12.315713, t2=09:19:12.315713, t3=09:19:12.359253 | delays: d0=11.986µs, d1=11.986µs
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.04351567 "mid [s]"=0.043527656 "hi [s]"=0.043539642 "loLim [s]"=0.043518207 "amid [s]"=0.043527656 "hiLim [s]"=0.043537105 "offset [s]"=0.043527656 weight=83430.67011396629
+Generated timestamps: t0=09:19:12.359235, t1=09:19:12.315716, t2=09:19:12.315716, t3=09:19:12.359253 | delays: d0=8.662µs, d1=8.662µs
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:12.359236, t1=09:19:12.315717, t2=09:19:12.315717, t3=09:19:12.359253 | delays: d0=8.516µs, d1=8.516µs
+Generated timestamps: t0=09:19:12.359230, t1=09:19:12.315713, t2=09:19:12.315713, t3=09:19:12.359253 | delays: d0=11.589µs, d1=11.589µs
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043518994 "mid [s]"=0.043527656 "hi [s]"=0.043536318 "loLim [s]"=0.04351055800013944 "amid [s]"=0.043527656 "hiLim [s]"=0.04354475399986056 "offset [s]"=0.043527656 weight=115446.78003486493
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043516067 "mid [s]"=0.043527656 "hi [s]"=0.043539245 "loLim [s]"=0.04351313300057224 "amid [s]"=0.043527656 "hiLim [s]"=0.043542178999684183 "offset [s]"=0.043527656 weight=86288.72306402623
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.04351914 "mid [s]"=0.043527656 "hi [s]"=0.043536172 "loLim [s]"=0.04351755299986656 "amid [s]"=0.043527656 "hiLim [s]"=0.04353775899969301 "offset [s]"=0.043527656 weight=117426.02260638798
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/sync/sync.go:155 msg="correcting clock" corr=-0.043527656 refClkOk=true refClkOff=-0.043527656 refClkCorr=-0.043527656 refClkMaxCorr=1.152921504606847e+10 peerClkOk=false peerClkOff=0 peerClkCorr=0 peerClkMaxCorr=2.305843009213694e+10
+time=2025-07-25T09:19:12.915Z level=DEBUG source=core/sync/adjustments/pi_linux.go:113 msg="adjusting clock frequency" frequency=-0.0008430631000000011
+time=2025-07-25T09:19:12.915Z level=DEBUG source=driver/clocks/sysclk_linux.go:173 msg=sleeping duration=1s
+time=2025-07-25T09:19:13.916Z level=DEBUG source=driver/shm/refclk.go:82 msg="SHM clock sample" receiveTime=2025-07-25T09:19:13.359Z clockTime=2025-07-25T09:19:13.316Z offset=-43.042336ms
+time=2025-07-25T09:19:13.916Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 453>3 1-ff00:0:110 1>6 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:13.359354, t1=09:19:13.316323, t2=09:19:13.316323, t3=09:19:13.359377 | delays: d0=11.562µs, d1=11.562µs
+time=2025-07-25T09:19:13.916Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043030774 "mid [s]"=0.043042336 "hi [s]"=0.043053898 "loLim [s]"=0 "amid [s]"=0.043042336 "hiLim [s]"=0 "offset [s]"=0.043042336 weight=86490.2276043937
+time=2025-07-25T09:19:13.916Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359355, t1=09:19:13.316324, t2=09:19:13.316324, t3=09:19:13.359377 | delays: d0=11.038µs, d1=11.038µs
+time=2025-07-25T09:19:13.916Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043031298 "mid [s]"=0.043042336 "hi [s]"=0.043053374 "loLim [s]"=0.043030774 "amid [s]"=0.043042336 "hiLim [s]"=0.043053898 "offset [s]"=0.043042336 weight=90596.1234859576
+time=2025-07-25T09:19:13.916Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359356, t1=09:19:13.316324, t2=09:19:13.316324, t3=09:19:13.359377 | delays: d0=10.739µs, d1=10.739µs
+time=2025-07-25T09:19:13.916Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043031597 "mid [s]"=0.043042336 "hi [s]"=0.043053075 "loLim [s]"=0.04303024999947244 "amid [s]"=0.043042336 "hiLim [s]"=0.04305442200052756 "offset [s]"=0.043042336 weight=93118.54090129436
+time=2025-07-25T09:19:13.916Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:13.916Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:13.359367, t1=09:19:13.316330, t2=09:19:13.316330, t3=09:19:13.359377 | delays: d0=5.108µs, d1=5.108µs
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043037228 "mid [s]"=0.043042336 "hi [s]"=0.043047444 "loLim [s]"=0 "amid [s]"=0.043042336 "hiLim [s]"=0 "offset [s]"=0.043042336 weight=195771.34007595928
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359365, t1=09:19:13.316329, t2=09:19:13.316329, t3=09:19:13.359377 | delays: d0=5.98µs, d1=5.98µs
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043036356 "mid [s]"=0.043042336 "hi [s]"=0.043048316 "loLim [s]"=0.043037228 "amid [s]"=0.043042336 "hiLim [s]"=0.043047444 "offset [s]"=0.043042336 weight=167224.0812675585
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359363, t1=09:19:13.316328, t2=09:19:13.316328, t3=09:19:13.359377 | delays: d0=7.203µs, d1=7.203µs
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043035133 "mid [s]"=0.043042336 "hi [s]"=0.043049539 "loLim [s]"=0.043035484000794766 "amid [s]"=0.043042336 "hiLim [s]"=0.04304918800144326 "offset [s]"=0.043042336 weight=138831.04362113005
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=6c4f86d4c33b5c2371494582f3224b1a3c0611709168c4f411f66c9fa27d744b path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 501>2 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:13.359364, t1=09:19:13.316328, t2=09:19:13.316328, t3=09:19:13.359377 | delays: d0=6.586µs, d1=6.586µs
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.04303575 "mid [s]"=0.043042336 "hi [s]"=0.043048922 "loLim [s]"=0 "amid [s]"=0.043042336 "hiLim [s]"=0 "offset [s]"=0.043042336 weight=151837.23148891586
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359360, t1=09:19:13.316326, t2=09:19:13.316326, t3=09:19:13.359377 | delays: d0=8.853µs, d1=8.853µs
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043033483 "mid [s]"=0.043042336 "hi [s]"=0.043051189 "loLim [s]"=0.04303575 "amid [s]"=0.043042336 "hiLim [s]"=0.043048922 "offset [s]"=0.043042336 weight=112956.06109262398
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359363, t1=09:19:13.316328, t2=09:19:13.316328, t3=09:19:13.359377 | delays: d0=7.139µs, d1=7.139µs
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043035197 "mid [s]"=0.043042336 "hi [s]"=0.043049475 "loLim [s]"=0.04303121599994447 "amid [s]"=0.043042336 "hiLim [s]"=0.04305345599976858 "offset [s]"=0.043042336 weight=140075.64184605685
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:13.917Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=c138518cd3637650efb49977186c920375cc6b36f75923be55d04f8f9303e188 path="Hops: [2-ff00:0:222 302>1 2-ff00:0:221 2>500 2-ff00:0:220 503>450 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.210:31114"
+Generated timestamps: t0=09:19:13.359353, t1=09:19:13.316323, t2=09:19:13.316323, t3=09:19:13.359377 | delays: d0=11.928µs, d1=11.928µs
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043030408 "mid [s]"=0.043042336 "hi [s]"=0.043054264 "loLim [s]"=0 "amid [s]"=0.043042336 "hiLim [s]"=0 "offset [s]"=0.043042336 weight=83836.35244198525
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359355, t1=09:19:13.316324, t2=09:19:13.316324, t3=09:19:13.359377 | delays: d0=11.313µs, d1=11.313µs
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043031023 "mid [s]"=0.043042336 "hi [s]"=0.043053649 "loLim [s]"=0.043030408 "amid [s]"=0.043042336 "hiLim [s]"=0.043054264 "offset [s]"=0.043042336 weight=88393.88414328649
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359354, t1=09:19:13.316323, t2=09:19:13.316323, t3=09:19:13.359377 | delays: d0=11.479µs, d1=11.479µs
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043030857 "mid [s]"=0.043042336 "hi [s]"=0.043053815 "loLim [s]"=0.04302979299866307 "amid [s]"=0.043042336 "hiLim [s]"=0.04305487899922141 "offset [s]"=0.043042336 weight=87115.60340439063
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=a7a0a2901cccd754534d65374136b9829a7f81518309af79d87f0a560a14690c path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:13.359365, t1=09:19:13.316329, t2=09:19:13.316329, t3=09:19:13.359377 | delays: d0=6.287µs, d1=6.287µs
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043036049 "mid [s]"=0.043042336 "hi [s]"=0.043048623 "loLim [s]"=0 "amid [s]"=0.043042336 "hiLim [s]"=0 "offset [s]"=0.043042336 weight=159058.37542341338
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359368, t1=09:19:13.316330, t2=09:19:13.316330, t3=09:19:13.359377 | delays: d0=4.596µs, d1=4.596µs
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.04303774 "mid [s]"=0.043042336 "hi [s]"=0.043046932 "loLim [s]"=0.043036049 "amid [s]"=0.043042336 "hiLim [s]"=0.043048623 "offset [s]"=0.043042336 weight=217580.5057867711
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359367, t1=09:19:13.316330, t2=09:19:13.316330, t3=09:19:13.359377 | delays: d0=5.139µs, d1=5.139µs
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043037197 "mid [s]"=0.043042336 "hi [s]"=0.043047475 "loLim [s]"=0.043034357999667976 "amid [s]"=0.043042336 "hiLim [s]"=0.04305031399994733 "offset [s]"=0.043042336 weight=194590.38823487057
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:13.918Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=e1bf6b79f7219745133909e2a6fba731b92d001007cf81235cec08f3491bf196 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 6>1 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:13.359353, t1=09:19:13.316323, t2=09:19:13.316323, t3=09:19:13.359377 | delays: d0=11.892µs, d1=11.892µs
+time=2025-07-25T09:19:13.919Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043030444 "mid [s]"=0.043042336 "hi [s]"=0.043054228 "loLim [s]"=0 "amid [s]"=0.043042336 "hiLim [s]"=0 "offset [s]"=0.043042336 weight=84090.14563504877
+time=2025-07-25T09:19:13.919Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359352, t1=09:19:13.316323, t2=09:19:13.316323, t3=09:19:13.359377 | delays: d0=12.407µs, d1=12.407µs
+time=2025-07-25T09:19:13.919Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.043029929 "mid [s]"=0.043042336 "hi [s]"=0.043054743 "loLim [s]"=0.043030444 "amid [s]"=0.043042336 "hiLim [s]"=0.043054228 "offset [s]"=0.043042336 weight=80599.66248142178
+time=2025-07-25T09:19:13.919Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359356, t1=09:19:13.316324, t2=09:19:13.316324, t3=09:19:13.359377 | delays: d0=10.76µs, d1=10.76µs
+time=2025-07-25T09:19:13.919Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043031576 "mid [s]"=0.043042336 "hi [s]"=0.043053096 "loLim [s]"=0.04302941399950239 "amid [s]"=0.043042336 "hiLim [s]"=0.04305525799797131 "offset [s]"=0.043042336 weight=92936.8039739777
+time=2025-07-25T09:19:13.919Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:13.919Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=4194af709787d03483b2c8f298a1e12fba6abb384a62ded807cb4cb7ee197fd7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:13.359354, t1=09:19:13.316323, t2=09:19:13.316323, t3=09:19:13.359377 | delays: d0=11.769µs, d1=11.769µs
+time=2025-07-25T09:19:13.920Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043030567 "mid [s]"=0.043042336 "hi [s]"=0.043054105 "loLim [s]"=0 "amid [s]"=0.043042336 "hiLim [s]"=0 "offset [s]"=0.043042336 weight=84968.9873199932
+time=2025-07-25T09:19:13.920Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359358, t1=09:19:13.316325, t2=09:19:13.316325, t3=09:19:13.359377 | delays: d0=9.563µs, d1=9.563µs
+time=2025-07-25T09:19:13.920Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043032773 "mid [s]"=0.043042336 "hi [s]"=0.043051899 "loLim [s]"=0.043030567 "amid [s]"=0.043042336 "hiLim [s]"=0.043054105 "offset [s]"=0.043042336 weight=104569.69670218551
+time=2025-07-25T09:19:13.920Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:13.359357, t1=09:19:13.316325, t2=09:19:13.316325, t3=09:19:13.359377 | delays: d0=10.121µs, d1=10.121µs
+time=2025-07-25T09:19:13.920Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.043032215 "mid [s]"=0.043042336 "hi [s]"=0.043052457 "loLim [s]"=0.0430283610002109 "amid [s]"=0.043042336 "hiLim [s]"=0.04305631100008399 "offset [s]"=0.043042336 weight=98804.46696186147
+time=2025-07-25T09:19:13.920Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:13.920Z level=DEBUG source=core/sync/sync.go:155 msg="correcting clock" corr=-0.043042336 refClkOk=true refClkOff=-0.043042336 refClkCorr=-0.043042336 refClkMaxCorr=1.152921504606847e+10 peerClkOk=false peerClkOff=0 peerClkCorr=0 peerClkMaxCorr=2.305843009213694e+10
+time=2025-07-25T09:19:13.920Z level=DEBUG source=core/sync/adjustments/pi_linux.go:113 msg="adjusting clock frequency" frequency=-0.0008382125600000009
+time=2025-07-25T09:19:13.920Z level=DEBUG source=driver/clocks/sysclk_linux.go:173 msg=sleeping duration=1s
+time=2025-07-25T09:19:14.921Z level=DEBUG source=driver/shm/refclk.go:82 msg="SHM clock sample" receiveTime=2025-07-25T09:19:14.359Z clockTime=2025-07-25T09:19:14.316Z offset=-42.557082ms
+time=2025-07-25T09:19:14.921Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 453>3 1-ff00:0:110 1>6 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:14.359473, t1=09:19:14.316929, t2=09:19:14.316929, t3=09:19:14.359500 | delays: d0=13.705µs, d1=13.705µs
+time=2025-07-25T09:19:14.921Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042543377 "mid [s]"=0.042557081999999996 "hi [s]"=0.042570787 "loLim [s]"=0 "amid [s]"=0.042557081999999996 "hiLim [s]"=0 "offset [s]"=0.042557081 weight=72966.07177708865
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359480, t1=09:19:14.316933, t2=09:19:14.316933, t3=09:19:14.359500 | delays: d0=10.172µs, d1=10.172µs
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.04254691 "mid [s]"=0.042557081999999996 "hi [s]"=0.042567254 "loLim [s]"=0.042543377 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042570787 "offset [s]"=0.042557081 weight=98309.08475933937
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359473, t1=09:19:14.316929, t2=09:19:14.316929, t3=09:19:14.359500 | delays: d0=13.587µs, d1=13.587µs
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042543495 "mid [s]"=0.042557081999999996 "hi [s]"=0.042570669 "loLim [s]"=0.042539843999968796 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.0425743200000312 "offset [s]"=0.042557081 weight=73599.76548075366
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=c138518cd3637650efb49977186c920375cc6b36f75923be55d04f8f9303e188 path="Hops: [2-ff00:0:222 302>1 2-ff00:0:221 2>500 2-ff00:0:220 503>450 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.210:31114"
+Generated timestamps: t0=09:19:14.359481, t1=09:19:14.316933, t2=09:19:14.316933, t3=09:19:14.359500 | delays: d0=9.561µs, d1=9.561µs
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042547521 "mid [s]"=0.042557081999999996 "hi [s]"=0.042566643 "loLim [s]"=0 "amid [s]"=0.042557081999999996 "hiLim [s]"=0 "offset [s]"=0.042557081 weight=104591.57091946449
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359479, t1=09:19:14.316933, t2=09:19:14.316933, t3=09:19:14.359500 | delays: d0=10.379µs, d1=10.379µs
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.042546703 "mid [s]"=0.042557081999999996 "hi [s]"=0.042567461 "loLim [s]"=0.042547521 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042566643 "offset [s]"=0.042557081 weight=96348.39679920995
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359475, t1=09:19:14.316930, t2=09:19:14.316930, t3=09:19:14.359500 | delays: d0=12.523µs, d1=12.523µs
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=a7a0a2901cccd754534d65374136b9829a7f81518309af79d87f0a560a14690c path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:14.359489, t1=09:19:14.316937, t2=09:19:14.316937, t3=09:19:14.359500 | delays: d0=5.465µs, d1=5.465µs
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.042544559 "mid [s]"=0.042557082 "hi [s]"=0.042569605 "loLim [s]"=0.04254588500035695 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.04256827900043831 "offset [s]"=0.042557082 weight=79853.07135055498
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042551617 "mid [s]"=0.042557081999999996 "hi [s]"=0.042562547 "loLim [s]"=0 "amid [s]"=0.042557081999999996 "hiLim [s]"=0 "offset [s]"=0.042557081 weight=182982.61765141808
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359488, t1=09:19:14.316937, t2=09:19:14.316937, t3=09:19:14.359500 | delays: d0=6.1µs, d1=6.1µs
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=e1bf6b79f7219745133909e2a6fba731b92d001007cf81235cec08f3491bf196 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 6>1 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:14.359478, t1=09:19:14.316932, t2=09:19:14.316932, t3=09:19:14.359500 | delays: d0=11.182µs, d1=11.182µs
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.0425459 "mid [s]"=0.042557081999999996 "hi [s]"=0.042568264 "loLim [s]"=0 "amid [s]"=0.042557081999999996 "hiLim [s]"=0 "offset [s]"=0.042557081 weight=89429.44117170453
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.042550982 "mid [s]"=0.042557081999999996 "hi [s]"=0.042563182 "loLim [s]"=0.042551617 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042562547 "offset [s]"=0.042557081 weight=163934.42722950818
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359476, t1=09:19:14.316931, t2=09:19:14.316931, t3=09:19:14.359500 | delays: d0=12.183µs, d1=12.183µs
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.042544899 "mid [s]"=0.042557081999999996 "hi [s]"=0.042569265 "loLim [s]"=0.0425459 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042568264 "offset [s]"=0.042557081 weight=82081.59009956497
+Generated timestamps: t0=09:19:14.359488, t1=09:19:14.316937, t2=09:19:14.316937, t3=09:19:14.359500 | delays: d0=5.93µs, d1=5.93µs
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359481, t1=09:19:14.316933, t2=09:19:14.316933, t3=09:19:14.359500 | delays: d0=9.703µs, d1=9.703µs
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042551152 "mid [s]"=0.042557081999999996 "hi [s]"=0.042563012 "loLim [s]"=0.042550347000792604 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042563816999207395 "offset [s]"=0.042557081 weight=168634.06508094433
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=4194af709787d03483b2c8f298a1e12fba6abb384a62ded807cb4cb7ee197fd7 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 453>3 1-ff00:0:110 2>104 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:14.359477, t1=09:19:14.316931, t2=09:19:14.316931, t3=09:19:14.359500 | delays: d0=11.565µs, d1=11.565µs
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042545517 "mid [s]"=0.042557081999999996 "hi [s]"=0.042568647 "loLim [s]"=0 "amid [s]"=0.042557081999999996 "hiLim [s]"=0 "offset [s]"=0.042557081 weight=86467.7917479464
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359477, t1=09:19:14.316931, t2=09:19:14.316931, t3=09:19:14.359500 | delays: d0=11.741µs, d1=11.741µs
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.042545341 "mid [s]"=0.042557081999999996 "hi [s]"=0.042568823 "loLim [s]"=0.042545517 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042568647 "offset [s]"=0.042557081 weight=85171.62181594413
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.923Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01 path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 8>452 2-ff00:0:210 450>503 2-ff00:0:220 502>3 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:14.359477, t1=09:19:14.316931, t2=09:19:14.316931, t3=09:19:14.359500 | delays: d0=11.739µs, d1=11.739µs
+Generated timestamps: t0=09:19:14.359485, t1=09:19:14.316935, t2=09:19:14.316935, t3=09:19:14.359500 | delays: d0=7.697µs, d1=7.697µs
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042545343 "mid [s]"=0.042557081999999996 "hi [s]"=0.042568821 "loLim [s]"=0.04254516499592143 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042568999007774624 "offset [s]"=0.042557081 weight=85186.1326977596
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042549385 "mid [s]"=0.042557081999999996 "hi [s]"=0.042564779 "loLim [s]"=0 "amid [s]"=0.042557081999999996 "hiLim [s]"=0 "offset [s]"=0.042557081 weight=129920.74934351047
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359489, t1=09:19:14.316937, t2=09:19:14.316937, t3=09:19:14.359500 | delays: d0=5.468µs, d1=5.468µs
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042551614 "mid [s]"=0.042557081999999996 "hi [s]"=0.04256255 "loLim [s]"=0.042549385 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042564779 "offset [s]"=0.042557081 weight=182882.22484784198
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359484, t1=09:19:14.316935, t2=09:19:14.316935, t3=09:19:14.359500 | delays: d0=7.796µs, d1=7.796µs
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042549286 "mid [s]"=0.042557081999999996 "hi [s]"=0.042564878 "loLim [s]"=0.04254715600042997 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042567007999570035 "offset [s]"=0.042557081 weight=128270.90915802977
+time=2025-07-25T09:19:14.925Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.922Z level=DEBUG source=core/client/client.go:197 msg="SCIONClient <-> SPS" ntpcs="" sps=6c4f86d4c33b5c2371494582f3224b1a3c0611709168c4f411f66c9fa27d744b path="Hops: [2-ff00:0:222 301>4 2-ff00:0:211 7>451 2-ff00:0:210 450>503 2-ff00:0:220 501>2 1-ff00:0:120 1>105 1-ff00:0:130 111>479 1-ff00:0:131 478>2 1-ff00:0:132 1>2 1-ff00:0:133] MTU: 1280 NextHop: 10.0.0.209:31112"
+Generated timestamps: t0=09:19:14.359487, t1=09:19:14.316936, t2=09:19:14.316936, t3=09:19:14.359500 | delays: d0=6.561µs, d1=6.561µs
+time=2025-07-25T09:19:14.926Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042550521 "mid [s]"=0.042557081999999996 "hi [s]"=0.042563643 "loLim [s]"=0 "amid [s]"=0.042557081999999996 "hiLim [s]"=0 "offset [s]"=0.042557081 weight=152415.79127587256
+time=2025-07-25T09:19:14.926Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359483, t1=09:19:14.316934, t2=09:19:14.316934, t3=09:19:14.359500 | delays: d0=8.416µs, d1=8.416µs
+time=2025-07-25T09:19:14.926Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=1 "lo [s]"=0.042548666 "mid [s]"=0.042557081999999996 "hi [s]"=0.042565498 "loLim [s]"=0.042550521 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042563643 "offset [s]"=0.042557081 weight=118821.2937756654
+time=2025-07-25T09:19:14.926Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+Generated timestamps: t0=09:19:14.359484, t1=09:19:14.316935, t2=09:19:14.316935, t3=09:19:14.359500 | delays: d0=8.214µs, d1=8.214µs
+time=2025-07-25T09:19:14.926Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042548868 "mid [s]"=0.042557081999999996 "hi [s]"=0.042565296 "loLim [s]"=0.04254681099955126 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042567353000448734 "offset [s]"=0.042557081 weight=121743.36598660825
+time=2025-07-25T09:19:14.926Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.924Z level=DEBUG source=core/client/filter_ntimed.go:104 msg="filtered response" branch=4 "lo [s]"=0.042547379 "mid [s]"=0.042557082 "hi [s]"=0.042566785 "loLim [s]"=0.042543898000325285 "amid [s]"=0.042557081999999996 "hiLim [s]"=0.042570265999674714 "offset [s]"=0.042557082 weight=103060.90999721736
+time=2025-07-25T09:19:14.926Z level=DEBUG source=core/client/client_scion.go:156 msg=@@@NTPSYNC Difference=0s
+time=2025-07-25T09:19:14.926Z level=DEBUG source=core/sync/sync.go:155 msg="correcting clock" corr=-0.042557082 refClkOk=true refClkOff=-0.042557082 refClkCorr=-0.042557082 refClkMaxCorr=1.152921504606847e+10 peerClkOk=false peerClkOff=0 peerClkCorr=0 peerClkMaxCorr=2.305843009213694e+10
+time=2025-07-25T09:19:14.927Z level=DEBUG source=core/sync/adjustments/pi_linux.go:113 msg="adjusting clock frequency" frequency=-0.0008333725600000001
+time=2025-07-25T09:19:14.927Z level=DEBUG source=driver/clocks/sysclk_linux.go:173 msg=sleeping duration=1s

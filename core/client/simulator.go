@@ -202,13 +202,14 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path) (TimeSta
 	}
 
 	logMsg := fmt.Sprintf(
-		"Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | delays: d0=%v, d1=%v",
+		"Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | delays: d0=%v, d1=%v | offset: off=%v",
 		ts.t0.Format("15:04:05.000000"),
 		ts.t1.Format("15:04:05.000000"),
 		ts.t2.Format("15:04:05.000000"),
 		ts.t3.Format("15:04:05.000000"),
 		d0,
 		d1,
+		off,
 	)
 
 	fmt.Println(logMsg)
