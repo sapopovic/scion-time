@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"sync/atomic"
@@ -108,7 +109,7 @@ loop:
 }
 
 func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
-	ntpcs []*SCIONClient, sps []snet.Path, localAddr, remoteAddr udp.UDPAddr) (time.Time, time.Duration, error) {
+	ntpcs []*SCIONClient, sps []snet.Path, localAddr, remoteAddr udp.UDPAddr, simulatorOn bool) (time.Time, time.Duration, error) {
 	mtrcs := scionMetrics.Load()
 
 	// IDEA: if after static selection or dynamic selection some paths remain the same, then wen don't want to throw away the filter.
@@ -162,6 +163,24 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 
 	ms := make([]measurements.Measurement, len(ntpcs))
 	msc := make(chan measurements.Measurement)
+
+	if simulatorOn {
+		// Fetch t3 and local offset from shm
+		t3, off, err := ntpcs[0].Simulator.SHM.MeasureClockOffset(ctx)
+		if err != nil {
+			fmt.Println("FAILED CLOCK")
+			return time.Time{}, 0, fmt.Errorf("failed to fetch time from shared memory: %w", err)
+		}
+
+		// Assign t3 to all SCIONClient.Simulator
+		for _, client := range ntpcs {
+			if client.Simulator != nil {
+				client.Simulator.t3 = t3
+				client.Simulator.off = off
+			}
+		}
+	}
+
 	for i := range len(sps) {
 		// wg.Add(1)
 		go func(ctx context.Context, log *slog.Logger, mtrcs *scionClientMetrics, ntpc *SCIONClient, localAddr, remoteAddr udp.UDPAddr, p snet.Path) {

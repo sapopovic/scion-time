@@ -116,6 +116,7 @@ type ntpReferenceClockSCION struct {
 	selectionMethod string
 	pathManager     *client.PathManager
 	resetChan       chan struct{}
+	simulatorOn     bool
 }
 
 type tlsCertCache struct {
@@ -296,6 +297,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 		remoteAddr:  remoteAddr,
 		pathManager: pM,
 		resetChan:   make(chan struct{}, 1),
+		simulatorOn: cfg.SimulatorOn,
 	}
 
 	log.Info("----Configuration Details----")
@@ -374,7 +376,7 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 
 	}
 
-	return client.MeasureClockOffsetSCION_v2(ctx, c.log, c.ntpcs[:], ps, c.localAddr, c.remoteAddr)
+	return client.MeasureClockOffsetSCION_v2(ctx, c.log, c.ntpcs[:], ps, c.localAddr, c.remoteAddr, c.simulatorOn)
 	// NTP
 	// return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
 }

@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math/rand"
 	"strconv"
@@ -24,8 +25,9 @@ type Simulator struct {
 	asymRange     time.Duration
 	log           *slog.Logger
 	SHM           ReferenceClock
-	ctx           context.Context
 	pathQualities map[string]*PathQuality
+	t3            time.Time
+	off           time.Duration
 }
 
 type PathQuality struct { // Char stands for characteristics
@@ -155,14 +157,16 @@ func assignPathQualities() map[string]*PathQuality {
 	}
 }
 
-func (s Simulator) generateTimeStamps(p snet.Path) TimeStamps {
+func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path) (TimeStamps, time.Duration) {
 	// Step 1: Fetch client receive time (local clock) and offset to GNSS
-	/*t3, off, err := s.SHM.MeasureClockOffset(s.ctx) // t3 = local clock, offset = GNSS - local
-	if err != nil {
-		panic(fmt.Sprintf("error fetching clock offset: %v", err))
-	}*/
-	t3 := time.Now()
-	off := time.Duration(0)
+	// t3, off, err := s.SHM.MeasureClockOffset(ctx) // t3 = local clock, offset = GNSS - local
+	// if err != nil {
+	// 	panic(fmt.Sprintf("error fetching clock offset: %v", err))
+	// }
+	////////////////EXPERIMENT1  t3 := time.Now()
+	////////////////EXPERIMENT1  off := time.Duration(0)
+
+	t3, off := s.t3, s.off // fetched by shmRefClock
 
 	// USE pathQualities MAP TO DERIVE RTT AND ASYM
 	pq := s.pathQualities[snet.Fingerprint(p).String()]
@@ -179,6 +183,8 @@ func (s Simulator) generateTimeStamps(p snet.Path) TimeStamps {
 	asymNs := pq.rng.Float64()*(maxAsym-minAsym-1) + minAsym + 0.5
 	asym := time.Duration(asymNs) // asym in nanoseconds
 
+	asym = time.Duration(0) // NO ASYMMETRY
+
 	// Step 4: Compute one-way delays (true delays, gnss time perspective)
 	d1 := rtt/2 - asym/2 // client <- server
 	d0 := rtt/2 + asym/2 // client -> server
@@ -188,10 +194,24 @@ func (s Simulator) generateTimeStamps(p snet.Path) TimeStamps {
 	t1 := t2                    // no processing delay at server
 	t0 := t1.Add(-d0).Add(-off) // local clock (client send)
 
-	return TimeStamps{
+	ts := TimeStamps{
 		t0: t0, // client send (local)
 		t1: t1, // server recv (GNSS)
 		t2: t2, // server send (GNSS)
 		t3: t3, // client recv (local)
 	}
+
+	logMsg := fmt.Sprintf(
+		"Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | delays: d0=%v, d1=%v",
+		ts.t0.Format("15:04:05.000000"),
+		ts.t1.Format("15:04:05.000000"),
+		ts.t2.Format("15:04:05.000000"),
+		ts.t3.Format("15:04:05.000000"),
+		d0,
+		d1,
+	)
+
+	fmt.Println(logMsg)
+
+	return ts, off
 }

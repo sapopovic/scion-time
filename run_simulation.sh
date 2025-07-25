@@ -17,6 +17,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 sudo systemctl stop chrony
 sudo systemctl disable chrony
 
+sudo systemctl start mbgsvcd.service
+
 # --------------------------------------------------------------------------------------------------------------------
 
 OUTPUT_FILE_TIMESERVICE="$SCRIPT_DIR/simulation_logs/client_log_run1.txt"
@@ -78,3 +80,5 @@ sleep 1
 
 sudo systemctl enable chrony
 sudo systemctl start chrony
+
+sudo systemctl stop mbgsvcd.service
