@@ -31,8 +31,8 @@ type Simulator struct {
 	off           time.Duration
 }
 
-type PathQuality struct { // Char stands for characteristics
-	rttRange  []float64
+type PathQuality struct {
+	rttRange  []float64 // Milliseconds
 	asymRange []float64 // not sure about that yet
 	rng       *rand.Rand
 }
@@ -176,7 +176,7 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path) (TimeSta
 	minRTT := pq.rttRange[0] // e.g. 10.0 microseconds
 	maxRTT := pq.rttRange[1] // e.g. 30.0
 	rttMs := pq.rng.Float64()*(maxRTT-minRTT) + minRTT
-	rtt := time.Duration(rttMs * float64(time.Microsecond)) // Duration is in nano seconds, time.Microsecond is 1000 ns = 1 microsecond
+	rtt := time.Duration(rttMs * float64(time.Millisecond)) // Duration is in nano seconds, time.Microsecond is 1000 ns = 1 microsecond
 
 	// Step 3: Sample asymmetry
 	minAsym := -float64(rtt.Nanoseconds()) // in nanoseconds
