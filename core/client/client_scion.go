@@ -141,7 +141,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 	if c.Simulator != nil {
 		// we create the 4 timestamps
 		// ts, off2 := c.Simulator.generateTimeStamps(ctx, path) // off2 is measured by MBG! (shm)
-		ts, off2 := c.Simulator.generateTimeStamps(ctx, path)
+		ts, _ := c.Simulator.generateTimeStamps(ctx, path)
 		t0, t1, t2, t3 := ts.t0, ts.t1, ts.t2, ts.t3
 
 		// calculate the offset which depends on induced delays
@@ -153,10 +153,10 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 			offset = c.Filter.Do(t0, t1, t2, t3)
 		}
 
-		c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@NTPSYNC", slog.Any("Difference", off-off2)) // test without ntimed filter
-		if off != off2 || off == 0 {
-			c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@ERROR", slog.Any("Difference", off-off2))
-		}
+		// c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@NTPSYNC", slog.Any("Difference", off-off2)) // test without ntimed filter
+		// if off != off2 || off == 0 {
+		// 	c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@ERROR", slog.Any("Difference", off-off2))
+		// }
 
 		return t3, off, nil
 
@@ -693,7 +693,7 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 
 	if c.Simulator != nil {
 		// we create the 4 timestamps
-		ts, off2 := c.Simulator.generateTimeStamps(ctx, path)
+		ts, _ := c.Simulator.generateTimeStamps(ctx, path)
 		t0, t1, t2, t3 := ts.t0, ts.t1, ts.t2, ts.t3
 
 		// calculate the offset which depends on induced delays
@@ -705,10 +705,10 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 			offset = c.Filter.Do(t0, t1, t2, t3)
 		}
 
-		c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@PROBING", slog.Any("Difference", off-off2))
-		if off != off2 || off == 0 {
-			c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@ERROR", slog.Any("Difference", off-off2))
-		}
+		// c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@PROBING", slog.Any("Difference", off-off2))
+		// if off != off2 || off == 0 {
+		// 	c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@ERROR", slog.Any("Difference", off-off2))
+		// }
 
 		return t3, off, nil, ts
 

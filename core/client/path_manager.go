@@ -56,20 +56,45 @@ type PathMetrics struct {
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
 	// ADD RESETTING WHOLE THING
 	ps := pM.Pather.Paths(pM.RemoteAddr.IA)
+	fmt.Printf("All available paths:\n")
 	for i, path := range ps {
-		fmt.Printf("Path %d:\n", i+1)
+		fmt.Printf("Path %d:\n", i)
 		fmt.Printf("  FP: %v\n", snet.Fingerprint(path).String())
-		fmt.Printf("  Interfaces: %v\n", path.Metadata().Interfaces)
+		fmt.Printf("  Hop Count: %v\n", path.Metadata().Interfaces)
+		fmt.Printf("  Hop Count: %v\n", len(path.Metadata().Interfaces))
 		fmt.Println()
 	}
 	pM.MetricsPerProber = make(map[int]*PathMetrics)
 	S := chooseNewPaths(ps, pM.K)
-	S_active := pickRandom(S, pM.Cap)
+	// S_active := pickRandom(S, pM.Cap)
+	// --------------------------------------------------------------------------------------------------------------
+	// we always use the same paths for the warm up phase.
+	randomly_picked_paths := []string{"d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7", "5fb945f4d62fb9a9877489f10006d8f9c5a94f16656121e5eb78a0394a4f466e", "6c4f86d4c33b5c2371494582f3224b1a3c0611709168c4f411f66c9fa27d744b", "e1bf6b79f7219745133909e2a6fba731b92d001007cf81235cec08f3491bf196", "b1319d5e0f1cc40a0d227ef38e03ee6d58bd352393cb48f6fbeea0d29032b036", "a7a0a2901cccd754534d65374136b9829a7f81518309af79d87f0a560a14690c", "02bf95b27afd43858f75306b7a77c5d548ab4618a12cb155775ead71345028f9"}
+	fmt.Printf("Randomly chosen (once)\n")
+	// Create a set from randomlyPickedPaths for fast lookup
+	pickedSet := make(map[string]struct{})
+	for _, fp := range randomly_picked_paths {
+		pickedSet[fp] = struct{}{}
+	}
+	// Create the result slice
+	var s_active []snet.Path
+	// Iterate through S and pick matching paths
+	for _, p := range S {
+		if _, found := pickedSet[snet.Fingerprint(p).String()]; found {
+			s_active = append(s_active, p)
+			fmt.Println("new path in S_Active => Fingerprint: ", snet.Fingerprint(p).String())
+		}
+	}
+	if len(s_active) != len(randomly_picked_paths) {
+		fmt.Println("ERROR IN PATH SELECTION")
+	}
+	pM.S_Active = s_active
+	// --------------------------------------------------------------------------------------------------------------
 	pM.S = S
-	pM.S_Active = S_active
+	// pM.S_Active = S_active
 	pM.assignProbers()
 
-	log.Info("Static path selection completed", slog.Int("S_total", len(S)), slog.Int("S_active", len(S_active)))
+	log.Info("Static path selection completed", slog.Int("S_total", len(pM.S)), slog.Int("S_active", len(pM.S_Active)))
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
