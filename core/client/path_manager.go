@@ -45,15 +45,11 @@ type MetricEMA struct {
 }
 
 type PathMetrics struct {
-	MinRTT float64
-	//JitterEMA   MetricEMA
-	//AsymEMA     MetricEMA
+	MinRTT      float64
 	Qscore      float64
 	Samples     []float64
 	SampleCount int
-
-	LossCount int       // outdated
-	QScoreEMA MetricEMA // outdated
+	LossCount   int // outdated
 }
 
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
@@ -273,7 +269,7 @@ func (pM *PathManager) setSactive(log *slog.Logger) {
 			log.Info("Path score",
 				slog.Int("prober", idx),
 				slog.Any("fp", snet.Fingerprint(path).String()),
-				slog.Float64("Q", metrics.QScoreEMA.Value),
+				slog.Float64("Q", metrics.Qscore),
 				slog.Int("samples", metrics.SampleCount),
 				slog.Int("losses", metrics.LossCount),
 			)
@@ -297,7 +293,7 @@ func (pM *PathManager) PrintSortedPathsByQ(log *slog.Logger) {
 
 	// Sort in ascending order of QScoreEMA.Value
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].Metrics.QScoreEMA.Value < list[j].Metrics.QScoreEMA.Value
+		return list[i].Metrics.Qscore < list[j].Metrics.Qscore
 	})
 
 	// Print sorted path metrics
@@ -305,10 +301,7 @@ func (pM *PathManager) PrintSortedPathsByQ(log *slog.Logger) {
 		m := entry.Metrics
 		log.Info("Path score",
 			slog.Int("prober", entry.Index),
-			slog.Float64("Q", m.QScoreEMA.Value),
-			// slog.Float64("jitter", m.JitterEMA.Value),
-			// slog.Float64("asymmetry", m.AsymEMA.Value),
-			// slog.Float64("minRTT", m.MinRTT),
+			slog.Float64("Q", m.Qscore),
 			slog.Int("samples", m.SampleCount),
 			slog.Int("losses", m.LossCount),
 		)

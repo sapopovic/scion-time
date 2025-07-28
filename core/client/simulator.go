@@ -133,7 +133,7 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path) TimeStam
 
 	// Step 8: Logging
 	logMsg := fmt.Sprintf(
-		"Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | delays: d0=%v, d1=%v | RTT: %v | SampledRTT?=d0+d1: %t | SHM offset: off=%v | NTP offset: off=%v | Test 1: %t",
+		"Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | delays: d0=%v, d1=%v | RTT: %v | Test 2: SampledRTT?=d0+d1: %t | SHM offset: off=%v | NTP offset: off=%v | Test 1: %t",
 		ts.t0.Format("15:04:05.000000"),
 		ts.t1.Format("15:04:05.000000"),
 		ts.t2.Format("15:04:05.000000"),
