@@ -141,7 +141,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 	if c.Simulator != nil {
 		// we create the 4 timestamps
 		// ts, off2 := c.Simulator.generateTimeStamps(ctx, path) // off2 is measured by MBG! (shm)
-		ts, _ := c.Simulator.generateTimeStamps(ctx, path)
+		ts := c.Simulator.generateTimeStamps(ctx, path)
 		t0, t1, t2, t3 := ts.t0, ts.t1, ts.t2, ts.t3
 
 		// calculate the offset which depends on induced delays
@@ -693,7 +693,7 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 
 	if c.Simulator != nil {
 		// we create the 4 timestamps
-		ts, _ := c.Simulator.generateTimeStamps(ctx, path)
+		ts := c.Simulator.generateTimeStamps(ctx, path)
 		t0, t1, t2, t3 := ts.t0, ts.t1, ts.t2, ts.t3
 
 		// calculate the offset which depends on induced delays

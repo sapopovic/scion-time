@@ -14,6 +14,18 @@ sleep 2
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+
+# export SCION_BIN=~/scion/bin
+# cd ~/scion-time/testnet
+# 
+# rm -rf logs
+# ./scion-topo-gen-crypto.sh
+# ./testnet-up.sh
+# 
+# ./supervisor/supervisor.sh reload && sleep 1
+# ./supervisor/supervisor.sh start all
+
+
 sudo systemctl stop chrony
 sudo systemctl disable chrony
 
