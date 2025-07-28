@@ -222,7 +222,7 @@ func (pM *PathManager) setSactive(log *slog.Logger) {
 
 		// assign Qscore
 		sum := 0.0
-		for _, v := range metrics.Samples {
+		for _, v := range metrics.Samples { // samples contains |d1-d0|
 			sum += v
 		}
 		metrics.Qscore = sum / float64(metrics.SampleCount)
@@ -384,9 +384,14 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 				nProbers++
 
 				if _, exists := pM.MetricsPerProber[i]; !exists {
-					pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64, Samples: make([]float64, 0)}
+					pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
 				}
 				metrics := pM.MetricsPerProber[i]
+				// Fresh struct for new dynamic selection
+				metrics.LossCount = 0
+				metrics.Qscore = 0.0
+				metrics.SampleCount = 0
+				metrics.Samples = make([]float64, 0)
 
 				wg.Add(1)
 				go func(i int, prober *SCIONClient, p snet.Path) {
