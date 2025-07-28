@@ -66,9 +66,9 @@ func NewSimulator(simRefClock []string) *Simulator {
 
 func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path) TimeStamps {
 	// Step 1: Fetch t3 and offset from SHM (or use fixed for simulation)
-	// t3, off := s.t3, s.off // GNSS-based local time and offset
+	t3, off := s.t3, s.off // GNSS-based local time and offset
 	// Test 2: The only unknown is the drift
-	t3, off := time.Now(), time.Duration(0)
+	// t3, off := time.Now(), time.Duration(0)
 
 	// Step 2: Retrieve path-specific configuration
 	pq := s.pathQualities[snet.Fingerprint(p).String()]

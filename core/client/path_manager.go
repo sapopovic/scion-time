@@ -63,7 +63,6 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 		fmt.Printf("  Hop Count: %v\n", len(path.Metadata().Interfaces))
 		fmt.Println()
 	}
-	pM.MetricsPerProber = make(map[int]*PathMetrics)
 	S := chooseNewPaths(ps, pM.K)
 	// S_active := pickRandom(S, pM.Cap)
 	// --------------------------------------------------------------------------------------------------------------
@@ -91,14 +90,16 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 	// --------------------------------------------------------------------------------------------------------------
 	pM.S = S
 	// pM.S_Active = S_active
-	pM.assignProbers()
+	pM.assignProbers() // Assign each path in S to a prober (used for pinging)
 
 	log.Info("Static path selection completed", slog.Int("S_total", len(pM.S)), slog.Int("S_active", len(pM.S_Active)))
 }
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
+	log.Info("Starting with dynamic selection.")
 	var wg sync.WaitGroup
-	pM.probePaths(ctx, log, &wg) // Updates PathMetrics for each path with EVERY NEW MEASUREMENT. These are performance results.
+	pM.MetricsPerProber = make(map[int]*PathMetrics) // We only ever evaluate a 15 minutes window!
+	pM.probePaths(ctx, log, &wg)                     // Updates PathMetrics for each path with EVERY NEW MEASUREMENT. These are performance results.
 	wg.Wait()
 	// pM.PrintSortedPathsByQ(log)
 	pM.setSactive(log)
@@ -360,7 +361,7 @@ func updateEMA(metric *MetricEMA, newVal float64) {
 
 func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *sync.WaitGroup) {
 	pathMap := make(map[string]snet.Path)
-	for _, path := range pM.S {
+	for _, path := range pM.S { // mapping from fingerprint to snet.path struct
 		fp := snet.Fingerprint(path).String()
 		pathMap[fp] = path
 	}
@@ -372,8 +373,8 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 	scoringType := "symmetry"
 
 	for i, prober := range pM.Probers {
-		if prober.prev.path != "" {
-			if path, ok := pathMap[prober.prev.path]; ok {
+		if prober.prev.path != "" { // Does the prober contain a path?
+			if path, ok := pathMap[prober.prev.path]; ok { // to be safe
 				nProbers++
 
 				if _, exists := pM.MetricsPerProber[i]; !exists {

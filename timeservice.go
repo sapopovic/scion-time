@@ -725,14 +725,14 @@ func runClient(configFile, simCfg string) {
 				}
 
 				// 2. Pause 1 minute
-				time.Sleep(60 * time.Second)
+				time.Sleep(5 * time.Minute)
 
 				// 3. Immediate first dynamic selection
 				scionClock.pathManager.RunDynamicSelection(ctx, log)
 
-				// 4. Dynamic selection every 15 minutes
-				reset := time.After(60 * time.Minute)
-				dTicker := time.NewTicker(16 * time.Minute)
+				// 4. Dynamic selection every 15 minutes and static selection every 24 hours
+				reset := time.After(24 * time.Hour)
+				dTicker := time.NewTicker(15 * time.Minute)
 
 			scheduleLoop:
 				for {
