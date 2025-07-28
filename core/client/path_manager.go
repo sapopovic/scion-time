@@ -45,12 +45,15 @@ type MetricEMA struct {
 }
 
 type PathMetrics struct {
-	MinRTT      float64
-	JitterEMA   MetricEMA
-	AsymEMA     MetricEMA
-	QScoreEMA   MetricEMA
+	MinRTT float64
+	//JitterEMA   MetricEMA
+	//AsymEMA     MetricEMA
+	Qscore      float64
+	Samples     []float64
 	SampleCount int
-	LossCount   int
+
+	LossCount int       // outdated
+	QScoreEMA MetricEMA // outdated
 }
 
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
@@ -216,11 +219,22 @@ func (pM *PathManager) setSactive(log *slog.Logger) {
 			continue // Skip uninitialized paths
 		}
 		list = append(list, ranked{Index: index, Metrics: metrics})
+
+		// assign Qscore
+		sum := 0.0
+		for _, v := range metrics.Samples {
+			sum += v
+		}
+		metrics.Qscore = sum / float64(metrics.SampleCount)
 	}
 
 	// Sort in ascending order of QScoreEMA.Value
+	// sort.Slice(list, func(i, j int) bool {
+	// 	return list[i].Metrics.QScoreEMA.Value < list[j].Metrics.QScoreEMA.Value
+	// })
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].Metrics.QScoreEMA.Value < list[j].Metrics.QScoreEMA.Value
+		// return list[i].Metrics.QScoreEMA.Value < list[j].Metrics.QScoreEMA.Value
+		return list[i].Metrics.Qscore < list[j].Metrics.Qscore
 	})
 
 	// map: fp -> snet.Path
@@ -370,7 +384,7 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 				nProbers++
 
 				if _, exists := pM.MetricsPerProber[i]; !exists {
-					pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
+					pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64, Samples: make([]float64, 0)}
 				}
 				metrics := pM.MetricsPerProber[i]
 
@@ -421,15 +435,16 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 						// Q := 0.6*asymNorm + 0.4*jitterNorm // + 0.2*lossNorm
 						var Q float64
 						if scoringType == "symmetry" {
-							Q = asym
+							Q = math.Abs(asym)
 						} else {
 							// Q = jitter_scoring
 						}
 						// updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.1)
 						// updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.001)
-						updateEMA(&metrics.QScoreEMA, Q)
 
+						metrics.Samples = append(metrics.Samples, Q) // Add new d1-d0 value to Samples slice (around 150 entries at the end)
 						metrics.SampleCount++
+						// updateEMA(&metrics.QScoreEMA, Q)
 						time.Sleep(6 * time.Second) // 1 * time.Second
 					}
 				}(i, prober, path)
