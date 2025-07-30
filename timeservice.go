@@ -265,16 +265,18 @@ func configureSCIONClientNTS(c *client.SCIONClient, ntskeServer string, ntskeIns
 }
 
 func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAddr, dscp uint8, ntskeServer string, cfg svcConfig) *ntpReferenceClockSCION {
-	pM := &client.PathManager{
-		StaticSelectionInterval:  24 * time.Hour,
-		DynamicSelectionInterval: time.Hour,
-		Cap:                      7, // to be determined
-		K:                        20,
-		RemoteAddr:               remoteAddr,
-		LocalAddr:                localAddr,
-		PingDuration:             150, // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
-	}
+	var pM *client.PathManager
 	if cfg.SimulatorOn {
+		pM = &client.PathManager{
+			StaticSelectionInterval:  24 * time.Hour,
+			DynamicSelectionInterval: time.Hour,
+			Cap:                      7, // to be determined
+			K:                        20,
+			RemoteAddr:               remoteAddr,
+			LocalAddr:                localAddr,
+			PingDuration:             150,  // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
+			SimulatorOn:              true, // probePaths() -> will fetch t3, off
+		}
 		for i := range len(pM.Probers) {
 			pM.Probers[i] = &client.SCIONClient{
 				Log:             log,
@@ -283,6 +285,15 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			}
 		}
 	} else {
+		pM = &client.PathManager{
+			StaticSelectionInterval:  24 * time.Hour,
+			DynamicSelectionInterval: time.Hour,
+			Cap:                      7, // to be determined
+			K:                        20,
+			RemoteAddr:               remoteAddr,
+			LocalAddr:                localAddr,
+			PingDuration:             150, // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
+		}
 		for i := range len(pM.Probers) {
 			pM.Probers[i] = &client.SCIONClient{
 				Log:             log,
@@ -308,11 +319,10 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 
 	for i := range len(c.ntpcs) {
 		if cfg.SimulatorOn {
-
 			c.ntpcs[i] = &client.SCIONClient{
 				Log:             log,
 				DSCP:            dscp,
-				InterleavedMode: true,
+				InterleavedMode: false, // t1=t2 in our case
 				Simulator:       client.NewSimulator(cfg.SimulatorSHMRefClk),
 			}
 		} else {
@@ -724,8 +734,9 @@ func runClient(configFile, simCfg string) {
 					first = false
 				}
 
-				// 2. Pause 1 minute
+				// 2. Pause 5 minutes
 				time.Sleep(5 * time.Minute)
+				//time.Sleep(10 * time.Second)
 
 				// 3. Immediate first dynamic selection
 				scionClock.pathManager.RunDynamicSelection(ctx, log)

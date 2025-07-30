@@ -30,6 +30,7 @@ type PathManager struct {
 	Probers                  [20]*SCIONClient // handle path assessment (symmetry, jitter), LENGTH TO BE DEFINED SOMEWHERE ELSE
 	PingDuration             int
 	MetricsPerProber         map[int]*PathMetrics
+	SimulatorOn              bool
 }
 
 type ProbeResult struct {
@@ -368,17 +369,17 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 
 	mtrcs := scionMetrics.Load()
 
-	nProbers := 0
-
 	scoringType := "symmetry"
 
+	// Setup a new MetricsPerProber for each Prober
+	nProbers := 0
 	for i, prober := range pM.Probers {
 		if prober.prev.path != "" { // Does the prober contain a path?
-			if path, ok := pathMap[prober.prev.path]; ok { // to be safe
+			if _, ok := pathMap[prober.prev.path]; ok { // to be safe
 				nProbers++
 
 				if _, exists := pM.MetricsPerProber[i]; !exists {
-					pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
+					pM.MetricsPerProber[i] = &PathMetrics{}
 				}
 				metrics := pM.MetricsPerProber[i]
 				// Fresh struct for new dynamic selection
@@ -386,70 +387,99 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 				metrics.Qscore = 0.0
 				metrics.SampleCount = 0
 				metrics.Samples = make([]float64, 0)
-
-				wg.Add(1)
-				go func(i int, prober *SCIONClient, p snet.Path) {
-					defer wg.Done()
-					// if _, ok := pM.MetricsPerProber[i]; !ok {
-					// 	pM.MetricsPerProber[i] = &PathMetrics{MinRTT: math.MaxFloat64}
-					// }
-					// metrics := pM.MetricsPerProber[i]
-
-					for j := 0; j < pM.PingDuration; j++ {
-						pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-						_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
-						cancel()
-
-						if e != nil {
-							prober.Log.LogAttrs(ctx, slog.LevelInfo, "Timeout or error during probing",
-								slog.Any("to", pM.RemoteAddr),
-								slog.Any("via", snet.Fingerprint(p).String()),
-								slog.Any("error", e),
-							)
-							metrics.LossCount++
-							continue
-						}
-
-						if timestamps.t0.IsZero() || timestamps.t1.IsZero() || timestamps.t2.IsZero() || timestamps.t3.IsZero() || timestamps.t3.Before(timestamps.t2) || timestamps.t2.Before(timestamps.t1) || timestamps.t1.Before(timestamps.t0) {
-							continue // skip invalid timestamps
-						}
-
-						d1 := timestamps.t1.Sub(timestamps.t0).Seconds()
-						d2 := timestamps.t3.Sub(timestamps.t2).Seconds()
-						// rtt := d1 + d2
-
-						asym := math.Abs(d1 - d2)
-
-						// if rtt < metrics.MinRTT { // TODO: look at that again
-						// 	metrics.MinRTT = rtt
-						// }
-
-						// jitter := math.Abs(rtt - metrics.MinRTT)
-						// updateEMA(&metrics.JitterEMA, jitter, 0.3, 0.8, 0.001) // frac value TO BE CHANGED
-						// updateEMA(&metrics.AsymEMA, asym, 0.3, 0.8, 0.001) // frac value 0.1 TO BE CHANGED
-
-						// jitterNorm := normalize(metrics.JitterEMA.Value, 0.01) // ADD LATER
-						// asymNorm := normalize(metrics.AsymEMA.Value, 0.0005) // asymmetry jumps around 500 microseconds, frac value TO BE CHANGED
-
-						// Q := 0.6*asymNorm + 0.4*jitterNorm // + 0.2*lossNorm
-						var Q float64
-						if scoringType == "symmetry" {
-							Q = math.Abs(asym)
-						} else {
-							// Q = jitter_scoring
-						}
-						// updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.1)
-						// updateEMA(&metrics.QScoreEMA, Q, 0.3, 0.8, 0.001)
-
-						metrics.Samples = append(metrics.Samples, Q) // Add new d1-d0 value to Samples slice (around 150 entries at the end)
-						metrics.SampleCount++
-						// updateEMA(&metrics.QScoreEMA, Q)
-						time.Sleep(6 * time.Second) // 1 * time.Second
-					}
-				}(i, prober, path)
 			}
 		}
 	}
+
+	for j := 0; j < pM.PingDuration; j++ { // each prober pings pM.PingDuration times
+		// we set t3, off once for each pinging round
+		if pM.SimulatorOn {
+			const maxNumRetries = 3
+			numRetries := 0
+			deadline, deadlineIsSet := ctx.Deadline()
+			for {
+				// Fetch t3 and local offset from shm
+				t3, off, err := pM.Probers[0].Simulator.SHM.MeasureClockOffset(ctx)
+				if err != nil || (t3.IsZero() || (t3.Hour() == 0 && t3.Minute() == 0 && t3.Second() == 0)) {
+					// Retry on temporary SHM failure
+					if numRetries < maxNumRetries && (!deadlineIsSet || time.Now().Before(deadline)) {
+						numRetries++
+						time.Sleep(50 * time.Millisecond)
+						continue
+					}
+					// Final fallback: panic for critical unrecoverable state
+					panic(fmt.Sprintf("PANIC in Path Manager: Fetched time from SHM and t3 is zero or failed to fetch time from SHM after %d retries: %v. STOPPED RUN", numRetries, err))
+				}
+
+				// Assign t3 and off to all simulators
+				for _, client := range pM.Probers {
+					if client.Simulator != nil {
+						client.Simulator.t3 = t3
+						client.Simulator.off = off
+					}
+				}
+				break
+			}
+		}
+
+		// each pM.Prober has t3 and 0ff set now
+		// for each prober pings once in a go routine
+		for i, prober := range pM.Probers {
+			if prober == nil || prober.prev.path == "" {
+				continue
+			}
+
+			path, ok := pathMap[prober.prev.path]
+			if !ok {
+				continue
+			}
+
+			metrics := pM.MetricsPerProber[i]
+
+			wg.Add(1)
+			go func(i int, prober *SCIONClient, p snet.Path) {
+				defer wg.Done()
+
+				pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+				_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
+				cancel()
+
+				if e != nil {
+					prober.Log.LogAttrs(ctx, slog.LevelInfo, "Timeout or error during probing",
+						slog.Any("to", pM.RemoteAddr),
+						slog.Any("via", snet.Fingerprint(p).String()),
+						slog.Any("error", e),
+					)
+					metrics.LossCount++
+					return
+				}
+
+				if timestamps.t0.IsZero() || timestamps.t1.IsZero() || timestamps.t2.IsZero() || timestamps.t3.IsZero() || timestamps.t3.Before(timestamps.t2) || timestamps.t2.Before(timestamps.t1) || timestamps.t1.Before(timestamps.t0) {
+					return // skip invalid timestamps
+				}
+
+				d1 := timestamps.t1.Sub(timestamps.t0).Seconds()
+				d2 := timestamps.t3.Sub(timestamps.t2).Seconds()
+
+				asym := math.Abs(d1 - d2)
+
+				var Q float64
+				if scoringType == "symmetry" {
+					Q = math.Abs(asym)
+				} else {
+					// Q = jitter_scoring?
+				}
+
+				metrics.Samples = append(metrics.Samples, Q) // Add new d1-d0 value to Samples slice (around 150 entries at the end)
+				metrics.SampleCount++
+
+			}(i, prober, path)
+		}
+
+		// ONCE all probers have exchanged a ping, then sleep 6 seconds
+		time.Sleep(6 * time.Second)
+	}
+
 }
 
 func (ts TimeStamps) String() string {

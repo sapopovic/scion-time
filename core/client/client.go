@@ -188,7 +188,7 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 		for {
 			// Fetch t3 and local offset from shm
 			t3, off, err := ntpcs[0].Simulator.SHM.MeasureClockOffset(ctx)
-			if err != nil {
+			if err != nil || (t3.IsZero() || (t3.Hour() == 0 && t3.Minute() == 0 && t3.Second() == 0)) {
 				// Retry on temporary SHM failure
 				if numRetries < maxNumRetries && (!deadlineIsSet || time.Now().Before(deadline)) {
 					numRetries++
@@ -196,7 +196,7 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 					continue
 				}
 				// Final fallback: panic for critical unrecoverable state
-				panic(fmt.Sprintf("PANIC: Failed to fetch time from SHM after %d retries: %v. STOPPED RUN", numRetries, err))
+				panic(fmt.Sprintf("PANIC: Fetched time from SHM and t3 is zero or failed to fetch time from SHM after %d retries: %v. STOPPED RUN", numRetries, err))
 			}
 
 			// Assign t3 and off to all simulators
