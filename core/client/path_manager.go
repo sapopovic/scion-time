@@ -271,7 +271,7 @@ func (pM *PathManager) setSactive(log *slog.Logger) {
 			log.Info("Path score",
 				slog.Int("prober", idx),
 				slog.Any("fp", snet.Fingerprint(path).String()),
-				slog.Float64("Q", metrics.Qscore),
+				slog.Float64("Q", metrics.Qscore*1e6),
 				slog.Int("samples", metrics.SampleCount),
 				slog.Int("losses", metrics.LossCount),
 			)
@@ -470,6 +470,7 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 					// Q = jitter_scoring?
 				}
 
+				prober.Log.LogAttrs(ctx, slog.LevelInfo, "Add new score", slog.Any("via", snet.Fingerprint(p).String()), slog.Any("New Score", Q*1e6))
 				metrics.Samples = append(metrics.Samples, Q) // Add new d1-d0 value to Samples slice (around 150 entries at the end)
 				metrics.SampleCount++
 
@@ -477,6 +478,7 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 		}
 
 		// ONCE all probers have exchanged a ping, then sleep 6 seconds
+		//time.Sleep(1 * time.Second)
 		time.Sleep(6 * time.Second)
 	}
 

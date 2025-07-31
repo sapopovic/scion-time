@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -468,16 +469,23 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path, msg stri
 	// 	off,
 	// )
 
+	d0_sim := t1.Sub(t0).Seconds()
+	d1_sim := t3.Sub(t2).Seconds()
+	asym_sim := math.Abs(d0_sim - d1_sim)
 	logMsg := fmt.Sprintf(
-		"Reason: %s | FP: %s | Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | delays: d0=%v, d1=%v | d0+d1?=rtt: %t",
+		"Reason: %s | FP: %s | Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | Real delay asym: %v [micros] | Client delay asym: %v [micros] | Real delays: d0=%v, d1=%v | Client delays: d0=%v, d1=%v [ms] | d0+d1?=rtt: %t",
 		msg,
 		snet.Fingerprint(p).String(),
 		ts.t0.Format("15:04:05.000000"),
 		ts.t1.Format("15:04:05.000000"),
 		ts.t2.Format("15:04:05.000000"),
 		ts.t3.Format("15:04:05.000000"),
+		math.Abs(d1.Seconds()-d0.Seconds())*1e6,
+		asym_sim*1e6,
 		d0,
 		d1,
+		d0_sim*1000,
+		d1_sim*1000,
 		sampledRTT == d0_float+d1_float,
 	)
 	fmt.Println(logMsg)

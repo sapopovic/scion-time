@@ -274,7 +274,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			K:                        20,
 			RemoteAddr:               remoteAddr,
 			LocalAddr:                localAddr,
-			PingDuration:             150,  // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
+			PingDuration:             150,  // 15,  // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
 			SimulatorOn:              true, // probePaths() -> will fetch t3, off
 		}
 		for i := range len(pM.Probers) {
@@ -736,7 +736,7 @@ func runClient(configFile, simCfg string) {
 
 				// 2. Pause 5 minutes
 				time.Sleep(5 * time.Minute)
-				//time.Sleep(10 * time.Second)
+				//time.Sleep(20 * time.Second)
 
 				// 3. Immediate first dynamic selection
 				scionClock.pathManager.RunDynamicSelection(ctx, log)
@@ -744,6 +744,7 @@ func runClient(configFile, simCfg string) {
 				// 4. Dynamic selection every 15 minutes and static selection every 24 hours
 				reset := time.After(24 * time.Hour)
 				dTicker := time.NewTicker(15 * time.Minute)
+				// dTicker := time.NewTicker(15 * time.Second)
 
 			scheduleLoop:
 				for {
