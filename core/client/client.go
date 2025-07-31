@@ -192,7 +192,7 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 				// Retry on temporary SHM failure
 				if numRetries < maxNumRetries && (!deadlineIsSet || time.Now().Before(deadline)) {
 					numRetries++
-					time.Sleep(50 * time.Millisecond)
+					time.Sleep(100 * time.Millisecond)
 					continue
 				}
 				// Final fallback: panic for critical unrecoverable state
