@@ -141,7 +141,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 	if c.Simulator != nil {
 		// we create the 4 timestamps
 		// ts, off2 := c.Simulator.generateTimeStamps(ctx, path) // off2 is measured by MBG! (shm)
-		ts := c.Simulator.generateTimeStamps(ctx, path, "NTP Sync")
+		ts := c.Simulator.generateTimeStamps(ctx, path, "NTP Sync", 0, false)
 		t0, t1, t2, t3 := ts.t0, ts.t1, ts.t2, ts.t3
 
 		// calculate the offset which depends on induced delays
@@ -688,12 +688,12 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 }
 
 func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetrics,
-	localAddr, remoteAddr udp.UDPAddr, path snet.Path) (
+	localAddr, remoteAddr udp.UDPAddr, path snet.Path, dsSequence int, worsen bool) (
 	timestamp time.Time, offset time.Duration, err error, timestamps TimeStamps) {
 
 	if c.Simulator != nil {
 		// we create the 4 timestamps
-		ts := c.Simulator.generateTimeStamps(ctx, path, "Probing")
+		ts := c.Simulator.generateTimeStamps(ctx, path, "Probing", dsSequence, worsen)
 		t0, t1, t2, t3 := ts.t0, ts.t1, ts.t2, ts.t3
 
 		// calculate the offset which depends on induced delays

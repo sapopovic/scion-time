@@ -31,6 +31,7 @@ type PathManager struct {
 	PingDuration             int
 	MetricsPerProber         map[int]*PathMetrics
 	SimulatorOn              bool
+	dsSequence               int
 }
 
 type ProbeResult struct {
@@ -55,6 +56,7 @@ type PathMetrics struct {
 
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
 	// ADD RESETTING WHOLE THING
+	pM.dsSequence = 0
 	ps := pM.Pather.Paths(pM.RemoteAddr.IA)
 	fmt.Printf("All available paths:\n")
 	for i, path := range ps {
@@ -98,6 +100,7 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
 	log.Info("Starting with dynamic selection.")
+	pM.dsSequence = pM.dsSequence + 1
 	var wg sync.WaitGroup
 	pM.MetricsPerProber = make(map[int]*PathMetrics) // We only ever evaluate a 15 minutes window!
 	pM.probePaths(ctx, log, &wg)                     // Updates PathMetrics for each path with EVERY NEW MEASUREMENT. These are performance results.
@@ -107,103 +110,6 @@ func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger
 }
 
 // -------------------dynamic----------------------------
-
-/*
-func (pM PathManager) analyzeProbes(ctx context.Context, results []ProbeResult, log *slog.Logger) {
-
-	var pathScores []PathScore
-
-	for i, res := range results {
-		tsList := res.Timestamps
-		if tsList == nil || len(tsList) == 0 {
-			log.LogAttrs(ctx, slog.LevelInfo, "No responses for prober",
-				slog.Int("prober", i),
-				slog.Int("attempted", res.AttemptedCount),
-				slog.Int("successful", res.SuccessCount),
-			)
-			continue
-		}
-
-		log.LogAttrs(ctx, slog.LevelInfo, "Probe response summary",
-			slog.Int("prober", i),
-			slog.Int("attempted", res.AttemptedCount),
-			slog.Int("successful", res.SuccessCount),
-			slog.Float64("success_rate", float64(res.SuccessCount)/float64(res.AttemptedCount)),
-		)
-
-		var symmetryVals []float64
-		var rttVals []float64
-		minRTT := math.MaxFloat64
-
-		for _, ts := range tsList {
-			if ts.t0.IsZero() || ts.t1.IsZero() || ts.t2.IsZero() || ts.t3.IsZero() || ts.t3.Before(ts.t2) || ts.t2.Before(ts.t1) || ts.t1.Before(ts.t0) {
-				continue // skip invalid timestamps
-			}
-
-			d1 := ts.t1.Sub(ts.t0).Seconds()
-			d2 := ts.t3.Sub(ts.t2).Seconds()
-			symmetry := math.Abs(d1 - d2)
-			rtt := d1 + d2
-
-			symmetryVals = append(symmetryVals, symmetry)
-			rttVals = append(rttVals, rtt)
-
-			if rtt < minRTT {
-				minRTT = rtt
-			}
-		}
-
-		avgSym := avg(symmetryVals)
-		jitter := stddev(rttVals)
-		successRate := float64(res.SuccessCount) / float64(res.AttemptedCount)
-
-		// small coefficients in norm are too aggressive
-		// symNorm := normalize(avgSym, 0.02) // 20ms scale
-		// minRTTNorm := normalize(minRTT, 0.05) // 50ms baseline
-		// jitterNorm := normalize(jitter, 0.03) // 30ms jitter scale
-		// lossNorm := 1 - successRate                         // higher = worse
-		// combinedRTTScore := 0.6*minRTTNorm + 0.4*jitterNorm // jitter higher because of accuracy NTP!
-
-		// Emphasize on symmetry, then stability (jitter), then baseline latency, then availability
-		// Q := 0.5*symNorm + 0.4*combinedRTTScore + 0.1*lossNorm
-		Q := avgSym
-
-		path := ""
-		if i < len(pM.Probers) && pM.Probers[i] != nil {
-			path = pM.Probers[i].prev.path
-		}
-		pathScores = append(pathScores, PathScore{
-			Index:       i,
-			Path:        path,
-			Q:           Q,
-			Symmetry:    avgSym,
-			MinRTT:      minRTT,
-			Jitter:      jitter,
-			SuccessRate: successRate,
-		})
-		// Q = w_sym * norm(symmetry) + w_rtt * combinedRTTScore + w_loss * (1 - successRate) | combinedRTTScore = combination minRTT & jitter
-	}
-
-	sort.Slice(pathScores, func(i, j int) bool {
-		return pathScores[i].Q < pathScores[j].Q
-	})
-	log.Info("Sorted paths by Q (lower is better):")
-	for _, ps := range pathScores {
-		// log.LogAttrs(ctx, slog.LevelInfo, "Path score",
-		// 	slog.Int("prober", ps.Index),
-		// 	slog.String("path", ps.Path),
-		// 	slog.Float64("Q", ps.Q),
-		// 	slog.Float64("symmetry", ps.Symmetry),
-		// 	slog.Float64("min_rtt", ps.MinRTT),
-		// 	slog.Float64("jitter", ps.Jitter),
-		// 	slog.Float64("success_rate", ps.SuccessRate),
-		// )
-		log.LogAttrs(ctx, slog.LevelInfo, "Path score",
-			slog.Int("prober", ps.Index),
-			slog.Float64("Q", ps.Q),
-		)
-	}
-}*/
 
 func (pM *PathManager) setSactive(log *slog.Logger) {
 	type ranked struct {
@@ -404,7 +310,7 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 					// Retry on temporary SHM failure
 					if numRetries < maxNumRetries && (!deadlineIsSet || time.Now().Before(deadline)) {
 						numRetries++
-						time.Sleep(50 * time.Millisecond)
+						time.Sleep(80 * time.Millisecond)
 						continue
 					}
 					// Final fallback: panic for critical unrecoverable state
@@ -440,8 +346,13 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 			go func(i int, prober *SCIONClient, p snet.Path) {
 				defer wg.Done()
 
+				worsen := false
+				if j == pM.PingDuration/5 { // around halftime, worsen paths defined in Simulator.worsenpaths
+					worsen = true
+				}
+
 				pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-				_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p)
+				_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p, pM.dsSequence, worsen)
 				cancel()
 
 				if e != nil {
