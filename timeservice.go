@@ -274,7 +274,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			K:                        20,
 			RemoteAddr:               remoteAddr,
 			LocalAddr:                localAddr,
-			PingDuration:             150,  // 15,  // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
+			PingDuration:             149,  // 15,  // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
 			SimulatorOn:              true, // probePaths() -> will fetch t3, off
 		}
 		for i := range len(pM.Probers) {
@@ -292,7 +292,7 @@ func newNTPReferenceClockSCION(log *slog.Logger, localAddr, remoteAddr udp.UDPAd
 			K:                        20,
 			RemoteAddr:               remoteAddr,
 			LocalAddr:                localAddr,
-			PingDuration:             150, // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
+			PingDuration:             149, // 150 pings per 15 minutes, every 6 seconds one ping, evenly distributed
 		}
 		for i := range len(pM.Probers) {
 			pM.Probers[i] = &client.SCIONClient{
@@ -724,40 +724,60 @@ func runClient(configFile, simCfg string) {
 			close(ready)
 			return
 		}
+
+		// Channel to block until first static selection is finished
+		staticDone := make(chan struct{})
+
+		// 1. Static selection goroutine (runs every 24h, but first one signals ready)
 		go func() {
-			first := true
+			round := 0
 			for {
-				// 1. Static selection
+				log.Info("Static selection round", slog.Int("round", round), slog.Time("time", time.Now()))
 				scionClock.pathManager.RunStaticSelection(ctx, log)
-				if first {
-					close(ready)
-					first = false
+
+				if round == 0 {
+					// Signal that initial static selection is done
+					close(staticDone)
 				}
 
-				// 2. Pause 5 minutes
-				time.Sleep(5 * time.Minute)
-				//time.Sleep(20 * time.Second)
+				round++
+				time.Sleep(24 * time.Hour)
+			}
+		}()
 
-				// 3. Immediate first dynamic selection
+		// 2. Main dynamic scheduling goroutine
+		go func() {
+			// Wait for first static selection to complete
+			log.Info("Waiting for initial static selection before dynamic selection begins")
+			<-staticDone
+			log.Info("Initial static selection complete, starting warmup")
+
+			// Signal service readiness
+			close(ready)
+
+			// 5-minute warmup
+			time.Sleep(5 * time.Minute)
+
+			// Dynamic selection loop (every 15 minutes, serialized)
+			round := 0
+			for {
+				start := time.Now()
+				log.Info("Dynamic selection round", slog.Int("round", round), slog.Time("start", start))
+
 				scionClock.pathManager.RunDynamicSelection(ctx, log)
 
-				// 4. Dynamic selection every 15 minutes and static selection every 24 hours
-				reset := time.After(24 * time.Hour)
-				dTicker := time.NewTicker(15 * time.Minute)
-				// dTicker := time.NewTicker(15 * time.Second)
+				end := time.Now()
+				log.Info("Dynamic selection finished", slog.Int("round", round), slog.Time("end", end))
+				round++
 
-			scheduleLoop:
-				for {
-					select {
-					case <-dTicker.C:
-						scionClock.pathManager.RunDynamicSelection(ctx, log)
-					case <-reset:
-						dTicker.Stop()
-						break scheduleLoop
-					}
+				// Wait remaining time to align with 15-minute interval
+				sleep := 15*time.Minute - time.Since(start)
+				if sleep > 0 {
+					log.Info("Sleeping before next dynamic selection", slog.Duration("sleep", sleep))
+					time.Sleep(sleep)
+				} else {
+					log.Warn("Dynamic selection overran 15m window", slog.Duration("overrun", -sleep))
 				}
-
-				// Back to static selection again
 			}
 		}()
 	}
