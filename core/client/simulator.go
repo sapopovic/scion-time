@@ -67,7 +67,7 @@ func NewSimulator(simRefClock []string) *Simulator {
 	return &Simulator{log: log, SHM: refClock[0], pathQualities: pqs, worsenPaths: worsenPaths}
 }
 
-func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path, msg string, dsSequence int, worsen bool) TimeStamps {
+func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path, msg string, worsen bool) TimeStamps {
 	t3, off := s.t3, s.off // fetched by shmRefClock
 	// t3, off := time.Now(), time.Duration(0)
 
@@ -80,7 +80,7 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path, msg stri
 	// USE pathQualities MAP TO DERIVE RTT AND ASYM
 	pq := s.pathQualities[snet.Fingerprint(p).String()]
 
-	if dsSequence == 2 && worsen { // worsen if second dyn sel running 2. time, worsen bool given by prober and the path in question is part of the paths that worsen over time
+	if worsen { // worsen if second dyn sel running 2. time
 		fp := snet.Fingerprint(p).String()
 		ok := false
 		for _, s := range s.worsenPaths {
@@ -90,23 +90,23 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path, msg stri
 		}
 		if ok { // path is in worsenpaths
 			pq.meanRTT = 100
-			pq.jitter = 1.5
+			pq.jitter = 1.6
 			pq.rttRange[0] = 50
-			pq.rttRange[1] = 170
-			fmt.Println("Worsen path: %s", fp)
+			pq.rttRange[1] = 200
+			fmt.Println("Worsen path:", fp)
 		}
 	}
 
 	logMsgPQ := fmt.Sprintf(
-		"PathQuality | FP: %s | rttRange: [%.2f, %.2f] ms | meanRTT: %.2f ms | jitter: %.2f ms | RNG seed: %d",
-		snet.Fingerprint(p).String(),
+		"PathQuality | rttRange: [%.2f, %.2f] ms | meanRTT: %.2f ms | jitter: %.2f ms | RNG seed: %d",
+		//snet.Fingerprint(p).String(),
 		pq.rttRange[0],
 		pq.rttRange[1],
 		pq.meanRTT,
 		pq.jitter,
 		pq.rng.Int63(), // get a value from rng to show it's seeded
 	)
-	fmt.Println(logMsgPQ)
+	// fmt.Println(logMsgPQ)
 
 	// Step 2: Sample RTT
 	sampledRTT := float64(sampleClampedNormal(
@@ -156,7 +156,7 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path, msg stri
 	d1_sim := t3.Sub(t2).Seconds()
 	asym_sim := math.Abs(d0_sim - d1_sim)
 	logMsg := fmt.Sprintf(
-		"Reason: %s | FP: %s | Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | Real delay asym: %v [micros] | Client delay asym: %v [micros] | Real delays: d0=%v, d1=%v | Client delays: d0=%v, d1=%v [ms] | d0+d1?=rtt: %t",
+		"Reason: %s | FP: %s | Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | Real delay asym: %v [micros] | Client delay asym: %v [micros] | Real delays: d0=%v, d1=%v | Client delays: d0=%v, d1=%v [ms] | d0+d1?=rtt: %t | %s",
 		msg,
 		snet.Fingerprint(p).String(),
 		ts.t0.Format("15:04:05.000000"),
@@ -170,6 +170,7 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path, msg stri
 		d0_sim*1000,
 		d1_sim*1000,
 		sampledRTT == d0_float+d1_float,
+		logMsgPQ,
 	)
 	fmt.Println(logMsg)
 

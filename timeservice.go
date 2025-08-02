@@ -383,10 +383,9 @@ func (c *ntpReferenceClockSCION) MeasureClockOffset(ctx context.Context) (
 		// ps = c.pather.Paths(c.remoteAddr.IA)
 
 		ps = c.pathManager.S_Active
-
 	}
 
-	return client.MeasureClockOffsetSCION_v2(ctx, c.log, c.ntpcs[:], ps, c.localAddr, c.remoteAddr, c.simulatorOn)
+	return client.MeasureClockOffsetSCION_v2(ctx, c.log, c.ntpcs[:], ps, c.localAddr, c.remoteAddr, c.simulatorOn, c.pathManager.ChangeNetState)
 	// NTP
 	// return client.MeasureClockOffsetSCION(ctx, c.log, c.ntpcs[:], c.localAddr, c.remoteAddr, ps, c.chosenPaths, c.selectionMethod)
 }

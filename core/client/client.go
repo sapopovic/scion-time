@@ -109,7 +109,7 @@ loop:
 }
 
 func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
-	ntpcs []*SCIONClient, sps []snet.Path, localAddr, remoteAddr udp.UDPAddr, simulatorOn bool) (time.Time, time.Duration, error) {
+	ntpcs []*SCIONClient, sps []snet.Path, localAddr, remoteAddr udp.UDPAddr, simulatorOn bool, changeNetState bool) (time.Time, time.Duration, error) {
 	mtrcs := scionMetrics.Load()
 
 	// IDEA: if after static selection or dynamic selection some paths remain the same, then wen don't want to throw away the filter.
@@ -233,7 +233,7 @@ func MeasureClockOffsetSCION_v2(ctx context.Context, log *slog.Logger,
 				n = 1
 			}
 			for j := range n {
-				t, o, e := ntpc.measureClockOffsetSCION(ctx, mtrcs, localAddr, remoteAddr, p)
+				t, o, e := ntpc.measureClockOffsetSCION(ctx, mtrcs, localAddr, remoteAddr, p, changeNetState)
 				if e == nil {
 					ts, off, err = t, o, e
 					if ntpc.InInterleavedMode() {
@@ -352,7 +352,7 @@ func MeasureClockOffsetSCION(ctx context.Context, log *slog.Logger,
 				n = 1
 			}
 			for j := range n {
-				t, o, e := ntpc.measureClockOffsetSCION(ctx, mtrcs, localAddr, remoteAddr, p)
+				t, o, e := ntpc.measureClockOffsetSCION(ctx, mtrcs, localAddr, remoteAddr, p, false)
 				if e == nil {
 					ts, off, err = t, o, e
 					if ntpc.InInterleavedMode() {

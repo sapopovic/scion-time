@@ -31,7 +31,8 @@ type PathManager struct {
 	PingDuration             int
 	MetricsPerProber         map[int]*PathMetrics
 	SimulatorOn              bool
-	dsSequence               int
+	DsSequence               int
+	ChangeNetState           bool
 }
 
 type ProbeResult struct {
@@ -56,7 +57,8 @@ type PathMetrics struct {
 
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
 	// ADD RESETTING WHOLE THING
-	pM.dsSequence = 0
+	pM.DsSequence = 0
+	pM.ChangeNetState = false
 	ps := pM.Pather.Paths(pM.RemoteAddr.IA)
 	fmt.Printf("All available paths:\n")
 	for i, path := range ps {
@@ -100,12 +102,15 @@ func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger)
 
 func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger) {
 	log.Info("Starting with dynamic selection.")
-	pM.dsSequence = pM.dsSequence + 1
+	pM.DsSequence = pM.DsSequence + 1
 	var wg sync.WaitGroup
 	pM.MetricsPerProber = make(map[int]*PathMetrics) // We only ever evaluate a 15 minutes window!
 	pM.probePaths(ctx, log, &wg)                     // Updates PathMetrics for each path with EVERY NEW MEASUREMENT. These are performance results.
 	wg.Wait()
 	// pM.PrintSortedPathsByQ(log)
+	//if pM.dsSequence == 1 { // only reset sActive at first dynamic selection
+	//	pM.setSactive(log)
+	//}
 	pM.setSactive(log)
 }
 
@@ -346,13 +351,12 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 			go func(i int, prober *SCIONClient, p snet.Path) {
 				defer wg.Done()
 
-				worsen := false
-				if j == pM.PingDuration/5 { // around halftime, worsen paths defined in Simulator.worsenpaths
-					worsen = true
+				if j == pM.PingDuration/5 && pM.DsSequence == 2 { // in second DS, around halftime, worsen paths defined in Simulator.worsenpaths
+					pM.ChangeNetState = true
 				}
 
 				pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-				_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p, pM.dsSequence, worsen)
+				_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p, pM.ChangeNetState)
 				cancel()
 
 				if e != nil {
