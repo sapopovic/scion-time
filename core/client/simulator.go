@@ -60,7 +60,7 @@ func NewSimulator(simRefClock []string) *Simulator {
 		refClock = append(refClock, shm.NewReferenceClock(log, u)) // we only have 1 element
 	}
 
-	pqs := assignPathQualities_exp2()
+	pqs := assignPathQualities_exp3()
 
 	worsenPaths := []string{"877b3a86f6e88d9034423fde74939b9362cbc8ac368cec0be7eab8e5a9663c6e", "3496ccc115ec697f3e2027c1f2b70a364bc08cf49ecb6fcb335c3989fca26b02", "1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01", "1c91e925e44aebc06938ee1f41ad22d0c2c3691a877eaf57eb974088bcbd2e4e"}
 
@@ -156,9 +156,10 @@ func (s Simulator) generateTimeStamps(ctx context.Context, p snet.Path, msg stri
 	d1_sim := t3.Sub(t2).Seconds()
 	asym_sim := math.Abs(d0_sim - d1_sim)
 	logMsg := fmt.Sprintf(
-		"Reason: %s | FP: %s | Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | Real delay asym: %v [micros] | Client delay asym: %v [micros] | Real delays: d0=%v, d1=%v | Client delays: d0=%v, d1=%v [ms] | d0+d1?=rtt: %t | %s",
+		"Reason: %s | FP: %s | Theta_r: %v | Generated timestamps: t0=%s, t1=%s, t2=%s, t3=%s | Real delay asym: %v [micros] | Client delay asym: %v [micros] | Real delays: d0=%v, d1=%v | Client delays: d0=%v, d1=%v [ms] | d0+d1?=rtt: %t | %s",
 		msg,
 		snet.Fingerprint(p).String(),
+		off,
 		ts.t0.Format("15:04:05.000000"),
 		ts.t1.Format("15:04:05.000000"),
 		ts.t2.Format("15:04:05.000000"),

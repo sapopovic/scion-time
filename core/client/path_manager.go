@@ -48,11 +48,14 @@ type MetricEMA struct {
 }
 
 type PathMetrics struct {
-	MinRTT      float64
-	Qscore      float64
-	Samples     []float64
-	SampleCount int
-	LossCount   int // outdated
+	MinRTT       float64
+	RTTs         []float64
+	Qscore       float64
+	Samples      []float64
+	Offsets      []time.Duration
+	FailedRounds []bool
+	SampleCount  int
+	LossCount    int // outdated
 }
 
 func (pM *PathManager) RunStaticSelection(ctx context.Context, log *slog.Logger) {
@@ -122,27 +125,92 @@ func (pM *PathManager) setSactive(log *slog.Logger) {
 		Metrics *PathMetrics
 	}
 
-	var list []ranked
-	for index, metrics := range pM.MetricsPerProber {
-		if metrics.SampleCount == 0 {
-			continue // Skip uninitialized paths
-		}
-		list = append(list, ranked{Index: index, Metrics: metrics})
+	// also keep per-path valid round counts
+	validCounts := make(map[int]int)
 
-		// assign Qscore
-		sum := 0.0
-		for _, v := range metrics.Samples { // samples contains |d1-d0|
-			sum += v
+	for round := 0; round < pM.PingDuration; round++ {
+		// Build candidate set S_r: the 5 paths with smallest RTT in this round
+		type pair struct {
+			index int
+			rtt   float64
+			theta float64
 		}
-		metrics.Qscore = sum / float64(metrics.SampleCount)
+		var candidates []pair
+
+		for idx, m := range pM.MetricsPerProber {
+			if m.SampleCount == 0 || m.FailedRounds[round] {
+				continue // skip uninitialized or failed round
+			}
+			candidates = append(candidates, pair{
+				index: idx,
+				rtt:   m.RTTs[round],
+				theta: float64(m.Offsets[round]),
+			})
+		}
+
+		// Sort by RTT ascending
+		sort.Slice(candidates, func(i, j int) bool {
+			return candidates[i].rtt < candidates[j].rtt
+		})
+
+		// Take up to 5
+		if len(candidates) > 5 {
+			candidates = candidates[:5]
+		}
+
+		// For each path, compute its g_r^{(-i)} and m_{i,r}
+		for idx, m := range pM.MetricsPerProber {
+			if m.SampleCount == 0 || m.FailedRounds[round] {
+				continue
+			}
+
+			var thetas []float64
+			for _, c := range candidates {
+				if c.index == idx {
+					continue // leave-one-out
+				}
+				thetas = append(thetas, c.theta)
+			}
+			if len(thetas) == 0 {
+				continue // can't compute a center for this path
+			}
+
+			sort.Float64s(thetas)
+			var g float64
+			n := len(thetas)
+			if n%2 == 1 {
+				g = thetas[n/2]
+			} else {
+				g = 0.5 * (thetas[n/2-1] + thetas[n/2])
+			}
+
+			// m_{i,r} = |theta_{i,r} - g_r^{(-i)}|
+			mir := math.Abs(float64(m.Offsets[round]) - g)
+			m.Qscore += mir
+			validCounts[idx]++
+
+			logMsg := fmt.Sprintf(
+				"FP: %s | Theta_{i,r}: %v | g_r: %v | |Theta_{i,r} - g_r|: %v ",
+				pM.Probers[idx].prev.path,
+				m.Offsets[round],
+				g,
+				mir,
+			)
+			fmt.Println(logMsg)
+		}
 	}
 
-	// Sort in ascending order of QScoreEMA.Value
-	// sort.Slice(list, func(i, j int) bool {
-	// 	return list[i].Metrics.QScoreEMA.Value < list[j].Metrics.QScoreEMA.Value
-	// })
+	// Normalize to get M_i = average across valid rounds
+	var list []ranked
+	for idx, m := range pM.MetricsPerProber {
+		if vc := validCounts[idx]; vc > 0 {
+			m.Qscore /= float64(vc)
+			list = append(list, ranked{Index: idx, Metrics: m})
+		}
+	}
+
+	// Sort in ascending order of Qscore
 	sort.Slice(list, func(i, j int) bool {
-		// return list[i].Metrics.QScoreEMA.Value < list[j].Metrics.QScoreEMA.Value
 		return list[i].Metrics.Qscore < list[j].Metrics.Qscore
 	})
 
@@ -153,18 +221,20 @@ func (pM *PathManager) setSactive(log *slog.Logger) {
 		pathMap[fp] = path
 	}
 
+	// Build sortedPaths from ranked list
 	sortedPaths := make([]snet.Path, 0, pM.Cap)
-	for i, _ := range list {
-		idx := list[i].Index // tells us which prober this is
-		prober := pM.Probers[idx]
-		if path, ok := pathMap[prober.prev.path]; ok { // get snet.Path from string
+	for _, r := range list {
+		prober := pM.Probers[r.Index]
+		if path, ok := pathMap[prober.prev.path]; ok {
 			sortedPaths = append(sortedPaths, path)
 		}
 	}
 
-	pM.S_Active = setBest(sortedPaths, pM.Cap) // ASSIGN GOOD NEW PATHS
+	// Pick best Cap paths
+	pM.S_Active = setBest(sortedPaths, pM.Cap)
 
 	// ----------------------Printing new active set--------------------
+
 	fmt.Println("Redefine S_Active set.")
 
 	for i, _ := range list { // go through sorted paths
@@ -298,6 +368,9 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 				metrics.Qscore = 0.0
 				metrics.SampleCount = 0
 				metrics.Samples = make([]float64, 0)
+				metrics.Offsets = make([]time.Duration, pM.PingDuration)
+				metrics.RTTs = make([]float64, pM.PingDuration)
+				metrics.FailedRounds = make([]bool, pM.PingDuration)
 			}
 		}
 	}
@@ -356,7 +429,7 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 				}
 
 				pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-				_, _, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p, pM.ChangeNetState)
+				_, theta, e, timestamps := prober.getTimestamps(pingCtx, mtrcs, pM.LocalAddr, pM.RemoteAddr, p, pM.ChangeNetState)
 				cancel()
 
 				if e != nil {
@@ -387,9 +460,12 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 					// Q = jitter_scoring?
 				}
 
-				prober.Log.LogAttrs(ctx, slog.LevelInfo, "Add new score", slog.Any("via", snet.Fingerprint(p).String()), slog.Any("New Score", Q*1e6))
+				//prober.Log.LogAttrs(ctx, slog.LevelInfo, "Add new score", slog.Any("via", snet.Fingerprint(p).String()), slog.Any("New Score", Q*1e6))
 				metrics.Samples = append(metrics.Samples, Q) // Add new d1-d0 value to Samples slice (around 150 entries at the end)
 				metrics.SampleCount++
+				metrics.Offsets[j] = theta
+				metrics.RTTs[j] = d1 + d2
+				metrics.FailedRounds[j] = true // this helps us know if we have a valid offset for round r and path i, default is false
 
 			}(i, prober, path)
 		}

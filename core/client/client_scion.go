@@ -158,7 +158,7 @@ func (c *SCIONClient) measureClockOffsetSCION(ctx context.Context, mtrcs *scionC
 		// 	c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@ERROR", slog.Any("Difference", off-off2))
 		// }
 
-		return t3, off, nil
+		return t3, offset, nil // return filtered value
 
 	} else {
 
@@ -699,11 +699,11 @@ func (c *SCIONClient) getTimestamps(ctx context.Context, mtrcs *scionClientMetri
 		// calculate the offset which depends on induced delays
 		off := ntp.ClockOffset(t0, t1, t2, t3)
 
-		if c.Filter == nil {
-			offset = off
-		} else {
-			offset = c.Filter.Do(t0, t1, t2, t3)
-		}
+		// if c.Filter == nil {
+		// 	offset = off
+		// } else {
+		// 	offset = c.Filter.Do(t0, t1, t2, t3)
+		// }
 
 		// c.Log.LogAttrs(ctx, slog.LevelDebug, "@@@PROBING", slog.Any("Difference", off-off2))
 		// if off != off2 || off == 0 {
