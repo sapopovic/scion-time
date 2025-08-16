@@ -60,7 +60,7 @@ func NewSimulator(simRefClock []string) *Simulator {
 		refClock = append(refClock, shm.NewReferenceClock(log, u)) // we only have 1 element
 	}
 
-	pqs := assignPathQualities_exp3()
+	pqs := assignPathQualities_exp2()
 
 	worsenPaths := []string{"877b3a86f6e88d9034423fde74939b9362cbc8ac368cec0be7eab8e5a9663c6e", "3496ccc115ec697f3e2027c1f2b70a364bc08cf49ecb6fcb335c3989fca26b02", "1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01", "1c91e925e44aebc06938ee1f41ad22d0c2c3691a877eaf57eb974088bcbd2e4e"}
 
@@ -770,7 +770,6 @@ func assignPathQualities_exp4() map[string]*PathQuality {
 	}
 }
 
-// v6=exp4=exp1
 func assignPathQualities_exp1() map[string]*PathQuality {
 	return map[string]*PathQuality{
 		// --- Very bad paths (1–7) ---
@@ -868,6 +867,102 @@ func assignPathQualities_exp1() map[string]*PathQuality {
 }
 
 func assignPathQualities_exp3() map[string]*PathQuality {
+	return map[string]*PathQuality{
+		// --- Very bad paths (1–7) ---------------------------------------------------------------------------------------------------------------------------------------------------------
+		"d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7": {
+			rttRange: []float64{50, 60},
+			meanRTT:  55, jitter: 0.8, rng: rand.New(rand.NewSource(101)),
+		},
+
+		"5fb945f4d62fb9a9877489f10006d8f9c5a94f16656121e5eb78a0394a4f466e": {
+			rttRange: []float64{30, 45},
+			meanRTT:  40, jitter: 1, rng: rand.New(rand.NewSource(102)),
+		},
+
+		"6c4f86d4c33b5c2371494582f3224b1a3c0611709168c4f411f66c9fa27d744b": {
+			rttRange: []float64{40, 60},
+			meanRTT:  50, jitter: 0.7, rng: rand.New(rand.NewSource(103)),
+		},
+
+		"e1bf6b79f7219745133909e2a6fba731b92d001007cf81235cec08f3491bf196": {
+			rttRange: []float64{60, 85},
+			meanRTT:  70, jitter: 1.0, rng: rand.New(rand.NewSource(104)),
+		},
+
+		"b1319d5e0f1cc40a0d227ef38e03ee6d58bd352393cb48f6fbeea0d29032b036": {
+			rttRange: []float64{85, 95},
+			meanRTT:  90, jitter: 1.2, rng: rand.New(rand.NewSource(105)),
+		},
+
+		"a7a0a2901cccd754534d65374136b9829a7f81518309af79d87f0a560a14690c": {
+			rttRange: []float64{80, 120},
+			meanRTT:  100, jitter: 1.5, rng: rand.New(rand.NewSource(106)),
+		},
+
+		"02bf95b27afd43858f75306b7a77c5d548ab4618a12cb155775ead71345028f9": {
+			rttRange: []float64{120, 160},
+			meanRTT:  140, jitter: 1.8, rng: rand.New(rand.NewSource(107)),
+		},
+
+		// --- 7 very good---------------------------------------------------------------------------------------------------------------------------------------------------------
+		"1c91e925e44aebc06938ee1f41ad22d0c2c3691a877eaf57eb974088bcbd2e4e": {
+			rttRange: []float64{20, 50},
+			meanRTT:  30, jitter: 0.6, rng: rand.New(rand.NewSource(118)),
+		},
+
+		"4194af709787d03483b2c8f298a1e12fba6abb384a62ded807cb4cb7ee197fd7": {
+			rttRange: []float64{20, 30},
+			meanRTT:  25, jitter: 0.8, rng: rand.New(rand.NewSource(108)),
+		},
+
+		"877b3a86f6e88d9034423fde74939b9362cbc8ac368cec0be7eab8e5a9663c6e": {
+			rttRange: []float64{20, 50},
+			meanRTT:  30, jitter: 0.6, rng: rand.New(rand.NewSource(109)),
+		},
+
+		"108acbc64efbf5a04652c15db371381c37fba6646fcc000bde7b7877cc8db557": {
+			rttRange: []float64{20, 30},
+			meanRTT:  25, jitter: 0.8, rng: rand.New(rand.NewSource(110)),
+		},
+
+		"3496ccc115ec697f3e2027c1f2b70a364bc08cf49ecb6fcb335c3989fca26b02": {
+			rttRange: []float64{20, 50},
+			meanRTT:  30, jitter: 0.6, rng: rand.New(rand.NewSource(111)),
+		},
+
+		"1c1badde515e0cba50c1cbddeb792683884d22bcdfde8a6f4722d3be4dc9cb01": {
+			rttRange: []float64{20, 30},
+			meanRTT:  25, jitter: 0.8, rng: rand.New(rand.NewSource(112)),
+		},
+
+		"e488d5b91a7b360294f19bad4ddf644c41d7e47c82cb68256bbedc3eed9a6447": {
+			rttRange: []float64{20, 50},
+			meanRTT:  30, jitter: 0.6, rng: rand.New(rand.NewSource(113)),
+		},
+		// --- 4 good, bit worse than 7 very good---------------------------------------------------------------------------
+		"aa170b5d350ffdd234572466a5b9e557c6930d2d8669a3f12a813c9410a0c0c7": {
+			rttRange: []float64{20, 50},
+			meanRTT:  34, jitter: 0.8, rng: rand.New(rand.NewSource(114)),
+		},
+
+		"c138518cd3637650efb49977186c920375cc6b36f75923be55d04f8f9303e188": {
+			rttRange: []float64{20, 50},
+			meanRTT:  34, jitter: 0.8, rng: rand.New(rand.NewSource(115)),
+		},
+
+		"0e8ebf758be09f95eb8f9f5df6eadad00cece2207a4ced88eac43dfafc68597f": {
+			rttRange: []float64{20, 50},
+			meanRTT:  34, jitter: 0.8, rng: rand.New(rand.NewSource(116)),
+		},
+
+		"d8c9132fa9db80172bcd51547b87137986ee0533e49483ce4fcba9c277c26e4a": {
+			rttRange: []float64{20, 50},
+			meanRTT:  34, jitter: 0.8, rng: rand.New(rand.NewSource(117)),
+		},
+	}
+}
+
+func assignPathQualities_exp2() map[string]*PathQuality {
 	return map[string]*PathQuality{
 		// --- Very bad paths (1–7) ---------------------------------------------------------------------------------------------------------------------------------------------------------
 		"d169d3fdcf2a7b89091fb85c61222c3cb3fed169bfa3994a49891042917553e7": {

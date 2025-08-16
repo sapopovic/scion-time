@@ -108,9 +108,9 @@ func (pM *PathManager) RunDynamicSelection(ctx context.Context, log *slog.Logger
 	pM.probePaths(ctx, log, &wg)                     // Updates PathMetrics for each path with EVERY NEW MEASUREMENT. These are performance results.
 	wg.Wait()
 	// pM.PrintSortedPathsByQ(log)
-	//if pM.dsSequence == 1 { // only reset sActive at first dynamic selection
-	//	pM.setSactive(log)
-	//}
+	// if pM.DsSequence == 1 { // only reset sActive at first dynamic selection
+	// 	pM.setSactive(log)
+	// }
 	pM.setSactive(log)
 }
 
@@ -352,7 +352,7 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 				defer wg.Done()
 
 				if j == pM.PingDuration/5 && pM.DsSequence == 2 { // in second DS, around halftime, worsen paths defined in Simulator.worsenpaths
-					pM.ChangeNetState = true
+					// pM.ChangeNetState = true // TO ADD PERFORMANCE DEGRADATION
 				}
 
 				pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -370,6 +370,8 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 				}
 
 				if timestamps.t0.IsZero() || timestamps.t1.IsZero() || timestamps.t2.IsZero() || timestamps.t3.IsZero() || timestamps.t3.Before(timestamps.t2) || timestamps.t2.Before(timestamps.t1) || timestamps.t1.Before(timestamps.t0) {
+					prober.Log.LogAttrs(ctx, slog.LevelInfo, "Skipped measurement", slog.Any("ts", timestamps.String()))
+
 					return // skip invalid timestamps
 				}
 
