@@ -755,6 +755,7 @@ func runClient(configFile, simCfg string) {
 			close(ready)
 
 			// 5-minute warmup
+			// time.Sleep(5 * time.Second)
 			time.Sleep(5 * time.Minute)
 
 			// Dynamic selection loop (every 15 minutes, serialized)

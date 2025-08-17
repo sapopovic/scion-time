@@ -141,6 +141,7 @@ func (pM *PathManager) setSactive(log *slog.Logger) {
 			if m.SampleCount == 0 || m.FailedRounds[round] {
 				continue // skip uninitialized or failed round
 			}
+			log.Info("1", slog.Int("1", 1))
 			candidates = append(candidates, pair{
 				index: idx,
 				rtt:   m.RTTs[round],
@@ -158,18 +159,21 @@ func (pM *PathManager) setSactive(log *slog.Logger) {
 			candidates = candidates[:5]
 		}
 
+		log.Info("2", slog.Int("2", len(candidates)))
+
 		// For each path, compute its g_r^{(-i)} and m_{i,r}
 		for idx, m := range pM.MetricsPerProber {
 			if m.SampleCount == 0 || m.FailedRounds[round] {
 				continue
 			}
-
+			log.Info("3", slog.Int("3", 3))
 			var thetas []float64
 			for _, c := range candidates {
 				if c.index == idx {
 					continue // leave-one-out
 				}
 				thetas = append(thetas, c.theta)
+				log.Info("4", slog.Int("4", 4))
 			}
 			if len(thetas) == 0 {
 				continue // can't compute a center for this path
@@ -438,13 +442,14 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 						slog.Any("via", snet.Fingerprint(p).String()),
 						slog.Any("error", e),
 					)
+					metrics.FailedRounds[j] = true
 					metrics.LossCount++
 					return
 				}
 
 				if timestamps.t0.IsZero() || timestamps.t1.IsZero() || timestamps.t2.IsZero() || timestamps.t3.IsZero() || timestamps.t3.Before(timestamps.t2) || timestamps.t2.Before(timestamps.t1) || timestamps.t1.Before(timestamps.t0) {
 					prober.Log.LogAttrs(ctx, slog.LevelInfo, "Skipped measurement", slog.Any("ts", timestamps.String()))
-
+					metrics.FailedRounds[j] = true
 					return // skip invalid timestamps
 				}
 
@@ -465,7 +470,7 @@ func (pM *PathManager) probePaths(ctx context.Context, log *slog.Logger, wg *syn
 				metrics.SampleCount++
 				metrics.Offsets[j] = theta
 				metrics.RTTs[j] = d1 + d2
-				metrics.FailedRounds[j] = true // this helps us know if we have a valid offset for round r and path i, default is false
+				metrics.FailedRounds[j] = false // this helps us know if we have a valid offset for round r and path i, default is false
 
 			}(i, prober, path)
 		}
