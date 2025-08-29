@@ -34,8 +34,8 @@ sudo systemctl start mbgsvcd.service
 
 
 
-OUTPUT_FILE_TIMESERVICE="$SCRIPT_DIR/simulation_logs/exp3_log_run4.txt"
-OUTPUT_FILE_MBG="$SCRIPT_DIR/simulation_logs/exp3_mbg_run4.txt"
+OUTPUT_FILE_TIMESERVICE="$SCRIPT_DIR/simulation_logs/exp2_log_run2.txt"
+OUTPUT_FILE_MBG="$SCRIPT_DIR/simulation_logs/exp2_mbg_run2.txt"
 
 sudo ./timeservice client -verbose -config testnet/client_sim.toml > "$OUTPUT_FILE_TIMESERVICE"  2>&1 &
 SERVICE_LOG_PID=$!
